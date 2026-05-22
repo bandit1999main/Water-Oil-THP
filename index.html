@@ -105,13 +105,22 @@
         <div class="resume-container glass-panel">
           <!-- Resume Header / Profile Banner -->
           <div class="resume-header">
-            <div class="resume-title-block">
-              <h3 class="glow-text">Bandit</h3>
-              <p class="resume-subtitle-text">Full-Stack Developer & Software Engineer</p>
+            <div class="resume-profile-wrap" style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+              <div class="resume-avatar-container">
+                <img id="resumeAvatar" src="./avatar_placeholder.png" alt="Profile Picture" />
+              </div>
+              <div class="resume-title-block">
+                <h3 class="glow-text">Bandit</h3>
+                <p class="resume-subtitle-text">Full-Stack Developer & Software Engineer</p>
+              </div>
             </div>
             <div class="resume-contact-info">
               <p><span class="logo-dot" style="margin-right: 0.25rem;"></span> 📍 Bangkok, Thailand</p>
               <p>✉️ bandit1999main@gmail.com</p>
+              <button class="btn btn-secondary btn-print-resume" id="btnPrintResume" style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 0.5rem 1rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Export PDF / Print
+              </button>
             </div>
           </div>
           
@@ -401,9 +410,15 @@
             <div class="resume-form-panel glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
               <h3 style="margin-bottom: 1.5rem;" class="glow-text">Edit Resume Data</h3>
               <form id="resumeEditorForm" class="contact-form">
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                  <label for="resumeInputBio">Bio / Professional Summary</label>
-                  <textarea id="resumeInputBio" class="form-input" placeholder="Summarize your professional background..." style="min-height: 120px;" required></textarea>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                  <div class="form-group">
+                    <label for="resumeInputAvatar">Avatar Image URL / Path</label>
+                    <input type="text" id="resumeInputAvatar" class="form-input" placeholder="e.g., ./avatar_placeholder.png or a hosted image link" />
+                  </div>
+                  <div class="form-group">
+                    <label for="resumeInputBio">Bio / Professional Summary</label>
+                    <textarea id="resumeInputBio" class="form-input" placeholder="Summarize your professional background..." style="min-height: 120px;" required></textarea>
+                  </div>
                 </div>
 
                 <!-- Experience List Editor -->

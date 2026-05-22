@@ -487,6 +487,7 @@ const LOCAL_ABOUT_KEY = 'bandit_about_me';
 
 const DEFAULT_ABOUT_DATA = {
   bio: "I am a digital artisan who loves building high-performance web applications. My coding journey revolves around creating beautiful, user-centered software designs backed by secure, optimized backend logic.\n\nI believe that premium products lie at the intersection of stunning design and stellar performance. I'm constantly learning new web patterns and leveraging cutting-edge web platform capabilities to build next-generation applications.",
+  avatarUrl: "./avatar_placeholder.png",
   experience: [
     {
       id: "exp1",

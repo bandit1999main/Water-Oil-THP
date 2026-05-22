@@ -1708,3 +1708,171 @@ footer {
   background: rgba(239, 68, 68, 0.25);
   transform: translateY(-1px);
 }
+
+/* --- RESUME PROFILE PICTURE --- */
+.resume-avatar-container {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-teal);
+  box-shadow: 0 0 15px rgba(20, 184, 166, 0.4);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.resume-avatar-container:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 25px rgba(20, 184, 166, 0.8), inset 0 0 10px rgba(20, 184, 166, 0.4);
+  border-color: #ffffff;
+}
+
+.resume-avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- EXPORT PDF & PRINT STYLE --- */
+@media print {
+  /* Hide dynamic gaming interface & nav headers completely */
+  header,
+  footer,
+  section:not(#about),
+  .section-header,
+  .btn-print-resume,
+  #adminDashboardContainer,
+  .modal-overlay,
+  #successToast {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Inter', sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #about {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .resume-container {
+    margin: 0 !important;
+    padding: 1.5cm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    color: #000000 !important;
+    max-width: 100% !important;
+  }
+
+  .glow-text {
+    text-shadow: none !important;
+    color: #0f172a !important;
+  }
+
+  .resume-title-block h3 {
+    color: #0f172a !important;
+    font-size: 2.4rem !important;
+  }
+
+  .resume-subtitle-text {
+    color: #0d9488 !important; /* accent teal */
+    font-weight: 600 !important;
+  }
+
+  .resume-contact-info p {
+    color: #4b5563 !important;
+  }
+
+  .resume-divider {
+    background: #cbd5e1 !important;
+    margin: 1.5rem 0 !important;
+  }
+
+  .resume-grid {
+    grid-template-columns: 2.2fr 1fr !important;
+    gap: 2rem !important;
+  }
+
+  .resume-section-title {
+    color: #0f172a !important;
+    border-bottom: 2px solid #0d9488 !important;
+    padding-bottom: 0.35rem !important;
+  }
+
+  .resume-section-title svg {
+    stroke: #0d9488 !important;
+  }
+
+  .resume-bio-text {
+    color: #1f2937 !important;
+    line-height: 1.6 !important;
+  }
+
+  .resume-timeline::before {
+    background: #cbd5e1 !important;
+  }
+
+  .resume-timeline-node {
+    background: #ffffff !important;
+    border-color: #0d9488 !important;
+    box-shadow: none !important;
+  }
+
+  .resume-timeline-role {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+  }
+
+  .resume-timeline-company {
+    color: #0d9488 !important;
+    font-weight: 600 !important;
+  }
+
+  .resume-timeline-duration {
+    color: #4b5563 !important;
+    background: #f3f4f6 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.2rem 0.6rem !important;
+  }
+
+  .resume-timeline-desc {
+    color: #374151 !important;
+  }
+
+  .skills-category {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .skills-category h4 {
+    color: #0f172a !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .skill-tag {
+    background: #f3f4f6 !important;
+    color: #1f2937 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  .resume-avatar-container {
+    border-color: #0d9488 !important;
+    box-shadow: none !important;
+  }
+}

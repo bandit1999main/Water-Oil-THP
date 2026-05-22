@@ -389,6 +389,14 @@ async function loadAndRenderProjects() {
   
   // Load and render public resume timeline
   await loadAndRenderResume();
+
+  // Print Resume Event Listener
+  const btnPrintResume = document.getElementById('btnPrintResume');
+  if (btnPrintResume) {
+    btnPrintResume.addEventListener('click', () => {
+      window.print();
+    });
+  }
 }
 
 function showProjectForm(isEdit = false) {
@@ -1319,6 +1327,12 @@ async function loadAndRenderResume() {
   try {
     currentAboutData = await fetchAboutMe();
     
+    // Render Avatar
+    const avatarEl = document.getElementById('resumeAvatar');
+    if (avatarEl) {
+      avatarEl.src = currentAboutData.avatarUrl || "./avatar_placeholder.png";
+    }
+
     // Render Professional Bio
     const bioTextEl = document.getElementById('resumeBio');
     if (bioTextEl) {
@@ -1418,6 +1432,11 @@ const resumeEditorForm = document.getElementById('resumeEditorForm');
 
 function prefillAdminResumeForm() {
   if (!currentAboutData) return;
+  
+  const avatarInput = document.getElementById('resumeInputAvatar');
+  if (avatarInput) {
+    avatarInput.value = currentAboutData.avatarUrl || '';
+  }
   
   const bioInput = document.getElementById('resumeInputBio');
   if (bioInput) {
@@ -1529,6 +1548,7 @@ if (resumeEditorForm) {
     e.preventDefault();
     
     const bioText = document.getElementById('resumeInputBio').value;
+    const avatarUrlVal = document.getElementById('resumeInputAvatar') ? document.getElementById('resumeInputAvatar').value.trim() : '';
     
     const expRows = expInputsContainer.querySelectorAll('.dynamic-item-row');
     const experiences = [];
@@ -1556,6 +1576,7 @@ if (resumeEditorForm) {
     
     const updatedAboutData = {
       bio: bioText,
+      avatarUrl: avatarUrlVal || "./avatar_placeholder.png",
       experience: experiences,
       education: educations
     };
