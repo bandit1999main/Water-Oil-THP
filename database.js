@@ -393,7 +393,18 @@ export async function loginAdmin(email, password) {
 // Check logged in user status
 export function getActiveUser() {
   if (useFirebase) {
-    return auth?.currentUser || null;
+    const user = auth?.currentUser;
+    if (user) {
+      const isAdmin = user.email === DEFAULT_ADMIN_EMAIL;
+      return {
+        email: user.email,
+        displayName: user.displayName || user.email.split('@')[0],
+        uid: user.uid,
+        id: user.uid,
+        role: isAdmin ? 'admin' : 'visitor'
+      };
+    }
+    return null;
   } else {
     // Admin check
     const adminToken = localStorage.getItem(LOCAL_AUTH_KEY);
@@ -423,10 +434,53 @@ export function getAdminUser() {
 // Auth state change listener
 export function onAuthChanged(callback) {
   if (useFirebase) {
-    const { onAuthStateChanged } = auth;
-    return onAuthStateChanged(auth, (user) => {
-      callback(user);
+    let unsubscribe = () => {};
+    
+    // Import dynamically from firebase/auth
+    import('firebase/auth').then(({ onAuthStateChanged }) => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          const isAdmin = user.email === DEFAULT_ADMIN_EMAIL;
+          if (isAdmin) {
+            localStorage.setItem(LOCAL_AUTH_KEY, `google-admin-${Date.now()}`);
+            localStorage.removeItem(LOCAL_USER_SESSION_KEY);
+            callback({
+              email: user.email,
+              displayName: user.displayName || user.email.split('@')[0],
+              uid: user.uid,
+              id: user.uid,
+              role: 'admin'
+            });
+          } else {
+            localStorage.removeItem(LOCAL_AUTH_KEY);
+            const visitorSession = {
+              email: user.email,
+              displayName: user.displayName || user.email.split('@')[0],
+              id: user.uid,
+              role: 'visitor'
+            };
+            localStorage.setItem(LOCAL_USER_SESSION_KEY, JSON.stringify(visitorSession));
+            callback({
+              email: user.email,
+              displayName: visitorSession.displayName,
+              uid: user.uid,
+              id: user.uid,
+              role: 'visitor'
+            });
+          }
+        } else {
+          localStorage.removeItem(LOCAL_AUTH_KEY);
+          localStorage.removeItem(LOCAL_USER_SESSION_KEY);
+          callback(null);
+        }
+      });
+    }).catch(err => {
+      console.error("❌ Failed to load onAuthStateChanged dynamically:", err);
     });
+    
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   } else {
     localAuthListeners.push(callback);
     callback(getActiveUser());
