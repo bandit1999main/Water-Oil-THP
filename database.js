@@ -2,12 +2,13 @@ import { projects as staticProjects } from './projects.js';
 
 // --- environment keys ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBlX_PjdyFhi8ySSlOoMdXWBZH0pLQ1xHk",
+  apiKey: "AIzaSyBlX_PjdyFhi8ySSlOoMdXwBZH0pLQ1xHk",
   authDomain: "tammadaday.firebaseapp.com",
   projectId: "tammadaday",
   storageBucket: "tammadaday.firebasestorage.app",
   messagingSenderId: "81971118471",
-  appId: "1:81971118471:web:52835644628cd5fcda9322"
+  appId: "1:81971118471:web:52835644628cd5fcda9322",
+  measurementId: "G-E57DT9D7EW"
 };
 
 // Check if we have standard Firebase configurations in .env
