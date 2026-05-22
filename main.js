@@ -7,7 +7,13 @@ import {
   loginAdmin,
   getAdminUser,
   onAuthChanged,
-  logoutAdmin
+  logoutAdmin,
+  registerVisitor,
+  loginVisitor,
+  getActiveUser,
+  logoutUser,
+  fetchUserFavorites,
+  toggleFavoriteProject
 } from './database.js';
 
 let projectsList = [];
@@ -38,6 +44,45 @@ const projectModal = document.getElementById('projectModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 const contactForm = document.getElementById('contactForm');
 const successToast = document.getElementById('successToast');
+
+// Header Auth Badge & Dropdown Elements
+const btnHeaderLogin = document.getElementById('btnHeaderLogin');
+const userProfileBadge = document.getElementById('userProfileBadge');
+const userAvatar = document.getElementById('userAvatar');
+const userDropdownMenu = document.getElementById('userDropdownMenu');
+const dropdownUserEmail = document.getElementById('dropdownUserEmail');
+const menuFavorites = document.getElementById('menuFavorites');
+const menuAdminConsole = document.getElementById('menuAdminConsole');
+const menuLogout = document.getElementById('menuLogout');
+
+// Auth Modal UI Elements
+const authModal = document.getElementById('authModal');
+const authModalCloseBtn = document.getElementById('authModalCloseBtn');
+const tabGuest = document.getElementById('tabGuest');
+const tabAdmin = document.getElementById('tabAdmin');
+const authTabGlider = document.querySelector('.auth-tab-glider');
+const panelGuest = document.getElementById('panelGuest');
+const panelAdmin = document.getElementById('panelAdmin');
+const guestAuthForm = document.getElementById('guestAuthForm');
+const guestAuthMode = document.getElementById('guestAuthMode');
+const groupGuestName = document.getElementById('groupGuestName');
+const guestName = document.getElementById('guestName');
+const guestEmail = document.getElementById('guestEmail');
+const guestPassword = document.getElementById('guestPassword');
+const btnGuestAuth = document.getElementById('btnGuestAuth');
+const guestAuthError = document.getElementById('guestAuthError');
+const toggleGuestMode = document.getElementById('toggleGuestMode');
+const guestPanelTitle = document.getElementById('guestPanelTitle');
+
+// Admin Panel in Modal Elements
+const modalAdminLoginForm = document.getElementById('modalAdminLoginForm');
+const modalAdminEmail = document.getElementById('modalAdminEmail');
+const modalAdminPassword = document.getElementById('modalAdminPassword');
+const btnModalAdminLogin = document.getElementById('btnModalAdminLogin');
+const modalAdminLoginError = document.getElementById('modalAdminLoginError');
+
+// Favorites Global Cache
+let userFavorites = [];
 
 // --- 1. ROUTING & NAVIGATION ---
 function showSection(sectionId) {
@@ -153,10 +198,16 @@ function renderProjects() {
     card.setAttribute('data-id', project.id);
     
     const svgIcon = getProjectSVG(project.id);
+    const isFavorite = userFavorites.includes(Number(project.id));
     
     card.innerHTML = `
       <div class="project-image-wrapper ${project.imageClass}">
         <span class="project-badge">${project.category}</span>
+        <button class="btn-favorite ${isFavorite ? 'active' : ''}" data-id="${project.id}" aria-label="Favorite Project">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+        </button>
         ${svgIcon}
       </div>
       <div class="project-info">
@@ -167,6 +218,35 @@ function renderProjects() {
         </div>
       </div>
     `;
+    
+    // Wire up Favorite button click with authentication check
+    const btnFav = card.querySelector('.btn-favorite');
+    btnFav.addEventListener('click', async (e) => {
+      e.stopPropagation(); // Prevent opening the detail modal
+      
+      const user = getActiveUser();
+      if (!user) {
+        openAuthModal('guest');
+        return;
+      }
+      
+      try {
+        btnFav.disabled = true;
+        const updatedFavs = await toggleFavoriteProject(project.id);
+        userFavorites = updatedFavs;
+        
+        const nowFavorite = userFavorites.includes(Number(project.id));
+        if (nowFavorite) {
+          btnFav.classList.add('active');
+        } else {
+          btnFav.classList.remove('active');
+        }
+      } catch (err) {
+        console.error("Toggle favorite error:", err);
+      } finally {
+        btnFav.disabled = false;
+      }
+    });
     
     card.addEventListener('click', () => openProjectModal(project));
     projectsGrid.appendChild(card);
@@ -276,6 +356,19 @@ const adminProjectListContainer = document.getElementById('adminProjectListConta
 
 async function loadAndRenderProjects() {
   projectsList = await fetchProjects();
+  
+  const activeUser = getActiveUser();
+  if (activeUser) {
+    try {
+      userFavorites = await fetchUserFavorites();
+    } catch (e) {
+      console.error("Failed to fetch favorites on load:", e);
+      userFavorites = [];
+    }
+  } else {
+    userFavorites = [];
+  }
+  
   renderProjects();
   if (getAdminUser()) {
     renderAdminProjects();
@@ -391,9 +484,246 @@ export function checkAdminAuthState() {
   }
 }
 
-// Hook up Auth Listener
-onAuthChanged((user) => {
+// --- MULTI-USER AUTHENTICATION CONTROLLER & EVENT BINDINGS ---
+
+// Open Auth Modal
+function openAuthModal(defaultTab = 'guest') {
+  if (!authModal) return;
+  authModal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+  switchAuthTab(defaultTab);
+}
+
+// Close Auth Modal
+function closeAuthModal() {
+  if (!authModal) return;
+  authModal.classList.remove('active');
+  document.body.style.overflow = '';
+  if (guestAuthForm) guestAuthForm.reset();
+  if (modalAdminLoginForm) modalAdminLoginForm.reset();
+  if (guestAuthError) guestAuthError.style.display = 'none';
+  if (modalAdminLoginError) modalAdminLoginError.style.display = 'none';
+}
+
+// Switch between Visitor and Admin tabs in Auth Modal
+function switchAuthTab(tab) {
+  if (tab === 'guest') {
+    if (tabGuest) tabGuest.classList.add('active');
+    if (tabAdmin) tabAdmin.classList.remove('active');
+    if (authTabGlider) authTabGlider.style.left = '0%';
+    if (panelGuest) panelGuest.style.display = 'block';
+    if (panelAdmin) panelAdmin.style.display = 'none';
+  } else {
+    if (tabGuest) tabGuest.classList.remove('active');
+    if (tabAdmin) tabAdmin.classList.add('active');
+    if (authTabGlider) authTabGlider.style.left = '50%';
+    if (panelGuest) panelGuest.style.display = 'none';
+    if (panelAdmin) panelAdmin.style.display = 'block';
+  }
+}
+
+// Hook up tab clicks
+if (tabGuest) {
+  tabGuest.addEventListener('click', () => switchAuthTab('guest'));
+}
+if (tabAdmin) {
+  tabAdmin.addEventListener('click', () => switchAuthTab('admin'));
+}
+
+// Close buttons / Outside click listeners
+if (authModalCloseBtn) {
+  authModalCloseBtn.addEventListener('click', closeAuthModal);
+}
+if (authModal) {
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) {
+      closeAuthModal();
+    }
+  });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeAuthModal();
+  }
+});
+
+// Toggle between Visitor Login and Create Account inside Visitor Portal
+if (toggleGuestMode) {
+  toggleGuestMode.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (guestAuthMode.value === 'login') {
+      guestAuthMode.value = 'register';
+      groupGuestName.style.display = 'block';
+      document.getElementById('guestName').setAttribute('required', 'true');
+      btnGuestAuth.textContent = 'Create Account';
+      guestPanelTitle.textContent = 'Create Account';
+      toggleGuestMode.textContent = 'Log In instead';
+    } else {
+      guestAuthMode.value = 'login';
+      groupGuestName.style.display = 'none';
+      document.getElementById('guestName').removeAttribute('required');
+      btnGuestAuth.textContent = 'Log In';
+      guestPanelTitle.textContent = 'Welcome Visitor';
+      toggleGuestMode.textContent = 'Create Account';
+    }
+    if (guestAuthError) guestAuthError.style.display = 'none';
+  });
+}
+
+// Toggle Profile Dropdown
+if (userProfileBadge) {
+  userProfileBadge.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userProfileBadge.classList.toggle('active');
+  });
+}
+document.addEventListener('click', (e) => {
+  if (userProfileBadge && !userProfileBadge.contains(e.target)) {
+    userProfileBadge.classList.remove('active');
+  }
+});
+
+// Sign In Button in Header
+if (btnHeaderLogin) {
+  btnHeaderLogin.addEventListener('click', () => {
+    openAuthModal('guest');
+  });
+}
+
+// Visitor register/login form submission
+if (guestAuthForm) {
+  guestAuthForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (guestAuthError) guestAuthError.style.display = 'none';
+    
+    const email = guestEmail.value.trim();
+    const password = guestPassword.value;
+    const mode = guestAuthMode.value;
+    
+    const originalText = btnGuestAuth.textContent;
+    btnGuestAuth.disabled = true;
+    btnGuestAuth.textContent = mode === 'login' ? 'Logging in...' : 'Registering...';
+    
+    let result;
+    if (mode === 'login') {
+      result = await loginVisitor(email, password);
+    } else {
+      const displayName = guestName.value.trim();
+      result = await registerVisitor(email, password, displayName);
+    }
+    
+    btnGuestAuth.disabled = false;
+    btnGuestAuth.textContent = originalText;
+    
+    if (result.success) {
+      closeAuthModal();
+      await loadAndRenderProjects();
+    } else {
+      if (guestAuthError) {
+        guestAuthError.textContent = result.error || 'Authentication failed.';
+        guestAuthError.style.display = 'block';
+      }
+    }
+  });
+}
+
+// Modal Admin login form submission
+if (modalAdminLoginForm) {
+  modalAdminLoginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (modalAdminLoginError) modalAdminLoginError.style.display = 'none';
+    
+    const email = modalAdminEmail.value.trim();
+    const password = modalAdminPassword.value;
+    
+    const originalText = btnModalAdminLogin.textContent;
+    btnModalAdminLogin.disabled = true;
+    btnModalAdminLogin.textContent = 'Accessing...';
+    
+    const result = await loginAdmin(email, password);
+    
+    btnModalAdminLogin.disabled = false;
+    btnModalAdminLogin.textContent = originalText;
+    
+    if (result.success) {
+      closeAuthModal();
+      window.location.hash = 'admin';
+      checkAdminAuthState();
+      await loadAndRenderProjects();
+    } else {
+      if (modalAdminLoginError) {
+        modalAdminLoginError.textContent = result.error || 'Admin access denied.';
+        modalAdminLoginError.style.display = 'block';
+      }
+    }
+  });
+}
+
+// Unified dropdown log out button
+if (menuLogout) {
+  menuLogout.addEventListener('click', async () => {
+    await logoutUser();
+    if (window.location.hash === '#admin') {
+      window.location.hash = 'home';
+    }
+    await loadAndRenderProjects();
+  });
+}
+
+// Hook up Auth Listener (Unified Visitor & Admin state controller)
+onAuthChanged(async (user) => {
   checkAdminAuthState();
+  
+  if (user) {
+    if (btnHeaderLogin) btnHeaderLogin.style.display = 'none';
+    if (userProfileBadge) {
+      userProfileBadge.style.display = 'flex';
+      const name = user.displayName || user.email || 'U';
+      if (userAvatar) {
+        userAvatar.textContent = name[0].toUpperCase();
+      }
+    }
+    if (dropdownUserEmail) {
+      dropdownUserEmail.textContent = user.email || '';
+    }
+    
+    // Auto-fill Contact Form details
+    const formName = document.getElementById('formName');
+    const formEmail = document.getElementById('formEmail');
+    if (formName && !formName.value && user.displayName) {
+      formName.value = user.displayName;
+    }
+    if (formEmail && !formEmail.value && user.email) {
+      formEmail.value = user.email;
+    }
+    
+    // Show/hide Admin Console item inside profile dropdown
+    const isAdmin = user.role === 'admin' || user.email === 'bandit1999main@gmail.com';
+    if (menuAdminConsole) {
+      menuAdminConsole.style.display = isAdmin ? 'flex' : 'none';
+    }
+    
+    // Asynchronously fetch favorites into local cache
+    try {
+      userFavorites = await fetchUserFavorites();
+    } catch (e) {
+      console.error("Failed to fetch favorites inside auth listener:", e);
+      userFavorites = [];
+    }
+  } else {
+    if (btnHeaderLogin) btnHeaderLogin.style.display = 'block';
+    if (userProfileBadge) {
+      userProfileBadge.style.display = 'none';
+      userProfileBadge.classList.remove('active');
+    }
+    if (menuAdminConsole) {
+      menuAdminConsole.style.display = 'none';
+    }
+    userFavorites = [];
+  }
+  
+  // Re-render the creative showcase projects to reactively draw favorites hearts
+  renderProjects();
 });
 
 // Setup events
@@ -435,6 +765,7 @@ if (btnAdminLogout) {
   btnAdminLogout.addEventListener('click', async () => {
     await logoutAdmin();
     checkAdminAuthState();
+    await loadAndRenderProjects();
   });
 }
 

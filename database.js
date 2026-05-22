@@ -242,42 +242,136 @@ function deleteLocalProject(projectId) {
   return true;
 }
 
+// --- MULTI-USER SYSTEM STRINGS & STORAGE KEYS ---
+const LOCAL_USERS_KEY = 'bandit_portfolio_users';
+const LOCAL_USER_SESSION_KEY = 'bandit_user_session';
+
+// Helper for local state callbacks
+let localAuthListeners = [];
+
+// Helper to trigger local auth change callbacks manually when logging in/out
+function triggerLocalAuthChange() {
+  const user = getActiveUser();
+  localAuthListeners.forEach(callback => callback(user));
+}
+
 // --- AUTHENTICATION ACTIONS ---
 
-// Login admin
-export async function loginAdmin(email, password) {
+// Sign Up Visitor
+export async function registerVisitor(email, password, displayName) {
+  if (useFirebase) {
+    try {
+      const { createUserWithEmailAndPassword, updateProfile } = await import('firebase/auth');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName });
+      return { success: true, user: userCredential.user };
+    } catch (error) {
+      console.error("❌ Firebase Visitor SignUp failed:", error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    // Local storage mock register
+    const users = JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
+    if (users.some(u => u.email === email)) {
+      return { success: false, error: "Email is already registered." };
+    }
+    const newUser = { id: `user-${Date.now()}`, email, password, displayName };
+    users.push(newUser);
+    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+    
+    // Auto login
+    localStorage.setItem(LOCAL_USER_SESSION_KEY, JSON.stringify({ email, displayName, id: newUser.id, role: 'visitor' }));
+    triggerLocalAuthChange();
+    return { success: true, user: { email, displayName } };
+  }
+}
+
+// Log In Visitor
+export async function loginVisitor(email, password) {
   if (useFirebase) {
     try {
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       return { success: true, user: userCredential.user };
     } catch (error) {
-      console.error("❌ Firebase Auth login failed:", error);
+      console.error("❌ Firebase Visitor Login failed:", error);
       return { success: false, error: error.message };
     }
   } else {
-    // Fallback Local Auth
-    if (email === DEFAULT_ADMIN_EMAIL && password === DEFAULT_ADMIN_PASSWORD) {
-      const mockToken = `mock-session-${Date.now()}`;
-      localStorage.setItem(LOCAL_AUTH_KEY, mockToken);
-      return { success: true, user: { email: DEFAULT_ADMIN_EMAIL } };
+    // Local storage mock login
+    const users = JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
+    const user = users.find(u => u.email === email && u.password === password);
+    if (user) {
+      localStorage.setItem(LOCAL_USER_SESSION_KEY, JSON.stringify({ email, displayName: user.displayName, id: user.id, role: 'visitor' }));
+      triggerLocalAuthChange();
+      return { success: true, user: { email, displayName: user.displayName } };
     } else {
       return { success: false, error: "Incorrect email or password." };
     }
   }
 }
 
-// Check auth state
-export function getAdminUser() {
+// Log In Admin
+export async function loginAdmin(email, password) {
   if (useFirebase) {
-    return auth.currentUser;
+    try {
+      const { signInWithEmailAndPassword } = await import('firebase/auth');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      if (email !== DEFAULT_ADMIN_EMAIL) {
+        const { signOut } = await import('firebase/auth');
+        await signOut(auth);
+        return { success: false, error: "Unauthorized access. This area is reserved for the administrator." };
+      }
+      return { success: true, user: userCredential.user };
+    } catch (error) {
+      console.error("❌ Firebase Admin Login failed:", error);
+      return { success: false, error: error.message };
+    }
   } else {
-    const token = localStorage.getItem(LOCAL_AUTH_KEY);
-    return token ? { email: DEFAULT_ADMIN_EMAIL } : null;
+    // Fallback Local Admin Login
+    if (email === DEFAULT_ADMIN_EMAIL && password === DEFAULT_ADMIN_PASSWORD) {
+      const mockToken = `mock-session-${Date.now()}`;
+      localStorage.setItem(LOCAL_AUTH_KEY, mockToken);
+      localStorage.removeItem(LOCAL_USER_SESSION_KEY); // Clear visitor session if admin logs in
+      triggerLocalAuthChange();
+      return { success: true, user: { email: DEFAULT_ADMIN_EMAIL, role: 'admin' } };
+    } else {
+      return { success: false, error: "Incorrect admin credentials." };
+    }
   }
 }
 
-// Register Auth state listener
+// Check logged in user status
+export function getActiveUser() {
+  if (useFirebase) {
+    return auth?.currentUser || null;
+  } else {
+    // Admin check
+    const adminToken = localStorage.getItem(LOCAL_AUTH_KEY);
+    if (adminToken) {
+      return { email: DEFAULT_ADMIN_EMAIL, displayName: 'Bandit (Admin)', uid: 'admin-uid', role: 'admin' };
+    }
+    // Visitor check
+    const visitorSession = localStorage.getItem(LOCAL_USER_SESSION_KEY);
+    if (visitorSession) {
+      const u = JSON.parse(visitorSession);
+      return { email: u.email, displayName: u.displayName, uid: u.id, role: 'visitor' };
+    }
+    return null;
+  }
+}
+
+// Keep backward compatibility check for getAdminUser
+export function getAdminUser() {
+  const user = getActiveUser();
+  if (useFirebase) {
+    return user && user.email === DEFAULT_ADMIN_EMAIL ? user : null;
+  } else {
+    return user && user.role === 'admin' ? user : null;
+  }
+}
+
+// Auth state change listener
 export function onAuthChanged(callback) {
   if (useFirebase) {
     const { onAuthStateChanged } = auth;
@@ -285,30 +379,105 @@ export function onAuthChanged(callback) {
       callback(user);
     });
   } else {
-    // Check locally every time auth shifts
-    const checkLocal = () => {
-      const user = getAdminUser();
-      callback(user);
+    localAuthListeners.push(callback);
+    callback(getActiveUser());
+    
+    return () => {
+      localAuthListeners = localAuthListeners.filter(l => l !== callback);
     };
-    checkLocal();
-    // Return a dummy unsubscribe function
-    return () => {};
   }
 }
 
-// Logout admin
-export async function logoutAdmin() {
+// Logout system (Unified)
+export async function logoutUser() {
   if (useFirebase) {
     try {
       const { signOut } = await import('firebase/auth');
       await signOut(auth);
       return true;
     } catch (error) {
-      console.error("❌ Firebase Auth logout failed:", error);
+      console.error("❌ Firebase Logout failed:", error);
       return false;
     }
   } else {
     localStorage.removeItem(LOCAL_AUTH_KEY);
+    localStorage.removeItem(LOCAL_USER_SESSION_KEY);
+    triggerLocalAuthChange();
     return true;
   }
+}
+
+// Keep backward compatibility logout
+export async function logoutAdmin() {
+  return logoutUser();
+}
+
+// --- PROJECT FAVORITES (BOOKMARK) ACTIONS ---
+
+// Get all favorited project IDs for the active user
+export async function fetchUserFavorites() {
+  const user = getActiveUser();
+  if (!user) return [];
+  
+  const userId = useFirebase ? user.uid : user.email;
+  
+  if (useFirebase) {
+    try {
+      const { doc, getDoc } = await import('firebase/firestore');
+      const docRef = doc(db, "favorites", userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data().projectIds || [];
+      }
+      return [];
+    } catch (error) {
+      console.error("❌ Firebase fetch favorites failed. Falling back to local.", error);
+      return getLocalFavorites(userId);
+    }
+  } else {
+    return getLocalFavorites(userId);
+  }
+}
+
+function getLocalFavorites(userId) {
+  const data = localStorage.getItem(`bandit_favs_${userId}`);
+  return data ? JSON.parse(data) : [];
+}
+
+// Toggle a favorite project ID
+export async function toggleFavoriteProject(projectId) {
+  const user = getActiveUser();
+  if (!user) throw new Error("Authentication required to bookmark projects.");
+  
+  const userId = useFirebase ? user.uid : user.email;
+  const currentFavs = await fetchUserFavorites();
+  const index = currentFavs.indexOf(Number(projectId));
+  
+  let newFavs;
+  if (index === -1) {
+    newFavs = [...currentFavs, Number(projectId)];
+  } else {
+    newFavs = currentFavs.filter(id => id !== Number(projectId));
+  }
+  
+  if (useFirebase) {
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const docRef = doc(db, "favorites", userId);
+      await setDoc(docRef, { projectIds: newFavs });
+      return newFavs;
+    } catch (error) {
+      console.error("❌ Firebase toggle favorite failed. Saving locally.", error);
+      saveLocalFavorites(userId, newFavs);
+      return newFavs;
+    }
+  } else {
+    saveLocalFavorites(userId, newFavs);
+    triggerLocalAuthChange(); // trigger UI re-renders locally
+    return newFavs;
+  }
+}
+
+function saveLocalFavorites(userId, favs) {
+  localStorage.setItem(`bandit_favs_${userId}`, JSON.stringify(favs));
 }

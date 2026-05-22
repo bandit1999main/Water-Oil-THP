@@ -1140,3 +1140,206 @@ footer {
     height: 380px !important;
   }
 }
+
+/* --- MULTI-USER AUTHENTICATION & PREMIUM STYLING --- */
+
+/* Navigation Header Profile Dropdown */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-nav-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.login-nav-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+.user-profile-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 50px;
+  cursor: pointer;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.user-profile-badge:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glass-hover);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
+  box-shadow: 0 0 10px rgba(20, 184, 166, 0.3);
+}
+
+.user-status-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 4px;
+  left: 28px;
+  border: 1px solid var(--bg-dark);
+  box-shadow: 0 0 8px #10b981;
+}
+
+/* Dropdown Menu styling */
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: rgba(13, 17, 30, 0.95);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  gap: 0.25rem;
+  z-index: 100;
+  transform: translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-profile-badge.active .user-dropdown-menu {
+  display: flex;
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dropdown-user-email {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.5rem 0.75rem;
+  word-break: break-all;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-glass);
+  margin: 0.5rem 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--accent-teal);
+}
+
+/* Hearts bookmark / favorites icon on project cards */
+.btn-favorite {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(7, 8, 14, 0.6);
+  border: 1px solid var(--border-glass);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.btn-favorite:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  transform: scale(1.1);
+}
+
+.btn-favorite.active {
+  color: #ef4444;
+  fill: #ef4444;
+  border-color: rgba(239, 68, 68, 0.8);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+/* Premium Auth Modal animations and tabs */
+.auth-modal-content {
+  padding: 2.5rem !important;
+}
+
+.auth-tabs {
+  margin-bottom: 2.5rem !important;
+}
+
+.auth-tab {
+  font-size: 1.05rem;
+}
+
+.auth-tab:hover {
+  color: var(--text-primary) !important;
+}
+
+.auth-tab.active {
+  color: var(--text-primary) !important;
+}
+
+.auth-panel {
+  animation: fadeInAuth 0.4s ease-out;
+}
+
+.auth-toggle-text a:hover {
+  color: var(--accent-indigo) !important;
+  text-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+}
+
+@keyframes fadeInAuth {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
