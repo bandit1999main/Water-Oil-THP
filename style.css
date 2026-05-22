@@ -1737,8 +1737,18 @@ footer {
   object-fit: cover;
 }
 
-/* --- EXPORT PDF & PRINT STYLE --- */
+/* --- EXPORT PDF & PRINT STYLE (FORCED 1-PAGE A4 LAYOUT) --- */
+@page {
+  size: A4 portrait;
+  margin: 0.4cm 0.5cm;
+}
+
 @media print {
+  /* Set base font-size to scale down all rem-based units nicely to fit on one page */
+  html {
+    font-size: 12px !important;
+  }
+
   /* Hide dynamic gaming interface & nav headers completely */
   header,
   footer,
@@ -1751,27 +1761,22 @@ footer {
     display: none !important;
   }
 
-  body {
+  body, #app, main, #about, .resume-container {
     background: #ffffff !important;
     color: #000000 !important;
     font-family: 'Inter', sans-serif !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #about {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .resume-container {
-    margin: 0 !important;
-    padding: 1.5cm !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
-    color: #000000 !important;
-    max-width: 100% !important;
+    display: block !important;
   }
 
   .glow-text {
@@ -1779,89 +1784,173 @@ footer {
     color: #0f172a !important;
   }
 
+  /* Compact Avatar and Title */
+  .resume-profile-wrap {
+    gap: 0.75rem !important;
+  }
+
+  .resume-avatar-container {
+    width: 60px !important;
+    height: 60px !important;
+    border-color: #0d9488 !important;
+    box-shadow: none !important;
+  }
+
   .resume-title-block h3 {
     color: #0f172a !important;
-    font-size: 2.4rem !important;
+    font-size: 1.6rem !important;
+    margin-bottom: 0.1rem !important;
   }
 
   .resume-subtitle-text {
-    color: #0d9488 !important; /* accent teal */
+    color: #0d9488 !important;
+    font-size: 0.9rem !important;
     font-weight: 600 !important;
+  }
+
+  /* Compact Contact Info */
+  .resume-contact-info {
+    gap: 0.15rem !important;
   }
 
   .resume-contact-info p {
     color: #4b5563 !important;
+    font-size: 0.75rem !important;
+    margin: 0 !important;
   }
 
+  /* Compact Divider */
   .resume-divider {
     background: #cbd5e1 !important;
-    margin: 1.5rem 0 !important;
+    margin: 0.6rem 0 !important;
+    height: 1px !important;
   }
 
+  /* Grid layouts */
   .resume-grid {
     grid-template-columns: 2.2fr 1fr !important;
-    gap: 2rem !important;
+    gap: 1.25rem !important;
+  }
+
+  /* Compact Sections */
+  .resume-section {
+    margin-bottom: 0.85rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .resume-section:last-child {
+    margin-bottom: 0 !important;
   }
 
   .resume-section-title {
     color: #0f172a !important;
-    border-bottom: 2px solid #0d9488 !important;
-    padding-bottom: 0.35rem !important;
+    font-size: 1rem !important;
+    border-bottom: 1.5px solid #0d9488 !important;
+    padding-bottom: 0.15rem !important;
+    margin-bottom: 0.5rem !important;
   }
 
   .resume-section-title svg {
     stroke: #0d9488 !important;
+    width: 14px !important;
+    height: 14px !important;
   }
 
   .resume-bio-text {
     color: #1f2937 !important;
-    line-height: 1.6 !important;
+    font-size: 0.78rem !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
   }
 
+  /* Compact Timelines */
   .resume-timeline::before {
     background: #cbd5e1 !important;
+    left: 4px !important;
+  }
+
+  .resume-timeline-item {
+    margin-bottom: 0.5rem !important;
+    padding-left: 1.1rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .resume-timeline-item:last-child {
+    margin-bottom: 0 !important;
   }
 
   .resume-timeline-node {
     background: #ffffff !important;
     border-color: #0d9488 !important;
     box-shadow: none !important;
+    width: 8px !important;
+    height: 8px !important;
+    left: 0 !important;
+    top: 4px !important;
+  }
+
+  .resume-timeline-header {
+    margin-bottom: 0.1rem !important;
+    gap: 0.4rem !important;
   }
 
   .resume-timeline-role {
     color: #0f172a !important;
     font-weight: 700 !important;
+    font-size: 0.8rem !important;
   }
 
   .resume-timeline-company {
     color: #0d9488 !important;
     font-weight: 600 !important;
+    font-size: 0.72rem !important;
   }
 
   .resume-timeline-duration {
     color: #4b5563 !important;
     background: #f3f4f6 !important;
     border: 1px solid #cbd5e1 !important;
-    padding: 0.2rem 0.6rem !important;
+    padding: 0.05rem 0.3rem !important;
+    font-size: 0.68rem !important;
+    border-radius: 3px !important;
   }
 
   .resume-timeline-desc {
     color: #374151 !important;
+    font-size: 0.72rem !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
   }
 
+  /* Compact Technical Skills */
   .skills-category {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
     color: #0f172a !important;
-    padding: 1rem !important;
-    margin-bottom: 1rem !important;
+    padding: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+    border-radius: 4px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .skills-category:last-child {
+    margin-bottom: 0 !important;
   }
 
   .skills-category h4 {
     color: #0f172a !important;
+    font-size: 0.75rem !important;
     border-bottom: 1px solid #e2e8f0 !important;
-    padding-bottom: 0.25rem !important;
+    padding-bottom: 0.1rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .skills-grid {
+    gap: 0.3rem !important;
   }
 
   .skill-tag {
@@ -1869,10 +1958,8 @@ footer {
     color: #1f2937 !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
-  }
-
-  .resume-avatar-container {
-    border-color: #0d9488 !important;
-    box-shadow: none !important;
+    font-size: 0.68rem !important;
+    padding: 0.1rem 0.3rem !important;
+    border-radius: 3px !important;
   }
 }
