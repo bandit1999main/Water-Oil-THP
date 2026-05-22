@@ -390,7 +390,57 @@ async function loadAndRenderProjects() {
   // Load and render public resume timeline
   await loadAndRenderResume();
 
-  // Print Resume Event Listener
+  // Print Resume & Dynamic Single-Page Scaling Event Listeners
+  let originalHtmlFontSize = '';
+
+  window.addEventListener('beforeprint', () => {
+    // Force the About section to be active and visible during printing measurements
+    const aboutSection = document.getElementById('about');
+    if (aboutSection) {
+      aboutSection.classList.add('active');
+    }
+
+    const resumeContainer = document.querySelector('.resume-container');
+    if (resumeContainer) {
+      // Save original root font-size if any
+      originalHtmlFontSize = document.documentElement.style.fontSize;
+
+      // Temporarily set the font-size to the base print size of 12px for measurement baseline
+      document.documentElement.style.setProperty('font-size', '12px', 'important');
+
+      // Allow the layout to reflow under print width, then measure scroll height
+      const height = resumeContainer.scrollHeight;
+      
+      // Target printable height for a single A4 page at 96 DPI with width 756px is 1040px
+      const targetHeight = 1040; 
+
+      if (height > targetHeight) {
+        const scale = targetHeight / height;
+        // Don't shrink below a safe readability limit (e.g. min scale of 0.55 = 6.6px base font size)
+        const safeScale = Math.max(0.55, scale);
+        const dynamicFontSize = 12 * safeScale;
+        
+        document.documentElement.style.setProperty('font-size', `${dynamicFontSize}px`, 'important');
+      }
+    }
+  });
+
+  window.addEventListener('afterprint', () => {
+    // Restore original root font-size
+    document.documentElement.style.fontSize = originalHtmlFontSize;
+    
+    // Restore the correct active section based on the current URL hash
+    const activeHash = window.location.hash || '#home';
+    const sections = document.querySelectorAll('section');
+    sections.forEach(sec => {
+      if ('#' + sec.id === activeHash) {
+        sec.classList.add('active');
+      } else {
+        sec.classList.remove('active');
+      }
+    });
+  });
+
   const btnPrintResume = document.getElementById('btnPrintResume');
   if (btnPrintResume) {
     btnPrintResume.addEventListener('click', () => {

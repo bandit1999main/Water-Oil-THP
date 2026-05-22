@@ -1761,7 +1761,7 @@ footer {
     display: none !important;
   }
 
-  body, #app, main, #about, .resume-container {
+  body, #app, main, #about {
     background: #ffffff !important;
     color: #000000 !important;
     font-family: 'Inter', sans-serif !important;
@@ -1769,14 +1769,24 @@ footer {
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    box-shadow: none !important;
-    border: none !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   #about {
     display: block !important;
+  }
+
+  .resume-container {
+    width: 756px !important;
+    max-width: 756px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
   }
 
   .glow-text {
