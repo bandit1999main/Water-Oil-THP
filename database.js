@@ -2,12 +2,12 @@ import { projects as staticProjects } from './projects.js';
 
 // --- environment keys ---
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyBlX_PjdyFhi8ySSlOoMdXWBZH0pLQ1xHk",
+  authDomain: "tammadaday.firebaseapp.com",
+  projectId: "tammadaday",
+  storageBucket: "tammadaday.firebasestorage.app",
+  messagingSenderId: "81971118471",
+  appId: "1:81971118471:web:52835644628cd5fcda9322"
 };
 
 // Check if we have standard Firebase configurations in .env
