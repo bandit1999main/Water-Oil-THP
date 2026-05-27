@@ -354,6 +354,27 @@
               </div>
             </div>
 
+            <!-- Saved Templates Batch Manager -->
+            <div class="saved-templates-bar" style="background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small); padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 250px;">
+                <span style="font-size: 1.2rem;">💾</span>
+                <div style="text-align: left;">
+                  <strong style="font-size: 0.85rem; display: block; color: var(--text-primary);">ระบบบันทึกและโหลดชุดรายชื่อ (Saved Templates)</strong>
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">บันทึกรายชื่อเจ้าหน้าที่เก็บไว้ใช้ในรอบถัดไปได้ทันที</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <input type="text" id="templateNameInput" class="form-input" style="width: 200px; padding: 0.5rem;" placeholder="ชื่อบันทึก (เช่น รายชื่อโซน 1)" />
+                <button type="button" id="saveTemplateBtn" class="btn btn-primary btn-small" style="padding: 0.5rem 1rem;">💾 บันทึกชุดปัจจุบัน</button>
+                <div style="height: 20px; width: 1px; background: var(--border-glass); margin: 0 0.25rem;"></div>
+                <select id="templateSelect" class="form-select" style="width: 200px; padding: 0.5rem;">
+                  <option value="" disabled selected>-- เลือกรายชื่อที่บันทึกไว้ --</option>
+                </select>
+                <button type="button" id="loadTemplateBtn" class="btn btn-secondary btn-small" style="padding: 0.5rem 1rem;">📂 โหลดใช้งาน</button>
+                <button type="button" id="deleteTemplateBtn" class="btn btn-danger btn-small" style="padding: 0.5rem 0.8rem; border-radius: 8px;">🗑️ ลบ</button>
+              </div>
+            </div>
+
             <!-- Scrollable Table Container -->
             <div class="table-container">
               <table id="employeeTable">

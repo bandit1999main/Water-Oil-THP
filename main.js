@@ -112,6 +112,13 @@ const themeToggleBtn = document.getElementById('themeToggleBtn');
 const sunIcon = document.getElementById('sunIcon');
 const moonIcon = document.getElementById('moonIcon');
 
+// Saved Templates Manager DOM Elements
+const templateNameInput = document.getElementById('templateNameInput');
+const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+const templateSelect = document.getElementById('templateSelect');
+const loadTemplateBtn = document.getElementById('loadTemplateBtn');
+const deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
+
 /* --- INITIALIZATION --- */
 document.addEventListener('DOMContentLoaded', () => {
   // Populate Route Dropdowns
@@ -164,6 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
   exportCsvBtn.addEventListener('click', exportToCsv);
   printReportBtn.addEventListener('click', printReport);
   clearAllBtn.addEventListener('click', clearAllData);
+
+  // Saved Templates Events
+  saveTemplateBtn.addEventListener('click', saveCurrentListAsTemplate);
+  loadTemplateBtn.addEventListener('click', loadSelectedTemplate);
+  deleteTemplateBtn.addEventListener('click', deleteSelectedTemplate);
+  updateTemplateSelectDropdown();
 
   // Setup live changes
   globalFuelPriceInput.addEventListener('change', recalculateTableCosts);
@@ -583,10 +596,10 @@ function renderEmployeeTable() {
       <td>${maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
       <td><strong style="color: var(--text-primary);">${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</strong></td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic;">${item.signature}</span></td>
-      <td class="actions-col">
-        <button class="row-action-btn edit-row-btn" data-index="${index}" title="แก้ไขข้อมูล">✏️</button>
-        <button class="row-action-btn clone-row-btn" data-index="${index}" title="คัดลอกข้อมูล">📋</button>
-        <button class="row-action-btn delete-row-btn" data-index="${index}" title="ลบข้อมูล">❌</button>
+      <td class="actions-col" style="width: 240px; white-space: nowrap;">
+        <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
+        <button class="btn btn-secondary btn-small clone-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">📋 คัดลอก</button>
+        <button class="btn btn-danger btn-small delete-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">🗑️ ลบ</button>
       </td>
     `;
 
@@ -955,4 +968,77 @@ function printReport() {
   document.getElementById('printSigApproverPosVal').textContent = sigApproverPosVal;
 
   window.print();
+}
+
+/* --- SAVED TEMPLATES / BATCH MANAGER LOGIC --- */
+function updateTemplateSelectDropdown() {
+  const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
+  templateSelect.innerHTML = '<option value="" disabled selected>-- เลือกรายชื่อที่บันทึกไว้ --</option>';
+  
+  Object.keys(savedTemplates).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    templateSelect.appendChild(opt);
+  });
+}
+
+function saveCurrentListAsTemplate() {
+  const name = templateNameInput.value.trim();
+  if (!name) {
+    alert('กรุณากรอกชื่อสำหรับบันทึกชุดรายชื่อ!');
+    return;
+  }
+
+  if (employees.length === 0) {
+    alert('ไม่มีรายชื่อพนักงานในตารางเพื่อบันทึก!');
+    return;
+  }
+
+  const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
+  savedTemplates[name] = [...employees];
+  
+  localStorage.setItem('tp_saved_templates', JSON.stringify(savedTemplates));
+  templateNameInput.value = '';
+  
+  updateTemplateSelectDropdown();
+  alert(`บันทึกชุดรายชื่อ "${name}" เรียบร้อยแล้ว!`);
+}
+
+function loadSelectedTemplate() {
+  const selectedName = templateSelect.value;
+  if (!selectedName) {
+    alert('กรุณาเลือกชุดรายชื่อที่ต้องการโหลด!');
+    return;
+  }
+
+  const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
+  const list = savedTemplates[selectedName];
+  
+  if (list) {
+    if (confirm(`คุณต้องการโหลดชุดรายชื่อ "${selectedName}" มาเขียนทับตารางปัจจุบันใช่หรือไม่?`)) {
+      employees = JSON.parse(JSON.stringify(list));
+      localStorage.setItem('tp_employees', JSON.stringify(employees));
+      cancelEdit();
+      renderEmployeeTable();
+      alert(`โหลดชุดรายชื่อ "${selectedName}" สำเร็จ!`);
+    }
+  }
+}
+
+function deleteSelectedTemplate() {
+  const selectedName = templateSelect.value;
+  if (!selectedName) {
+    alert('กรุณาเลือกชุดรายชื่อที่ต้องการลบ!');
+    return;
+  }
+
+  if (confirm(`คุณต้องการลบชุดรายชื่อ "${selectedName}" ใช่หรือไม่?`)) {
+    const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
+    delete savedTemplates[selectedName];
+    
+    localStorage.setItem('tp_saved_templates', JSON.stringify(savedTemplates));
+    updateTemplateSelectDropdown();
+    alert(`ลบชุดรายชื่อ "${selectedName}" เรียบร้อยแล้ว!`);
+  }
 }
