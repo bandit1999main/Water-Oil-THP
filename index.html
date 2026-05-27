@@ -100,6 +100,37 @@
               </div>
               <p class="input-tip">สามารถแก้ไขเพื่อใช้ราคานี้กับทุกคน หรือกดเพื่อคำนวณถัวเฉลี่ยตามระเบียบ</p>
             </div>
+
+            <!-- Signature Configurations for PDF Report -->
+            <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-glass); padding-top: 1rem;">
+              <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-highlight); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span>✍️ ผู้ลงนามในรายงาน (PDF)</span>
+              </h4>
+              
+              <div class="form-group">
+                <label>ผู้จัดทำ (ชื่อ / ตำแหน่ง)</label>
+                <div class="form-row-2">
+                  <input type="text" id="sigMakerName" class="form-input" value="นายนิพล ทรัพย์หมื่นแสน" placeholder="ชื่อผู้จัดทำ" />
+                  <input type="text" id="sigMakerPos" class="form-input" value="หัวหน้าทำการ" placeholder="ตำแหน่ง" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>ผู้ตรวจสอบ (ชื่อ / ตำแหน่ง)</label>
+                <div class="form-row-2">
+                  <input type="text" id="sigCheckerName" class="form-input" value="" placeholder="ชื่อผู้ตรวจสอบ (ปล่อยว่างได้)" />
+                  <input type="text" id="sigCheckerPos" class="form-input" value="หน.สพ./ปจ." placeholder="ตำแหน่ง" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>ผู้อนุมัติ (ชื่อ / ตำแหน่ง)</label>
+                <div class="form-row-2">
+                  <input type="text" id="sigApproverName" class="form-input" value="" placeholder="ชื่อผู้อนุมัติ (ปล่อยว่างได้)" />
+                  <input type="text" id="sigApproverPos" class="form-input" value="ผู้จัดการฝ่าย" placeholder="ตำแหน่ง" />
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Card 2: Form Input (Staff / Supervisor Tab Switching) -->
@@ -467,18 +498,18 @@
       <div class="print-signatures">
         <div class="sig-box">
           <p>ลงชื่อ..........................................................ผู้จัดทำ</p>
-          <p style="margin-top: 0.5rem;">(..........................................................)</p>
-          <p>ตำแหน่ง..........................................................</p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigMakerNameVal">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigMakerPosVal">..........................................................</span></p>
         </div>
         <div class="sig-box">
           <p>ลงชื่อ..........................................................ผู้ตรวจสอบ</p>
-          <p style="margin-top: 0.5rem;">(..........................................................)</p>
-          <p>ตำแหน่ง หน.สพ./ปจ. ..........................................................</p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigCheckerNameVal">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigCheckerPosVal">..........................................................</span></p>
         </div>
         <div class="sig-box">
           <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
-          <p style="margin-top: 0.5rem;">(..........................................................)</p>
-          <p>ตำแหน่ง ผู้จัดการฝ่าย..........................................................</p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigApproverNameVal">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigApproverPosVal">..........................................................</span></p>
         </div>
       </div>
     </div>

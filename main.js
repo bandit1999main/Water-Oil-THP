@@ -939,5 +939,20 @@ function printReport() {
   document.getElementById('printTotalMaintenance').textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
   document.getElementById('printGrandTotal').textContent = grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
 
+  // Map signatory values onto print preview
+  const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
+  const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
+  const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
+  const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
+  const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
+  const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
+
+  document.getElementById('printSigMakerNameVal').textContent = sigMakerNameVal;
+  document.getElementById('printSigMakerPosVal').textContent = sigMakerPosVal;
+  document.getElementById('printSigCheckerNameVal').textContent = sigCheckerNameVal;
+  document.getElementById('printSigCheckerPosVal').textContent = sigCheckerPosVal;
+  document.getElementById('printSigApproverNameVal').textContent = sigApproverNameVal;
+  document.getElementById('printSigApproverPosVal').textContent = sigApproverPosVal;
+
   window.print();
 }
