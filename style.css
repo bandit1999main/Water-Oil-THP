@@ -746,7 +746,7 @@ tr:hover td {
 }
 
 /* --- RESPONSIVE ADJUSTMENTS --- */
-@media (max-width: 1350px) {
+@media (max-width: 1600px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
