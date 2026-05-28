@@ -300,8 +300,8 @@ function addSupervisorMission() {
   if (type === 'ตรวจสอบการนำจ่าย') {
     // 1/2 of standard daily distance
     distance = (routeInfo.workerDist / 2) * days;
-    // liters = (1/2 distance) / 20 km/liter
-    liters = Number(((routeInfo.workerDist / 2) / 20 * days).toFixed(2));
+    // Sum workerLiters over days and round up in all cases if there are decimals
+    liters = Math.ceil(routeInfo.workerLiters * days);
   } else {
     // Substitute or Training gets full route daily rates
     distance = routeInfo.workerDist * days;
@@ -621,7 +621,12 @@ function renderEmployeeTable() {
     // Build description strings for the table
     let routeDesc = '';
     if (item.formMode === 'supervisor') {
-      routeDesc = item.missions.map(m => `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`).join(', ');
+      routeDesc = item.missions.map(m => {
+        if (m.type === 'ตรวจสอบการนำจ่าย') {
+          return 'ตรวจสอบการนำจ่าย';
+        }
+        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      }).join(', ');
     } else {
       routeDesc = `ด้านจ่ายที่ ${item.route}`;
     }
@@ -914,7 +919,12 @@ function exportToCsv() {
 
     let routeDesc = '';
     if (item.formMode === 'supervisor') {
-      routeDesc = item.missions.map(m => `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`).join('; ');
+      routeDesc = item.missions.map(m => {
+        if (m.type === 'ตรวจสอบการนำจ่าย') {
+          return 'ตรวจสอบการนำจ่าย';
+        }
+        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      }).join('; ');
     } else {
       routeDesc = `ด้านจ่ายที่ ${item.route}`;
     }
@@ -968,7 +978,12 @@ function printReport() {
 
     let routeDesc = '';
     if (item.formMode === 'supervisor') {
-      routeDesc = item.missions.map(m => `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`).join('<br>');
+      routeDesc = item.missions.map(m => {
+        if (m.type === 'ตรวจสอบการนำจ่าย') {
+          return 'ตรวจสอบการนำจ่าย';
+        }
+        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      }).join('<br>');
     } else {
       routeDesc = `ด้านจ่ายที่ ${item.route}`;
     }
