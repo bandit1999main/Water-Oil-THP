@@ -437,6 +437,35 @@ function calculateClaimLiters(item) {
 }
 
 /**
+ * Helper to calculate maintenance cost for a single supervisor mission
+ */
+function calculateSingleMissionMaint(item, m) {
+  const route = ROUTE_DATA[m.route];
+  if (!route) return 0;
+
+  const dailyDist = m.type === 'ตรวจสอบการนำจ่าย' ? (route.workerDist / 2) : route.workerDist;
+  
+  let tier = '';
+  if (dailyDist <= 40) tier = '1-40';
+  else if (dailyDist <= 70) tier = '41-70';
+  else if (dailyDist <= 100) tier = '71-100';
+  else tier = '101+';
+
+  if (item.vehicle === 'รถยนต์') {
+    return m.distance * 2.25;
+  } else if (item.vehicle === 'เรือยนต์') {
+    return 48 * m.days;
+  } else {
+    const rates = {
+      'รถจักรยานยนต์': { '1-40': 51, '41-70': 53, '71-100': 55, '101+': 57 },
+      'รถจักรยานยนต์ไฟฟ้า': { '1-40': 84, '41-70': 97, '71-100': 110, '101+': 123 }
+    };
+    const dailyRate = rates[item.vehicle] ? rates[item.vehicle][tier] : 0;
+    return dailyRate * m.days;
+  }
+}
+
+/**
  * Calculates Maintenance Cost based on Post regulations
  */
 function calculateMaintenanceCost(item) {
@@ -618,45 +647,113 @@ function renderEmployeeTable() {
   let totalMaintCost = 0;
   let grandTotal = 0;
 
-  employees.forEach((item, index) => {
-    const liters = calculateClaimLiters(item);
-    const fuelCost = liters * currentFuelPrice;
-    const maintCost = calculateMaintenanceCost(item);
-    const sumTotal = fuelCost + maintCost;
+  // Flatten the employees and their supervisor missions into separate rows
+  let flatRows = [];
+  employees.forEach((item, parentIndex) => {
+    if (item.formMode !== 'supervisor') {
+      const liters = calculateClaimLiters(item);
+      const fuelCost = liters * currentFuelPrice;
+      const maintCost = calculateMaintenanceCost(item);
+      const sumTotal = fuelCost + maintCost;
 
-    totalFuelCost += fuelCost;
-    totalMaintCost += maintCost;
-    grandTotal += sumTotal;
-
-    // Build description strings for the table
-    let routeDescHtml = '';
-    let routeDescPlain = '';
-    if (item.formMode === 'supervisor') {
-      const mapped = item.missions.map(m => {
-        if (m.type === 'ตรวจสอบการนำจ่าย') {
-          return 'ตรวจสอบการนำจ่าย';
-        }
-        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      flatRows.push({
+        parentIndex,
+        item,
+        name: item.name,
+        position: item.position,
+        routeDescHtml: `ด้านจ่ายที่ ${item.route}`,
+        routeDescPlain: `ด้านจ่ายที่ ${item.route}`,
+        workDays: item.workDays,
+        liters: liters,
+        fuelCost: fuelCost,
+        maintCost: maintCost,
+        sumTotal: sumTotal,
+        signature: item.signature,
+        remarks: item.remarks
       });
-      const uniqueMapped = [...new Set(mapped)];
-      routeDescHtml = uniqueMapped.map(desc => `<div style="margin-bottom: 2px;">• ${desc}</div>`).join('');
-      routeDescPlain = uniqueMapped.join(', ');
     } else {
-      routeDescHtml = `ด้านจ่ายที่ ${item.route}`;
-      routeDescPlain = `ด้านจ่ายที่ ${item.route}`;
+      // 1. Group 'ตรวจสอบการนำจ่าย' into a single row
+      const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+      if (inspectMissions.length > 0) {
+        let rawInspectionLiters = 0;
+        let inspectDays = 0;
+        let inspectMaint = 0;
+
+        inspectMissions.forEach(m => {
+          const routeInfo = ROUTE_DATA[m.route];
+          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+          rawInspectionLiters += dailyLiters * m.days;
+          inspectDays += m.days;
+          inspectMaint += calculateSingleMissionMaint(item, m);
+        });
+
+        const liters = Math.ceil(rawInspectionLiters / 2);
+        const fuelCost = liters * currentFuelPrice;
+        const sumTotal = fuelCost + inspectMaint;
+
+        flatRows.push({
+          parentIndex,
+          item,
+          name: item.name,
+          position: item.position,
+          routeDescHtml: `ตรวจสอบการนำจ่าย`,
+          routeDescPlain: `ตรวจสอบการนำจ่าย`,
+          workDays: inspectDays,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: inspectMaint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      }
+
+      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
+      const otherMissions = item.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+      otherMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        const liters = dailyLiters * m.days;
+        const fuelCost = liters * currentFuelPrice;
+        const maint = calculateSingleMissionMaint(item, m);
+        const sumTotal = fuelCost + maint;
+
+        flatRows.push({
+          parentIndex,
+          item,
+          name: item.name,
+          position: item.position,
+          routeDescHtml: `${m.type} (ด้าน ${m.route})`,
+          routeDescPlain: `${m.type} (ด้าน ${m.route})`,
+          workDays: m.days,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: maint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      });
     }
+  });
+
+  // Render the flattened rows
+  flatRows.forEach((row, index) => {
+    totalFuelCost += row.fuelCost;
+    totalMaintCost += row.maintCost;
+    grandTotal += row.sumTotal;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${index + 1}</td>
-      <td><strong>${item.name}</strong></td>
-      <td><span class="badge position-${item.position.replace(/[\s\(\)\.]/g, '')}">${item.position}</span></td>
-      <td style="font-size: 0.82rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${routeDescPlain}">${routeDescHtml}</td>
-      <td>${liters.toLocaleString(undefined, { minimumFractionDigits: 2 })} ลิตร</td>
-      <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
-      <td>${maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
-      <td><strong style="color: var(--text-primary);">${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</strong></td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic;">${item.signature}</span></td>
+      <td><strong>${row.name}</strong></td>
+      <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position}</span></td>
+      <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>
+      <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2 })} ลิตร</td>
+      <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
+      <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
+      <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</strong></td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic;">${row.signature}</span></td>
       <td class="actions-col" style="width: 240px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
         <button class="btn btn-secondary btn-small clone-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">📋 คัดลอก</button>
@@ -664,9 +761,9 @@ function renderEmployeeTable() {
       </td>
     `;
 
-    tr.querySelector('.edit-row-btn').addEventListener('click', () => loadRowToForm(index));
-    tr.querySelector('.clone-row-btn').addEventListener('click', () => cloneRow(index));
-    tr.querySelector('.delete-row-btn').addEventListener('click', () => deleteRow(index));
+    tr.querySelector('.edit-row-btn').addEventListener('click', () => loadRowToForm(row.parentIndex));
+    tr.querySelector('.clone-row-btn').addEventListener('click', () => cloneRow(row.parentIndex));
+    tr.querySelector('.delete-row-btn').addEventListener('click', () => deleteRow(row.parentIndex));
 
     employeeTableBody.appendChild(tr);
   });
@@ -924,28 +1021,90 @@ function exportToCsv() {
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
   let csvContent = "\uFEFF";
   
-  csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง/บทบาท,รายละเอียดด้านจ่าย/ภารกิจ,ปริมาณน้ำมัน (ลิตร),ค่าน้ำมัน (บาท),ค่าบำรุงรักษา (บาท),รวมเบิกจ่าย (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
+  csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง/บทบาท,รายละเอียดด้านจ่าย/ภารกิจ,วันทำงาน,ปริมาณน้ำมัน (ลิตร),ค่าน้ำมัน (บาท),ค่าบำรุงรักษา (บาท),รวมเบิกจ่าย (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
   
-  employees.forEach((item, index) => {
-    const liters = calculateClaimLiters(item);
-    const fuelCost = liters * currentFuelPrice;
-    const maintCost = calculateMaintenanceCost(item);
-    const sumTotal = fuelCost + maintCost;
+  let flatRows = [];
+  employees.forEach((item, parentIndex) => {
+    if (item.formMode !== 'supervisor') {
+      const liters = calculateClaimLiters(item);
+      const fuelCost = liters * currentFuelPrice;
+      const maintCost = calculateMaintenanceCost(item);
+      const sumTotal = fuelCost + maintCost;
 
-    let routeDesc = '';
-    if (item.formMode === 'supervisor') {
-      const mapped = item.missions.map(m => {
-        if (m.type === 'ตรวจสอบการนำจ่าย') {
-          return 'ตรวจสอบการนำจ่าย';
-        }
-        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      flatRows.push({
+        name: item.name,
+        position: item.position,
+        routeDesc: `ด้านจ่ายที่ ${item.route}`,
+        workDays: item.workDays,
+        liters: liters,
+        fuelCost: fuelCost,
+        maintCost: maintCost,
+        sumTotal: sumTotal,
+        signature: item.signature,
+        remarks: item.remarks
       });
-      routeDesc = [...new Set(mapped)].join('; ');
     } else {
-      routeDesc = `ด้านจ่ายที่ ${item.route}`;
-    }
+      // 1. Group 'ตรวจสอบการนำจ่าย'
+      const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+      if (inspectMissions.length > 0) {
+        let rawInspectionLiters = 0;
+        let inspectDays = 0;
+        let inspectMaint = 0;
 
-    csvContent += `${index + 1},"${item.name}","${item.position}","${routeDesc}",${liters.toFixed(2)},${fuelCost.toFixed(2)},${maintCost.toFixed(2)},${sumTotal.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
+        inspectMissions.forEach(m => {
+          const routeInfo = ROUTE_DATA[m.route];
+          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+          rawInspectionLiters += dailyLiters * m.days;
+          inspectDays += m.days;
+          inspectMaint += calculateSingleMissionMaint(item, m);
+        });
+
+        const liters = Math.ceil(rawInspectionLiters / 2);
+        const fuelCost = liters * currentFuelPrice;
+        const sumTotal = fuelCost + inspectMaint;
+
+        flatRows.push({
+          name: item.name,
+          position: item.position,
+          routeDesc: `ตรวจสอบการนำจ่าย`,
+          workDays: inspectDays,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: inspectMaint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      }
+
+      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
+      const otherMissions = item.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+      otherMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        const liters = dailyLiters * m.days;
+        const fuelCost = liters * currentFuelPrice;
+        const maint = calculateSingleMissionMaint(item, m);
+        const sumTotal = fuelCost + maint;
+
+        flatRows.push({
+          name: item.name,
+          position: item.position,
+          routeDesc: `${m.type} (ด้าน ${m.route})`,
+          workDays: m.days,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: maint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      });
+    }
+  });
+
+  flatRows.forEach((row, index) => {
+    csvContent += `${index + 1},"${row.name}","${row.position}","${row.routeDesc}",${row.workDays},${row.liters.toFixed(2)},${row.fuelCost.toFixed(2)},${row.maintCost.toFixed(2)},${row.sumTotal.toFixed(2)},"${row.signature}","${row.remarks}"\n`;
   });
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -982,47 +1141,110 @@ function printReport() {
   let totalMaintCost = 0;
   let grandTotal = 0;
 
-  employees.forEach((item, index) => {
-    const liters = calculateClaimLiters(item);
-    const fuelCost = liters * currentFuelPrice;
-    const maintCost = calculateMaintenanceCost(item);
-    const sumTotal = fuelCost + maintCost;
+  // Flatten the employees and their supervisor missions into separate rows
+  let flatRows = [];
+  employees.forEach((item, parentIndex) => {
+    if (item.formMode !== 'supervisor') {
+      const liters = calculateClaimLiters(item);
+      const fuelCost = liters * currentFuelPrice;
+      const maintCost = calculateMaintenanceCost(item);
+      const sumTotal = fuelCost + maintCost;
 
-    totalFuelCost += fuelCost;
-    totalMaintCost += maintCost;
-    grandTotal += sumTotal;
-
-    let routeDescHtml = '';
-    if (item.formMode === 'supervisor') {
-      const mapped = item.missions.map(m => {
-        if (m.type === 'ตรวจสอบการนำจ่าย') {
-          return 'ตรวจสอบการนำจ่าย';
-        }
-        return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
+      flatRows.push({
+        name: item.name,
+        position: item.position,
+        routeDesc: `ด้านจ่ายที่ ${item.route}`,
+        workDays: item.workDays,
+        liters: liters,
+        fuelCost: fuelCost,
+        maintCost: maintCost,
+        sumTotal: sumTotal,
+        signature: item.signature,
+        remarks: item.remarks
       });
-      routeDescHtml = [...new Set(mapped)].map(desc => `• ${desc}`).join('<br>');
     } else {
-      routeDescHtml = `ด้านจ่ายที่ ${item.route}`;
+      // 1. Group 'ตรวจสอบการนำจ่าย'
+      const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+      if (inspectMissions.length > 0) {
+        let rawInspectionLiters = 0;
+        let inspectDays = 0;
+        let inspectMaint = 0;
+
+        inspectMissions.forEach(m => {
+          const routeInfo = ROUTE_DATA[m.route];
+          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+          rawInspectionLiters += dailyLiters * m.days;
+          inspectDays += m.days;
+          inspectMaint += calculateSingleMissionMaint(item, m);
+        });
+
+        const liters = Math.ceil(rawInspectionLiters / 2);
+        const fuelCost = liters * currentFuelPrice;
+        const sumTotal = fuelCost + inspectMaint;
+
+        flatRows.push({
+          name: item.name,
+          position: item.position,
+          routeDesc: `ตรวจสอบการนำจ่าย`,
+          workDays: inspectDays,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: inspectMaint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      }
+
+      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
+      const otherMissions = item.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+      otherMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        const liters = dailyLiters * m.days;
+        const fuelCost = liters * currentFuelPrice;
+        const maint = calculateSingleMissionMaint(item, m);
+        const sumTotal = fuelCost + maint;
+
+        flatRows.push({
+          name: item.name,
+          position: item.position,
+          routeDesc: `${m.type} (ด้าน ${m.route})`,
+          workDays: m.days,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: maint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks
+        });
+      });
     }
+  });
+
+  flatRows.forEach((row, index) => {
+    totalFuelCost += row.fuelCost;
+    totalMaintCost += row.maintCost;
+    grandTotal += row.sumTotal;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${index + 1}</td>
-      <td><strong>${item.name}</strong></td>
-      <td>${item.position}</td>
-      <td style="text-align: left !important; font-size: 8pt; line-height: 1.3;">${routeDescHtml}</td>
-      <td>${item.workDays} วัน</td>
-      <td>${liters.toFixed(2)}</td>
-      <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-      <td>${maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-      <td><strong>${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-      <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #e5e5e5 !important;">${item.signature}</span></td>
-      <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
+      <td><strong>${row.name}</strong></td>
+      <td>${row.position}</td>
+      <td style="text-align: left !important; font-size: 8pt; line-height: 1.3;">${row.routeDesc}</td>
+      <td>${row.workDays} วัน</td>
+      <td>${row.liters.toFixed(2)}</td>
+      <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+      <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #e5e5e5 !important;">${row.signature}</span></td>
+      <td><span style="font-size: 8pt; color: #444;">${row.remarks}</span></td>
     `;
     printTableBody.appendChild(tr);
   });
 
-  document.getElementById('printTotalCount').textContent = employees.length.toString();
+  document.getElementById('printTotalCount').textContent = flatRows.length.toString();
   document.getElementById('printTotalFuel').textContent = totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
   document.getElementById('printTotalMaintenance').textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
   document.getElementById('printGrandTotal').textContent = grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
