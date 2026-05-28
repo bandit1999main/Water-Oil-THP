@@ -136,6 +136,7 @@ const routeHasCarSelect = document.getElementById('routeHasCar');
 const saveSingleRouteBtn = document.getElementById('saveSingleRouteBtn');
 const resetAllRoutesBtn = document.getElementById('resetAllRoutesBtn');
 const routeEditorTableBody = document.getElementById('routeEditorTableBody');
+const toggleSigEditBtn = document.getElementById('toggleSigEditBtn');
 
 /* --- INITIALIZATION --- */
 document.addEventListener('DOMContentLoaded', () => {
@@ -214,6 +215,9 @@ document.addEventListener('DOMContentLoaded', () => {
   editRouteSelect.addEventListener('change', loadSelectedRouteToEditorForm);
   saveSingleRouteBtn.addEventListener('click', saveSingleRouteSettings);
   resetAllRoutesBtn.addEventListener('click', resetRouteDataDefaults);
+  
+  // Bind Signatory editor events
+  toggleSigEditBtn.addEventListener('click', toggleSignatoryInputsLock);
 
   // Render Table
   renderEmployeeTable();
@@ -1187,5 +1191,34 @@ function resetRouteDataDefaults() {
     loadSelectedRouteToEditorForm();
     renderEmployeeTable();
     alert('รีเซ็ตข้อมูลด้านจ่ายทั้งหมดเรียบร้อยแล้ว!');
+  }
+}
+
+/* --- SIGNATORY INPUTS LOCK/UNLOCK TOGGLE --- */
+function toggleSignatoryInputsLock() {
+  const inputs = [
+    document.getElementById('sigMakerName'),
+    document.getElementById('sigMakerPos'),
+    document.getElementById('sigCheckerName'),
+    document.getElementById('sigCheckerPos'),
+    document.getElementById('sigApproverName'),
+    document.getElementById('sigApproverPos')
+  ];
+
+  const isCurrentlyLocked = inputs[0].disabled;
+
+  if (isCurrentlyLocked) {
+    // Unlock all inputs
+    inputs.forEach(input => input.disabled = false);
+    toggleSigEditBtn.innerHTML = '🔒 ล็อกผู้ลงนาม';
+    toggleSigEditBtn.style.background = 'var(--post-orange)';
+    toggleSigEditBtn.style.color = '#fff';
+    inputs[0].focus();
+  } else {
+    // Lock all inputs
+    inputs.forEach(input => input.disabled = true);
+    toggleSigEditBtn.innerHTML = '✏️ แก้ไขผู้ลงนาม';
+    toggleSigEditBtn.style.background = 'transparent';
+    toggleSigEditBtn.style.color = 'var(--post-orange)';
   }
 }
