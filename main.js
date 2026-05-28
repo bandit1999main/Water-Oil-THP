@@ -402,12 +402,22 @@ function handleClaimMethodSelect() {
  */
 function calculateClaimLiters(item) {
   if (item.formMode === 'supervisor') {
-    // Supervisors claim based on accumulated mission lites
-    let sumLiters = 0;
+    let otherLiters = 0;
+    let rawInspectionLiters = 0;
+    
     item.missions.forEach(m => {
-      sumLiters += m.liters;
+      const routeInfo = ROUTE_DATA[m.route];
+      const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+      
+      if (m.type === 'ตรวจสอบการนำจ่าย') {
+        rawInspectionLiters += dailyLiters * m.days;
+      } else {
+        otherLiters += dailyLiters * m.days;
+      }
     });
-    return Number(sumLiters.toFixed(2));
+    
+    const totalLiters = otherLiters + Math.ceil(rawInspectionLiters);
+    return Number(totalLiters.toFixed(2));
   }
 
   const route = ROUTE_DATA[item.route];
@@ -619,7 +629,8 @@ function renderEmployeeTable() {
     grandTotal += sumTotal;
 
     // Build description strings for the table
-    let routeDesc = '';
+    let routeDescHtml = '';
+    let routeDescPlain = '';
     if (item.formMode === 'supervisor') {
       const mapped = item.missions.map(m => {
         if (m.type === 'ตรวจสอบการนำจ่าย') {
@@ -627,9 +638,12 @@ function renderEmployeeTable() {
         }
         return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
       });
-      routeDesc = [...new Set(mapped)].join(', ');
+      const uniqueMapped = [...new Set(mapped)];
+      routeDescHtml = uniqueMapped.map(desc => `<div style="margin-bottom: 2px;">• ${desc}</div>`).join('');
+      routeDescPlain = uniqueMapped.join(', ');
     } else {
-      routeDesc = `ด้านจ่ายที่ ${item.route}`;
+      routeDescHtml = `ด้านจ่ายที่ ${item.route}`;
+      routeDescPlain = `ด้านจ่ายที่ ${item.route}`;
     }
 
     const tr = document.createElement('tr');
@@ -637,7 +651,7 @@ function renderEmployeeTable() {
       <td>${index + 1}</td>
       <td><strong>${item.name}</strong></td>
       <td><span class="badge position-${item.position.replace(/[\s\(\)\.]/g, '')}">${item.position}</span></td>
-      <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word;" title="${routeDesc}">${routeDesc}</td>
+      <td style="font-size: 0.82rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${routeDescPlain}">${routeDescHtml}</td>
       <td>${liters.toLocaleString(undefined, { minimumFractionDigits: 2 })} ลิตร</td>
       <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
       <td>${maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
@@ -978,7 +992,7 @@ function printReport() {
     totalMaintCost += maintCost;
     grandTotal += sumTotal;
 
-    let routeDesc = '';
+    let routeDescHtml = '';
     if (item.formMode === 'supervisor') {
       const mapped = item.missions.map(m => {
         if (m.type === 'ตรวจสอบการนำจ่าย') {
@@ -986,9 +1000,9 @@ function printReport() {
         }
         return `${m.type} (ด้าน ${m.route} / ${m.days} วัน)`;
       });
-      routeDesc = [...new Set(mapped)].join('<br>');
+      routeDescHtml = [...new Set(mapped)].map(desc => `• ${desc}`).join('<br>');
     } else {
-      routeDesc = `ด้านจ่ายที่ ${item.route}`;
+      routeDescHtml = `ด้านจ่ายที่ ${item.route}`;
     }
 
     const tr = document.createElement('tr');
@@ -996,7 +1010,7 @@ function printReport() {
       <td>${index + 1}</td>
       <td><strong>${item.name}</strong></td>
       <td>${item.position}</td>
-      <td style="text-align: left !important; font-size: 8.5pt;">${routeDesc}</td>
+      <td style="text-align: left !important; font-size: 8pt; line-height: 1.3;">${routeDescHtml}</td>
       <td>${item.workDays} วัน</td>
       <td>${liters.toFixed(2)}</td>
       <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
