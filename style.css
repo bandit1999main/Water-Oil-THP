@@ -38,6 +38,36 @@
   --card-bg-gradient: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.4));
 }
 
+/* --- DYNAMIC MODE STYLING (WATER THEME) --- */
+[data-mode="water"] {
+  --post-orange-rgb: 14, 165, 233;
+  --post-orange: hsl(199, 89%, 48%);
+  --post-orange-hover: hsl(199, 89%, 40%);
+  --post-red: hsl(215, 90%, 45%);
+  --text-highlight: hsl(199, 89%, 40%);
+}
+
+[data-mode="water"][data-theme="dark"] {
+  --post-orange-rgb: 56, 189, 248;
+  --post-orange: hsl(199, 89%, 58%);
+  --post-orange-hover: hsl(199, 89%, 48%);
+  --post-red: hsl(215, 90%, 55%);
+  --text-highlight: hsl(199, 89%, 58%);
+}
+
+[data-mode="water"] .orb-red {
+  background: radial-gradient(circle, hsl(190, 90%, 50%) 0%, transparent 70%) !important;
+}
+
+[data-mode="water"] .orb-orange {
+  background: radial-gradient(circle, hsl(210, 85%, 45%) 0%, transparent 70%) !important;
+}
+
+[data-mode="water"] .brand-logo {
+  background: linear-gradient(135deg, hsl(199, 89%, 48%), hsl(215, 90%, 45%)) !important;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
+}
+
 /* --- BASE STYLING --- */
 * {
   box-sizing: border-box;

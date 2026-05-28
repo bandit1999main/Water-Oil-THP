@@ -31,11 +31,21 @@
             </svg>
           </div>
           <div class="brand-text">
-            <h1>ไปรษณีย์ไทย</h1>
-            <p>Thailand Post Fuel Engine v2.5</p>
+            <h1 id="headerBrandTitle">ไปรษณีย์ไทย</h1>
+            <p id="headerBrandSubtitle">Thailand Post Fuel Engine v2.5</p>
           </div>
         </div>
         <div class="header-controls">
+          <!-- Segmented Tab Mode Switcher -->
+          <div class="mode-selector-tabs" style="display: flex; background: rgba(0, 0, 0, 0.06); padding: 0.25rem; border-radius: 12px; border: 1px solid var(--border-glass); margin-right: 0.5rem; align-items: center; gap: 0.2rem;">
+            <button id="modeFuelBtn" class="btn btn-small" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: var(--post-orange); color: white; border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
+              <span>⛽</span> ค่าน้ำมัน
+            </button>
+            <button id="modeWaterBtn" class="btn btn-small" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: transparent; color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
+              <span>🥤</span> ค่าน้ำดื่ม
+            </button>
+          </div>
+          
           <div id="dbStatusBadge" class="db-status-badge connecting">
             <span class="status-dot"></span>
             <span class="status-text">Connecting to cloud...</span>
@@ -161,6 +171,12 @@
               <div class="form-group">
                 <label for="empName">ชื่อ - นามสกุล</label>
                 <input type="text" id="empName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+              </div>
+
+              <!-- Salary field for water calculation (hidden by default) -->
+              <div class="form-group hidden" id="salaryGroup">
+                <label for="empSalary">เงินเดือน (บาท)</label>
+                <input type="number" id="empSalary" class="form-input text-highlight" placeholder="ระบุเงินเดือน (เช่น 26000)" value="0" />
               </div>
 
               <!-- POSITION / ROUTE SELECTION -->
@@ -658,7 +674,7 @@
     </div>
 
 
-    <!-- Printable Official Report Layout (Hidden on Screen, Visible on Print) -->
+    <!-- Printable Official Fuel Report Layout (Hidden on Screen, Visible on Print) -->
     <div id="printReportArea" class="print-only">
       <div class="print-header">
         <div class="print-title-container">
@@ -716,6 +732,70 @@
           <p>ลงชื่อ..........................................................<span id="printSigApproverTitleVal">ผู้อนุมัติ</span></p>
           <p style="margin-top: 0.5rem;">(<span id="printSigApproverNameVal">..........................................................</span>)</p>
           <p>ตำแหน่ง <span id="printSigApproverPosVal">..........................................................</span></p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Printable Official Water Report Layout (Hidden on Screen, Visible on Print) -->
+    <div id="printWaterReportArea" class="print-only">
+      <div class="print-header">
+        <div class="print-title-container">
+          <h2>แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ</h2>
+          <h3>บริษัท ไปรษณีย์ไทย จำกัด</h3>
+          <p>ประจำเดือน <span id="printWaterMonthText">-</span> พ.ศ. <span id="printWaterYearText">-</span></p>
+        </div>
+        <div class="print-meta-info" style="text-align: right;">
+          <p style="font-size: 0.8rem; margin-bottom: 0.2rem;">เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
+          <p style="font-size: 0.8rem; margin-bottom: 0.2rem;">เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
+          <p style="font-size: 0.8rem;">หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
+        </div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 5%">ลำดับ</th>
+            <th style="width: 25%">ชื่อ - นามสกุลผู้รับเงิน</th>
+            <th style="width: 18%">ปฏิบัติหน้าที่</th>
+            <th style="width: 10%">เงินเดือน (บาท)</th>
+            <th style="width: 8%">วันปฏิบัติงาน</th>
+            <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
+            <th style="width: 8%">ภาษี (ถ้ามี)</th>
+            <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
+            <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
+            <th style="width: 10%">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody id="printWaterTableBody">
+          <!-- Rendered via JS -->
+        </tbody>
+      </table>
+
+      <div class="print-summary-section">
+        <div class="summary-block">
+          <p>จำนวนรายชื่อผู้เบิกทั้งสิ้น: <strong id="printWaterTotalCount">-</strong> ราย</p>
+          <p>ค่าน้ำดื่มรวมทั้งสิ้น: <strong id="printWaterTotalCost">-</strong> บาท</p>
+          <p>ภาษีหัก ณ ที่จ่ายรวมทั้งสิ้น: <strong id="printWaterTotalTax">-</strong> บาท</p>
+          <p class="final-sum">ยอดเงินจ่ายสุทธิรวมทั้งสิ้น: <strong id="printWaterGrandTotal">-</strong> บาท</p>
+        </div>
+      </div>
+
+      <div class="print-signatures">
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................<span id="printSigMakerTitleValWater">ผู้จัดทำ</span></p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigMakerNameValWater">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigMakerPosValWater">..........................................................</span></p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................<span id="printSigCheckerTitleValWater">ผู้ตรวจสอบ</span></p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigCheckerNameValWater">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigCheckerPosValWater">..........................................................</span></p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................<span id="printSigApproverTitleValWater">ผู้อนุมัติ</span></p>
+          <p style="margin-top: 0.5rem;">(<span id="printSigApproverNameValWater">..........................................................</span>)</p>
+          <p>ตำแหน่ง <span id="printSigApproverPosValWater">..........................................................</span></p>
         </div>
       </div>
     </div>

@@ -2,6 +2,8 @@ import {
   isCloudConnected,
   fetchEmployees,
   saveEmployees,
+  fetchWaterEmployees,
+  saveWaterEmployees,
   fetchRouteData,
   saveRouteData,
   resetCloudRouteData,
@@ -12,6 +14,10 @@ import {
   saveSignatoryProfile,
   deleteSignatoryProfile
 } from './database.js';
+
+// Global Mode State
+let activeMode = 'fuel'; // 'fuel' or 'water'
+let waterEmployees = JSON.parse(localStorage.getItem('tp_water_employees')) || [];
 
 const OFFICIAL_ROUTE_DATA = {
   "1": { hasCar: false, staffDist: 1300.00, staffLiters: 52.00, workerDist: 50.0, workerLiters: 2.00 },
@@ -127,6 +133,12 @@ const avgCalcTotalDays = document.getElementById('avgCalcTotalDays');
 const avgCalcTotalSum = document.getElementById('avgCalcTotalSum');
 const avgCalcResultPrice = document.getElementById('avgCalcResultPrice');
 
+// Mode Switch & Water Calculator DOM Elements
+const modeFuelBtn = document.getElementById('modeFuelBtn');
+const modeWaterBtn = document.getElementById('modeWaterBtn');
+const salaryGroup = document.getElementById('salaryGroup');
+const empSalaryInput = document.getElementById('empSalary');
+
 // Other Button Actions
 const loadDemoBtn = document.getElementById('loadDemoBtn');
 const exportCsvBtn = document.getElementById('exportCsvBtn');
@@ -183,6 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Bind Events
   themeToggleBtn.addEventListener('click', toggleTheme);
+  modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
+  modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
   deliveryRouteSelect.addEventListener('change', handleRouteSelect);
   empPositionSelect.addEventListener('change', handlePositionSelect);
   claimMethodSelect.addEventListener('change', handleClaimMethodSelect);
@@ -313,6 +327,165 @@ function toggleTheme() {
     moonIcon.classList.remove('hidden');
   }
 }
+
+/* --- APP MODE SWITCHER (FUEL vs WATER) --- */
+async function switchAppMode(mode) {
+  activeMode = mode;
+  document.documentElement.setAttribute('data-mode', mode);
+  
+  const headerBrandTitle = document.getElementById('headerBrandTitle');
+  const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+  const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+  const welcomeHeadingP = document.querySelector('.welcome-heading p');
+  const sumFuelCostLabel = document.querySelector('.metric-card.bg-orange-glow h3');
+  const sumMaintCostLabel = document.querySelector('.metric-card.bg-blue-glow h3');
+  const sumTotalCostLabel = document.querySelector('.metric-card.bg-emerald-glow h3');
+  const tableTitle = document.querySelector('.table-header-flex h3');
+  
+  if (mode === 'fuel') {
+    // Buttons styling
+    modeFuelBtn.style.background = 'var(--post-orange)';
+    modeFuelBtn.style.color = 'white';
+    modeWaterBtn.style.background = 'transparent';
+    modeWaterBtn.style.color = 'var(--text-secondary)';
+    
+    // Header texts
+    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Fuel Engine v2.5';
+    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.';
+    if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว';
+    
+    // Form & Tab configs
+    document.querySelector('.auth-tabs').style.display = 'flex';
+    document.getElementById('positionRouteRow').classList.remove('hidden');
+    document.getElementById('deliveryRouteGroup').classList.remove('hidden');
+    document.getElementById('claimMethodGroup').classList.remove('hidden');
+    document.getElementById('workDaysRow').classList.remove('hidden');
+    document.getElementById('daysNotWorkedGroup').classList.remove('hidden');
+    salaryGroup.classList.add('hidden');
+    
+    // Reset position dropdown to standard
+    empPositionSelect.innerHTML = `
+      <option value="พนักงาน">พนักงาน</option>
+      <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+      <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
+      <option value="ลูกจ้าง">ลูกจ้าง</option>
+      <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+    `;
+    
+    // Metric Card Texts
+    if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำมันเชื้อเพลิงรวม';
+    if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ค่าบำรุงรักษารวม';
+    if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+    
+    // Table Configs
+    if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.';
+    document.querySelector('#employeeTable thead').innerHTML = `
+      <tr>
+        <th>ลำดับ</th>
+        <th>ชื่อ - นามสกุล</th>
+        <th>ตำแหน่ง/บทบาท</th>
+        <th>รายละเอียด/ด้านจ่าย</th>
+        <th>ปริมาณน้ำมัน (ลิตร)</th>
+        <th>ค่าน้ำมัน (บาท)</th>
+        <th>ค่าบำรุงรักษา (บาท)</th>
+        <th>รวมเบิกจ่าย (บาท)</th>
+        <th>ลงนามผู้รับ</th>
+        <th class="actions-col">จัดการ</th>
+      </tr>
+    `;
+    saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
+  } else {
+    // Water Mode
+    modeWaterBtn.style.background = 'var(--post-orange)';
+    modeWaterBtn.style.color = 'white';
+    modeFuelBtn.style.background = 'transparent';
+    modeFuelBtn.style.color = 'var(--text-secondary)';
+    
+    // Header texts
+    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Drinking Water Engine v1.0';
+    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำดื่มเจ้าหน้าที่ปฏิบัติงานภายนอกที่ทำการ';
+    if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำดื่มพร้อมหักภาษี ณ ที่จ่ายตามเกณฑ์เงินเดือน 25,833 บาท ตามระเบียบใหม่ล่าสุด';
+    
+    // Form & Tab configs - Hide standard fuel inputs & show salary input
+    document.querySelector('.auth-tabs').style.display = 'none';
+    document.getElementById('positionRouteRow').classList.remove('hidden');
+    document.getElementById('deliveryRouteGroup').classList.add('hidden');
+    document.getElementById('claimMethodGroup').classList.add('hidden');
+    document.getElementById('workDaysRow').classList.remove('hidden');
+    document.getElementById('daysNotWorkedGroup').classList.add('hidden');
+    supervisorMissionSection.classList.add('hidden');
+    routeStatsPreview.classList.add('hidden');
+    salaryGroup.classList.remove('hidden');
+    
+    // Populate position select with specific drinking water claimable roles (Image 2)
+    empPositionSelect.innerHTML = `
+      <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+      <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+      <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+      <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+      <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+    `;
+    
+    // Metric Card Texts
+    if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำดื่มก่อนหักภาษีรวม';
+    if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ภาษีหัก ณ ที่จ่ายรวม';
+    if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+    
+    // Table Configs
+    if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกค่าน้ำดื่มประจำที่ทำการ ปณ.';
+    document.querySelector('#employeeTable thead').innerHTML = `
+      <tr>
+        <th>ลำดับ</th>
+        <th>ชื่อ - นามสกุล</th>
+        <th>ปฏิบัติหน้าที่</th>
+        <th>เงินเดือน (บาท)</th>
+        <th>วันทำงาน (วัน)</th>
+        <th>รวมค่าน้ำดื่ม (บาท)</th>
+        <th>ภาษี (บาท)</th>
+        <th>ยอดสุทธิคงเหลือ (บาท)</th>
+        <th>ลงนามผู้รับ</th>
+        <th class="actions-col">จัดการ</th>
+      </tr>
+    `;
+    saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+  }
+  
+  // Clear any active edits
+  cancelEdit();
+  // Fetch from DB & render
+  if (isCloudConnected()) {
+    try {
+      if (mode === 'fuel') {
+        employees = await fetchEmployees();
+      } else {
+        waterEmployees = await fetchWaterEmployees();
+      }
+    } catch (err) {
+      console.error("Error loading mode data:", err);
+    }
+  }
+  renderEmployeeTable();
+}
+
+/* --- DRINKING WATER TAX CALC ENGINE --- */
+function calculateWaterTax(salary, totalAllowance) {
+  // @IFS(D5<=25833,0,AND(D5>=25834,D5<=38333),F5*0.05,AND(D5>=38334,D5<=55000),F5*0.1,AND(D5>=55001,D5<=75833),F5*0.15,AND(D5>=75834,D5<=96666),F5*0.2,D5>=96667,F5*0.25)
+  if (salary <= 25833) {
+    return 0;
+  } else if (salary >= 25834 && salary <= 38333) {
+    return totalAllowance * 0.05;
+  } else if (salary >= 38334 && salary <= 55000) {
+    return totalAllowance * 0.10;
+  } else if (salary >= 55001 && salary <= 75833) {
+    return totalAllowance * 0.15;
+  } else if (salary >= 75834 && salary <= 96666) {
+    return totalAllowance * 0.20;
+  } else if (salary >= 96667) {
+    return totalAllowance * 0.25;
+  }
+  return 0;
+}
+
 
 /* --- TAB / FORM MODE SWITCHING --- */
 function switchFormMode(mode, keepEditState = false) {
@@ -629,13 +802,45 @@ function handleFormSubmit(e) {
 
   const name = document.getElementById('empName').value.trim();
   const formMode = formModeInput.value;
-  const vehicle = vehicleTypeSelect.value;
   const remarks = document.getElementById('remarks').value.trim();
   const signatureInput = document.getElementById('signature').value.trim();
   const signature = signatureInput || name;
   const editIndexVal = document.getElementById('editIndex').value;
 
   let item = {};
+
+  if (activeMode === 'water') {
+    const position = empPositionSelect.value;
+    const salary = parseFloat(empSalaryInput.value) || 0;
+    const workDays = parseInt(workDaysInput.value) || 0;
+
+    item = {
+      name,
+      position,
+      salary,
+      workDays,
+      remarks,
+      signature
+    };
+
+    if (editIndexVal !== '') {
+      waterEmployees[parseInt(editIndexVal)] = item;
+      document.getElementById('editIndex').value = '';
+      saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+      resetBtn.classList.add('hidden');
+      const formTitle = document.getElementById('formTitle');
+      if (formTitle) formTitle.textContent = 'กรอกข้อมูลผู้รับค่าน้ำดื่ม';
+    } else {
+      waterEmployees.push(item);
+    }
+
+    saveWaterEmployees(waterEmployees);
+    employeeForm.reset();
+    renderEmployeeTable();
+    return;
+  }
+
+  const vehicle = vehicleTypeSelect.value;
 
   if (formMode === 'supervisor') {
     if (tempMissions.length === 0) {
@@ -702,8 +907,88 @@ function handleFormSubmit(e) {
   renderEmployeeTable();
 }
 
+function editWaterEmployee(idx) {
+  const item = waterEmployees[idx];
+  document.getElementById('empName').value = item.name;
+  empPositionSelect.value = item.position;
+  empSalaryInput.value = item.salary;
+  workDaysInput.value = item.workDays;
+  document.getElementById('remarks').value = item.remarks;
+  document.getElementById('signature').value = item.signature;
+  document.getElementById('editIndex').value = idx;
+  
+  saveBtn.innerHTML = '✔️ อัปเดตข้อมูลค่าน้ำดื่ม';
+  resetBtn.classList.remove('hidden');
+  const formTitle = document.getElementById('formTitle');
+  if (formTitle) formTitle.textContent = 'แก้ไขข้อมูลผู้รับค่าน้ำดื่ม';
+}
+
+function deleteWaterEmployee(idx) {
+  if (confirm('คุณแน่ใจว่าต้องการลบรายชื่อนี้ใช่หรือไม่?')) {
+    waterEmployees.splice(idx, 1);
+    saveWaterEmployees(waterEmployees);
+    renderEmployeeTable();
+  }
+}
+
 function renderEmployeeTable() {
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
+
+  if (activeMode === 'water') {
+    if (waterEmployees.length === 0) {
+      employeeTableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+        </tr>
+      `;
+      sumFuelCostSpan.textContent = '0.00';
+      sumMaintenanceCostSpan.textContent = '0.00';
+      sumTotalCostSpan.textContent = '0.00';
+      return;
+    }
+
+    employeeTableBody.innerHTML = '';
+    let totalAllowance = 0;
+    let totalTaxVal = 0;
+    let totalNetVal = 0;
+
+    waterEmployees.forEach((item, parentIndex) => {
+      const allowance = item.workDays * 30;
+      const tax = calculateWaterTax(item.salary, allowance);
+      const net = allowance - tax;
+
+      totalAllowance += allowance;
+      totalTaxVal += tax;
+      totalNetVal += net;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${parentIndex + 1}</td>
+        <td style="font-weight: 700; color: var(--text-primary);">${item.name}</td>
+        <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position}</span></td>
+        <td>${item.salary.toLocaleString()} บาท</td>
+        <td style="text-align: center;">${item.workDays} วัน</td>
+        <td style="font-weight: 700;">${allowance.toFixed(2)} บาท</td>
+        <td style="color: ${tax > 0 ? 'var(--post-red)' : 'var(--text-secondary)'}; font-weight: ${tax > 0 ? '700' : '400'};">${tax.toFixed(2)} บาท</td>
+        <td style="font-weight: 800; color: var(--post-emerald);">${net.toFixed(2)} บาท</td>
+        <td style="font-style: italic; color: var(--text-secondary);">${item.signature}</td>
+        <td class="actions-col">
+          <button class="row-action-btn edit-btn" title="แก้ไข">✏️</button>
+          <button class="row-action-btn delete-btn" title="ลบ">🗑️</button>
+        </td>
+      `;
+
+      tr.querySelector('.edit-btn').addEventListener('click', () => editWaterEmployee(parentIndex));
+      tr.querySelector('.delete-btn').addEventListener('click', () => deleteWaterEmployee(parentIndex));
+
+      employeeTableBody.appendChild(tr);
+    });
+
+    sumFuelCostSpan.textContent = totalAllowance.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    sumMaintenanceCostSpan.textContent = totalTaxVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    sumTotalCostSpan.textContent = totalNetVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return;
+  }
 
   if (employees.length === 0) {
     employeeTableBody.innerHTML = `
@@ -915,6 +1200,15 @@ function cancelEdit() {
 }
 
 function clearAllData() {
+  if (activeMode === 'water') {
+    if (confirm('คุณต้องการลบข้อมูลการเบิกค่าน้ำดื่มทั้งหมดใช่หรือไม่?')) {
+      waterEmployees = [];
+      saveWaterEmployees([]);
+      cancelEdit();
+      renderEmployeeTable();
+    }
+    return;
+  }
   if (confirm('คุณต้องการลบข้อมูลพนักงานทั้งหมดในตารางใช่หรือไม่?')) {
     employees = [];
     saveEmployees([]);
@@ -1005,7 +1299,21 @@ function applyAvgPriceToGlobal() {
 }
 
 /* --- DEMO DATA LOADER --- */
+/* --- DEMO DATA LOADER --- */
 function loadDemoData() {
+  if (activeMode === 'water') {
+    const waterDemoList = [
+      { name: "นายนิพล ทรัพย์หมื่นแสน", position: "เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ", salary: 24500, workDays: 26, remarks: "นำจ่ายพัสดุ", signature: "นิพล ทรัพย์หมื่นแสน" },
+      { name: "นางสาวสมหญิง สุจริต", position: "เจ้าหน้าที่ไขตู้ไปรษณีย์", salary: 28500, workDays: 26, remarks: "ไขตู้นอกพื้นที่", signature: "สมหญิง สุจริต" },
+      { name: "นายปรีชา คุมงาน", position: "หัวหน้าโซนนำจ่าย", salary: 42000, workDays: 26, remarks: "หัวหน้าโซน 2", signature: "ปรีชา คุมงาน" },
+      { name: "นายรุ่งโรจน์ สัญจร", position: "เจ้าหน้าที่รับฝากนอกที่ทำการ", salary: 58000, workDays: 24, remarks: "ฝากเคาน์เตอร์เคลื่อนที่", signature: "รุ่งโรจน์ สัญจร" }
+    ];
+    waterEmployees = waterDemoList;
+    saveWaterEmployees(waterEmployees);
+    renderEmployeeTable();
+    return;
+  }
+
   const demoList = [
     {
       formMode: "standard",
@@ -1088,6 +1396,36 @@ function loadDemoData() {
 
 /* --- EXPORT CSV (EXCEL FRIENDLY) --- */
 function exportToCsv() {
+  if (activeMode === 'water') {
+    if (waterEmployees.length === 0) {
+      alert('ไม่มีข้อมูลที่จะส่งออก!');
+      return;
+    }
+    let csvContent = "\uFEFF";
+    csvContent += "ลำดับ,ชื่อ-นามสกุล,ปฏิบัติหน้าที่,เงินเดือน (บาท),จำนวนวันทำงาน,รวมค่าน้ำดื่ม (บาท),ภาษีหัก ณ ที่จ่าย (บาท),ยอดเงินจ่ายสุทธิ (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
+    
+    waterEmployees.forEach((item, index) => {
+      const allowance = item.workDays * 30;
+      const tax = calculateWaterTax(item.salary, allowance);
+      const net = allowance - tax;
+      csvContent += `${index + 1},"${item.name}","${item.position}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    const m = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+    const y = globalYearSelect.value;
+    link.setAttribute("download", `เบิกค่าน้ำดื่ม_${m}_${y}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return;
+  }
+
   if (employees.length === 0) {
     alert('ไม่มีข้อมูลที่จะส่งออก!');
     return;
@@ -1198,10 +1536,93 @@ function exportToCsv() {
 
 /* --- PRINT PDF / A4 LAYOUT REPORT --- */
 function printReport() {
+  if (activeMode === 'water') {
+    if (waterEmployees.length === 0) {
+      alert('ไม่มีข้อมูลที่จะพิมพ์!');
+      return;
+    }
+    
+    // Toggle correct print area
+    document.getElementById('printWaterReportArea').style.display = 'block';
+    document.getElementById('printReportArea').style.display = 'none';
+    
+    document.getElementById('printWaterMonthText').textContent = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+    document.getElementById('printWaterYearText').textContent = globalYearSelect.value;
+    
+    const printWaterTableBody = document.getElementById('printWaterTableBody');
+    printWaterTableBody.innerHTML = '';
+    
+    let totalAllowanceVal = 0;
+    let totalTaxVal = 0;
+    let totalNetVal = 0;
+    
+    waterEmployees.forEach((item, index) => {
+      const allowance = item.workDays * 30;
+      const tax = calculateWaterTax(item.salary, allowance);
+      const net = allowance - tax;
+      
+      totalAllowanceVal += allowance;
+      totalTaxVal += tax;
+      totalNetVal += net;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td><strong>${item.name}</strong></td>
+        <td>${item.position}</td>
+        <td>${item.salary.toLocaleString()}</td>
+        <td>${item.workDays} วัน</td>
+        <td>${allowance.toFixed(2)}</td>
+        <td>${tax.toFixed(2)}</td>
+        <td><strong>${net.toFixed(2)}</strong></td>
+        <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #444;">${item.signature}</span></td>
+        <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
+      `;
+      printWaterTableBody.appendChild(tr);
+    });
+    
+    document.getElementById('printWaterTotalCount').textContent = waterEmployees.length.toString();
+    document.getElementById('printWaterTotalCost').textContent = totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    document.getElementById('printWaterTotalTax').textContent = totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    document.getElementById('printWaterGrandTotal').textContent = totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    
+    // Signatures mapping for water print
+    const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
+    const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
+    const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
+    
+    const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
+    const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
+    const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
+    
+    const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
+    const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
+    const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
+    
+    document.getElementById('printSigMakerTitleValWater').textContent = sigMakerTitleVal;
+    document.getElementById('printSigMakerNameValWater').textContent = sigMakerNameVal;
+    document.getElementById('printSigMakerPosValWater').textContent = sigMakerPosVal;
+    
+    document.getElementById('printSigCheckerTitleValWater').textContent = sigCheckerTitleVal;
+    document.getElementById('printSigCheckerNameValWater').textContent = sigCheckerNameVal;
+    document.getElementById('printSigCheckerPosValWater').textContent = sigCheckerPosVal;
+    
+    document.getElementById('printSigApproverTitleValWater').textContent = sigApproverTitleVal;
+    document.getElementById('printSigApproverNameValWater').textContent = sigApproverNameVal;
+    document.getElementById('printSigApproverPosValWater').textContent = sigApproverPosVal;
+    
+    window.print();
+    return;
+  }
+
   if (employees.length === 0) {
     alert('ไม่มีข้อมูลที่จะพิมพ์!');
     return;
   }
+
+  // Toggle correct print area
+  document.getElementById('printWaterReportArea').style.display = 'none';
+  document.getElementById('printReportArea').style.display = 'block';
 
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
   

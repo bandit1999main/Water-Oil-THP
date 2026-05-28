@@ -69,8 +69,6 @@ export async function saveEmployees(employeesList) {
   if (!isCloudConnected()) return false;
 
   try {
-    // To keep it simple and clean, we can replace the whole collection.
-    // Or we can save them individually. Let's write them individually.
     const batch = writeBatch(db);
     
     // First, let's get all existing docs to clean up deleted ones
@@ -84,7 +82,6 @@ export async function saveEmployees(employeesList) {
     // Add or update existing ones
     employeesList.forEach((emp) => {
       const docRef = doc(db, "employees", String(emp.id));
-      // Exclude ID from body if we want, but keeping it is fine
       batch.set(docRef, emp);
     });
 
@@ -96,6 +93,60 @@ export async function saveEmployees(employeesList) {
     return false;
   }
 }
+
+/**
+ * --- WATER EMPLOYEES CRUD ---
+ */
+
+// Fetch all water employees from Firestore
+export async function fetchWaterEmployees() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_water_employees')) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, "water_employees"));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem('tp_water_employees', JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error("❌ Firestore fetchWaterEmployees failed. Falling back to local storage.", error);
+    return JSON.parse(localStorage.getItem('tp_water_employees')) || [];
+  }
+}
+
+// Save all water employees to Firestore in batch
+export async function saveWaterEmployees(employeesList) {
+  localStorage.setItem('tp_water_employees', JSON.stringify(employeesList));
+
+  if (!isCloudConnected()) return false;
+
+  try {
+    const batch = writeBatch(db);
+    
+    const querySnapshot = await getDocs(collection(db, "water_employees"));
+    querySnapshot.forEach((d) => {
+      if (!employeesList.some(emp => String(emp.id) === d.id)) {
+        batch.delete(doc(db, "water_employees", d.id));
+      }
+    });
+
+    employeesList.forEach((emp) => {
+      const docRef = doc(db, "water_employees", String(emp.id));
+      batch.set(docRef, emp);
+    });
+
+    await batch.commit();
+    console.log("✅ Water employees successfully synced to Cloud Firestore.");
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore saveWaterEmployees failed.", error);
+    return false;
+  }
+}
+
 
 /**
  * --- ROUTE DATA ACTIONS ---
