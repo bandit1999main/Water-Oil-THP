@@ -893,7 +893,7 @@ function renderPeriodTable() {
 
   avgCalcTotalDays.textContent = `${sumDays} วัน`;
   avgCalcTotalSum.textContent = `${sumWeightedProduct.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท`;
-  avgCalcResultPrice.textContent = `${avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} บาท/ลิตร`;
+  avgCalcResultPrice.textContent = `${avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท/ลิตร`;
   applyAvgPriceBtn.disabled = sumDays === 0;
 }
 
