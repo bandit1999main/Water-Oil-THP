@@ -416,7 +416,7 @@ function calculateClaimLiters(item) {
       }
     });
     
-    const totalLiters = otherLiters + Math.ceil(rawInspectionLiters);
+    const totalLiters = otherLiters + Math.ceil(rawInspectionLiters / 2);
     return Number(totalLiters.toFixed(2));
   }
 
