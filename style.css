@@ -866,6 +866,8 @@ tr:hover td {
 
   .print-table td {
     text-align: left;
+    height: 3.5rem !important;
+    vertical-align: middle !important;
   }
 
   .print-table td:nth-child(1),
