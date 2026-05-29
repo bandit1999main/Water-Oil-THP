@@ -893,10 +893,11 @@ tr:hover td {
   .print-table th, 
   .print-table td {
     border: 1px solid black !important;
-    padding: 4px 3px !important;
-    font-size: 8pt !important;
+    padding: 3px 2px !important;
+    font-size: 7.5pt !important;
     color: black !important;
     background: transparent !important;
+    white-space: nowrap !important;
   }
 
   .print-table th {
@@ -906,7 +907,7 @@ tr:hover td {
 
   .print-table td {
     text-align: left;
-    height: 3.5rem !important;
+    height: auto !important;
     vertical-align: middle !important;
   }
 
