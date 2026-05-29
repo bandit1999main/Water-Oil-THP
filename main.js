@@ -2007,14 +2007,80 @@ function printReport() {
   ].filter(cat => cat.list.length > 0);
 
   // 3. Clear printArea and build page by page dynamically
+  if (employees.length === 0) {
+    showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
+    return;
+  }
+
+  const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
+  
+  // Get signatory values onto print preview
+  const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
+  const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
+  const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
+  
+  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
+  const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
+  const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
+  
+  const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
+  const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
+  const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
+
+  const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+  const yearText = globalYearSelect.value;
+
+  // Categorize standard employees and supervisors separately
+  let listStaffAndRegular = []; // Page 1: พนักงาน และ ลูกจ้างประจำ
+  let listDailyAndTemp = [];     // Page 2: ลูกจ้างรายวัน และ ลูกจ้าง (ลูกจ้างชั่วคราว/รายวันทั่วไป)
+  let listContractors = [];     // Page 3: ลูกจ้างเหมา
+  let supervisors = [];         // Page 4+: หัวหน้าโซนนำจ่าย (ชนจ.)
+
+  employees.forEach((item) => {
+    if (item.formMode === 'supervisor') {
+      supervisors.push(item);
+    } else {
+      const liters = calculateClaimLiters(item);
+      const fuelCost = liters * currentFuelPrice;
+      const maintCost = calculateMaintenanceCost(item);
+      const sumTotal = fuelCost + maintCost;
+
+      const rowObj = {
+        name: item.name,
+        position: item.position,
+        routeDesc: `ด้านจ่ายที่ ${item.route}`,
+        workDays: item.workDays,
+        liters: liters,
+        fuelCost: fuelCost,
+        maintCost: maintCost,
+        sumTotal: sumTotal,
+        signature: item.signature,
+        remarks: item.remarks
+      };
+
+      const posLower = (item.position || '').toLowerCase();
+      
+      if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
+        listStaffAndRegular.push(rowObj);
+      } else if (posLower.includes('เหมา')) {
+        listContractors.push(rowObj);
+      } else {
+        // Daily and other temporary employees
+        listDailyAndTemp.push(rowObj);
+      }
+    }
+  });
+
   const printReportArea = document.getElementById('printReportArea');
   printReportArea.innerHTML = '';
 
-  categories.forEach((cat, catIdx) => {
+  // Function to render a standard flat table page
+  const renderStandardPage = (title, list, isLastPage) => {
+    if (list.length === 0) return;
+
     const pageDiv = document.createElement('div');
-    // Set style page break for printed pages
     pageDiv.className = 'print-page-section';
-    if (catIdx < categories.length - 1) {
+    if (!isLastPage) {
       pageDiv.style.pageBreakAfter = 'always';
     }
     pageDiv.style.marginBottom = '2cm';
@@ -2023,7 +2089,7 @@ function printReport() {
     let totalMaintCost = 0;
     let grandTotal = 0;
 
-    let tableRowsHtml = cat.list.map((row, idx) => {
+    let tableRowsHtml = list.map((row, idx) => {
       totalFuelCost += row.fuelCost;
       totalMaintCost += row.maintCost;
       grandTotal += row.sumTotal;
@@ -2049,7 +2115,7 @@ function printReport() {
       <div class="print-header">
         <div class="print-title-container">
           <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
-          <h3>บริษัท ไปรษณีย์ไทย จำกัด (${cat.title})</h3>
+          <h3>บริษัท ไปรษณีย์ไทย จำกัด (${title})</h3>
           <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
         </div>
         <div class="print-meta-info">
@@ -2080,10 +2146,190 @@ function printReport() {
 
       <div class="print-summary-section">
         <div class="summary-block">
-          <p>จำนวนรายชื่อผู้รับเงินกลุ่มนี้: <strong>${cat.list.length}</strong> ราย</p>
+          <p>จำนวนรายชื่อผู้รับเงินกลุ่มนี้: <strong>${list.length}</strong> ราย</p>
           <p>รวมค่าน้ำมันเชื้อเพลิงกลุ่มนี้: <strong>${totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
           <p>รวมค่าบำรุงรักษากลุ่มนี้: <strong>${totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
           <p class="final-sum">ยอดเงินเบิกจ่ายรวมทั้งสิ้น (กลุ่มนี้): <strong>${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+        </div>
+      </div>
+
+      <div class="print-signatures">
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+          <p>ตำแหน่ง ${sigMakerPosVal}</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+          <p>ตำแหน่ง ${sigApproverPosVal}</p>
+        </div>
+      </div>
+    `;
+    printReportArea.appendChild(pageDiv);
+  };
+
+  // Render Page 1, Page 2, Page 3 sequentially
+  const hasSupervisors = supervisors.length > 0;
+  
+  renderStandardPage('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular, listDailyAndTemp.length === 0 && listContractors.length === 0 && !hasSupervisors);
+  renderStandardPage('ลูกจ้างรายวัน และ ลูกจ้าง', listDailyAndTemp, listContractors.length === 0 && !hasSupervisors);
+  renderStandardPage('ลูกจ้างเหมา', listContractors, !hasSupervisors);
+
+  // Render Page 4+ for individual Supervisors (ชนจ.)
+  supervisors.forEach((sv, svIdx) => {
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'print-page-section';
+    
+    const isLastSv = svIdx === supervisors.length - 1;
+    if (!isLastSv) {
+      pageDiv.style.pageBreakAfter = 'always';
+    }
+    pageDiv.style.marginBottom = '2cm';
+
+    let totalLiters = 0;
+    let totalMaint = 0;
+    let totalFuel = 0;
+    let totalDays = 0;
+    let sumTotal = 0;
+
+    let subRowsHtml = [];
+    let rowIdx = 1;
+
+    // 1. Render Grouped 'ตรวจสอบการนำจ่าย' missions
+    const inspectMissions = sv.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+    if (inspectMissions.length > 0) {
+      let rawInspectionLiters = 0;
+      let inspectDays = 0;
+      let inspectMaint = 0;
+      let routesUsed = [];
+
+      inspectMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        rawInspectionLiters += dailyLiters * m.days;
+        inspectDays += m.days;
+        inspectMaint += calculateSingleMissionMaint(sv, m);
+        routesUsed.push(m.route);
+      });
+
+      const liters = Math.ceil(rawInspectionLiters / 2);
+      const fuelCost = liters * currentFuelPrice;
+      const rowSum = fuelCost + inspectMaint;
+
+      totalLiters += liters;
+      totalMaint += inspectMaint;
+      totalFuel += fuelCost;
+      totalDays += inspectDays;
+      sumTotal += rowSum;
+
+      subRowsHtml.push(`
+        <tr>
+          <td>${rowIdx++}</td>
+          <td><strong>${sv.name}</strong></td>
+          <td>${sv.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)'}</td>
+          <td style="text-align: left !important; font-size: 7.5pt;">ตรวจสอบการนำจ่าย (ด้าน ${routesUsed.join(', ')})</td>
+          <td>${inspectDays} วัน</td>
+          <td>${liters.toFixed(2)}</td>
+          <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td>${inspectMaint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #444;">${sv.signature}</span></td>
+          <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
+        </tr>
+      `);
+    }
+
+    // 2. Render other individual missions ('นำจ่ายแทน', 'ฝึกสอนงาน')
+    const otherMissions = sv.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+    otherMissions.forEach(m => {
+      const routeInfo = ROUTE_DATA[m.route];
+      const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+      const liters = dailyLiters * m.days;
+      const fuelCost = liters * currentFuelPrice;
+      const maint = calculateSingleMissionMaint(sv, m);
+      const rowSum = fuelCost + maint;
+
+      totalLiters += liters;
+      totalMaint += maint;
+      totalFuel += fuelCost;
+      totalDays += m.days;
+      sumTotal += rowSum;
+
+      subRowsHtml.push(`
+        <tr>
+          <td>${rowIdx++}</td>
+          <td><strong>${sv.name}</strong></td>
+          <td>${sv.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)'}</td>
+          <td style="text-align: left !important; font-size: 7.5pt;">${m.type} (ด้าน ${m.route})</td>
+          <td>${m.days} วัน</td>
+          <td>${liters.toFixed(2)}</td>
+          <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td>${maint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #444;">${sv.signature}</span></td>
+          <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
+        </tr>
+      `);
+    });
+
+    // 3. Append the Total Bold Sum row at the bottom of the table
+    subRowsHtml.push(`
+      <tr style="background: rgba(0,0,0,0.03); font-weight: bold;">
+        <td colspan="4" style="text-align: right !important;">รวมยอดทั้งหมดของ ${sv.name}:</td>
+        <td>${totalDays} วัน</td>
+        <td>${totalLiters.toFixed(2)}</td>
+        <td>${totalFuel.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td>${totalMaint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td style="border-bottom: 4px double #000 !important; font-size: 8.5pt;"><strong>${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+        <td colspan="2"></td>
+      </tr>
+    `);
+
+    pageDiv.innerHTML = `
+      <div class="print-header">
+        <div class="print-title-container">
+          <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
+          <h3>บริษัท ไปรษณีย์ไทย จำกัด (หัวหน้าโซนนำจ่าย - ชนจ. รายบุคคล)</h3>
+          <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+        </div>
+        <div class="print-meta-info">
+          <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
+        </div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 5%">ลำดับ</th>
+            <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
+            <th style="width: 12%">ตำแหน่ง / บทบาท</th>
+            <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
+            <th style="width: 8%">วันทำงาน</th>
+            <th style="width: 8%">น้ำมัน (ลิตร)</th>
+            <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
+            <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
+            <th style="width: 8%">รวมเงิน (บาท)</th>
+            <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
+            <th style="width: 10%">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subRowsHtml.join('')}
+        </tbody>
+      </table>
+
+      <div class="print-summary-section">
+        <div class="summary-block">
+          <p>จำนวนงานภารกิจย่อย: <strong>${rowIdx - 1}</strong> รายการ</p>
+          <p>รวมค่าน้ำมันของบุคคลนี้: <strong>${totalFuel.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+          <p>รวมค่าบำรุงรักษาของบุคคลนี้: <strong>${totalMaint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+          <p class="final-sum">ยอดรวมสุทธิบุคคลนี้: <strong>${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
         </div>
       </div>
 
