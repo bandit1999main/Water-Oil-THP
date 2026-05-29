@@ -1608,6 +1608,10 @@ function applyAvgPriceToGlobal() {
     const finalAvg = sumWeightedProduct / sumDays;
     globalFuelPriceInput.value = finalAvg.toFixed(2);
     recalculateTableCosts();
+    
+    // Synchronize the average fuel price globally
+    saveGlobalSetting('fuelPrice', { value: parseFloat(globalFuelPriceInput.value) || 38.50 });
+    
     avgCalcModal.classList.remove('active');
   }
 }
