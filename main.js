@@ -1265,7 +1265,7 @@ function renderEmployeeTable() {
         <td style="font-weight: 700;">${allowance.toFixed(2)} บาท</td>
         <td style="color: ${tax > 0 ? 'var(--post-red)' : 'var(--text-secondary)'}; font-weight: ${tax > 0 ? '700' : '400'};">${tax.toFixed(2)} บาท</td>
         <td style="font-weight: 800; color: var(--post-emerald);">${net.toFixed(2)} บาท</td>
-        <td style="font-style: italic; color: var(--text-primary);">${item.signature}</td>
+        <td style="font-style: italic; color: #ccc; font-weight: 300;">${item.signature}</td>
         <td class="actions-col">
           <button class="row-action-btn edit-btn" title="แก้ไข">✏️</button>
           <button class="row-action-btn delete-btn" title="ลบ">🗑️</button>
@@ -1407,7 +1407,7 @@ function renderEmployeeTable() {
       <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
       <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
       <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</strong></td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic;">${row.signature}</span></td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ccc; font-weight: 300;">${row.signature}</span></td>
       <td class="actions-col" style="width: 240px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
         <button class="btn btn-secondary btn-small clone-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">📋 คัดลอก</button>
@@ -1897,7 +1897,7 @@ function printReport() {
         <td>${allowance.toFixed(2)}</td>
         <td>${tax.toFixed(2)}</td>
         <td><strong>${net.toFixed(2)}</strong></td>
-        <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #444;">${item.signature}</span></td>
+        <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #ccc; font-weight: 300;">${item.signature}</span></td>
         <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
       `;
       printWaterTableBody.appendChild(tr);
@@ -2156,7 +2156,7 @@ function printReport() {
           <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #333;">${row.signature}</span></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #ccc; font-weight: 300;">${row.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${row.remarks}</span></td>
         </tr>
       `;
@@ -2290,7 +2290,7 @@ function printReport() {
           <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td>${inspectMaint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #444;">${sv.signature}</span></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #ccc; font-weight: 300;">${sv.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
         </tr>
       `);
@@ -2323,7 +2323,7 @@ function printReport() {
           <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td>${maint.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
           <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #444;">${sv.signature}</span></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #ccc; font-weight: 300;">${sv.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
         </tr>
       `);
