@@ -1892,11 +1892,11 @@ function printReport() {
         <td>${index + 1}</td>
         <td><strong>${item.name}</strong></td>
         <td>${item.position}</td>
-        <td>${item.salary.toLocaleString()}</td>
+        <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>${item.workDays} วัน</td>
-        <td>${allowance.toFixed(2)}</td>
-        <td>${tax.toFixed(2)}</td>
-        <td><strong>${net.toFixed(2)}</strong></td>
+        <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
         <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #ccc; font-weight: 300;">${item.signature}</span></td>
         <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
       `;
