@@ -14,7 +14,10 @@ import {
   deleteTemplate,
   fetchSignatoryProfiles,
   saveSignatoryProfile,
-  deleteSignatoryProfile
+  deleteSignatoryProfile,
+  fetchGlobalSettings,
+  saveGlobalSetting,
+  listenToGlobalSettings
 } from './database.js';
 
 // Global Mode State
@@ -289,7 +292,18 @@ document.addEventListener('DOMContentLoaded', () => {
   updateTemplateSelectDropdown();
 
   // Setup live changes
-  globalFuelPriceInput.addEventListener('change', recalculateTableCosts);
+  globalFuelPriceInput.addEventListener('change', () => {
+    recalculateTableCosts();
+    saveGlobalSetting('fuelPrice', { value: parseFloat(globalFuelPriceInput.value) || 38.50 });
+  });
+
+  globalMonthSelect.addEventListener('change', () => {
+    saveGlobalSetting('month', { value: parseInt(globalMonthSelect.value) || 5 });
+  });
+
+  globalYearSelect.addEventListener('change', () => {
+    saveGlobalSetting('year', { value: parseInt(globalYearSelect.value) || 2569 });
+  });
 
   // Populate Route Editor Dropdown
   Object.keys(ROUTE_DATA).forEach(route => {
@@ -357,6 +371,30 @@ async function initCloudSync() {
         ROUTE_DATA = cloudRouteData;
       }
       
+      // Fetch global settings
+      const globalSettings = await fetchGlobalSettings();
+      if (globalSettings.fuelPrice) {
+        globalFuelPriceInput.value = globalSettings.fuelPrice.value;
+      }
+      if (globalSettings.month) {
+        globalMonthSelect.value = globalSettings.month.value;
+      }
+      if (globalSettings.year) {
+        globalYearSelect.value = globalSettings.year.value;
+      }
+      if (globalSettings.signatories) {
+        const sigs = globalSettings.signatories;
+        document.getElementById('sigMakerTitle').value = sigs.makerTitle || '';
+        document.getElementById('sigMakerName').value = sigs.makerName || '';
+        document.getElementById('sigMakerPos').value = sigs.makerPos || '';
+        document.getElementById('sigCheckerTitle').value = sigs.checkerTitle || '';
+        document.getElementById('sigCheckerName').value = sigs.checkerName || '';
+        document.getElementById('sigCheckerPos').value = sigs.checkerPos || '';
+        document.getElementById('sigApproverTitle').value = sigs.approverTitle || '';
+        document.getElementById('sigApproverName').value = sigs.approverName || '';
+        document.getElementById('sigApproverPos').value = sigs.approverPos || '';
+      }
+
       // Populate templates
       await fetchSavedTemplates();
       
@@ -374,6 +412,31 @@ async function initCloudSync() {
       listenToWaterEmployees((updatedList) => {
         waterEmployees = updatedList;
         if (activeMode === 'water') renderEmployeeTable();
+      });
+
+      listenToGlobalSettings((updatedSettings) => {
+        if (updatedSettings.fuelPrice && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
+          globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
+          recalculateTableCosts();
+        }
+        if (updatedSettings.month && globalMonthSelect.value !== String(updatedSettings.month.value)) {
+          globalMonthSelect.value = updatedSettings.month.value;
+        }
+        if (updatedSettings.year && globalYearSelect.value !== String(updatedSettings.year.value)) {
+          globalYearSelect.value = updatedSettings.year.value;
+        }
+        if (updatedSettings.signatories) {
+          const sigs = updatedSettings.signatories;
+          document.getElementById('sigMakerTitle').value = sigs.makerTitle || '';
+          document.getElementById('sigMakerName').value = sigs.makerName || '';
+          document.getElementById('sigMakerPos').value = sigs.makerPos || '';
+          document.getElementById('sigCheckerTitle').value = sigs.checkerTitle || '';
+          document.getElementById('sigCheckerName').value = sigs.checkerName || '';
+          document.getElementById('sigCheckerPos').value = sigs.checkerPos || '';
+          document.getElementById('sigApproverTitle').value = sigs.approverTitle || '';
+          document.getElementById('sigApproverName').value = sigs.approverName || '';
+          document.getElementById('sigApproverPos').value = sigs.approverPos || '';
+        }
       });
 
     } else {
@@ -2554,11 +2617,24 @@ function toggleSignatoryInputsLock() {
     toggleSigEditBtn.style.color = '#fff';
     inputs[1].focus(); // Focus on the maker's name field
   } else {
-    // Lock all inputs
+    // Lock all inputs and save to Firestore
     inputs.forEach(input => input.disabled = true);
     toggleSigEditBtn.innerHTML = '✏️ แก้ไขผู้ลงนาม';
     toggleSigEditBtn.style.background = 'transparent';
     toggleSigEditBtn.style.color = 'var(--post-orange)';
+
+    // Save customized signatories to cloud
+    saveGlobalSetting('signatories', {
+      makerTitle: inputs[0].value,
+      makerName: inputs[1].value,
+      makerPos: inputs[2].value,
+      checkerTitle: inputs[3].value,
+      checkerName: inputs[4].value,
+      checkerPos: inputs[5].value,
+      approverTitle: inputs[6].value,
+      approverName: inputs[7].value,
+      approverPos: inputs[8].value
+    });
   }
 }
 

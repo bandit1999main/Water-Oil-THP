@@ -378,4 +378,57 @@ export function listenToWaterEmployees(callback) {
   });
 }
 
+/**
+ * --- GLOBAL SETTINGS CRUD & LISTENERS ---
+ */
+export async function fetchGlobalSettings() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_global_settings')) || {};
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, "global_settings"));
+    const settings = {};
+    querySnapshot.forEach((doc) => {
+      settings[doc.id] = doc.data();
+    });
+    localStorage.setItem('tp_global_settings', JSON.stringify(settings));
+    return settings;
+  } catch (error) {
+    console.error("❌ Firestore fetchGlobalSettings failed.", error);
+    return JSON.parse(localStorage.getItem('tp_global_settings')) || {};
+  }
+}
+
+export async function saveGlobalSetting(key, val) {
+  const settings = JSON.parse(localStorage.getItem('tp_global_settings')) || {};
+  settings[key] = val;
+  localStorage.setItem('tp_global_settings', JSON.stringify(settings));
+
+  if (!isCloudConnected()) return false;
+
+  try {
+    const docRef = doc(db, "global_settings", String(key));
+    await setDoc(docRef, val);
+    console.log(`✅ Global setting "${key}" successfully saved to Cloud Firestore.`);
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore saveGlobalSetting failed.", error);
+    return false;
+  }
+}
+
+export function listenToGlobalSettings(callback) {
+  if (!isCloudConnected()) return null;
+  return onSnapshot(collection(db, "global_settings"), (snapshot) => {
+    const settings = {};
+    snapshot.forEach((doc) => {
+      settings[doc.id] = doc.data();
+    });
+    localStorage.setItem('tp_global_settings', JSON.stringify(settings));
+    callback(settings);
+  }, (error) => {
+    console.error("Firestore listenToGlobalSettings failed:", error);
+  });
+}
+
 
