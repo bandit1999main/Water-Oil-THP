@@ -1037,26 +1037,46 @@ tr:hover td {
   }
 }
 
-/* --- TABLE COLUMNS WIDTH OPTIMIZATION --- */
+/* --- TABLE COLUMNS WIDTH & HEADER SIZE OPTIMIZATION --- */
+#employeeTable th {
+  padding: 0.6rem 0.75rem !important;
+  font-size: 0.85rem !important;
+  white-space: nowrap !important;
+}
+
+#employeeTable td {
+  padding: 0.6rem 0.75rem !important;
+  font-size: 0.85rem !important;
+  vertical-align: middle !important;
+}
+
+/* ชื่อ - นามสกุล (Column 2) */
 #employeeTable th:nth-child(2),
 #employeeTable td:nth-child(2) {
-  min-width: 170px !important;
-  max-width: 250px !important;
+  min-width: 120px !important;
+  max-width: 180px !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
-#employeeTable th:nth-child(4),
-#employeeTable td:nth-child(4) {
-  min-width: 130px !important;
-  max-width: 220px !important;
-  white-space: normal !important;
-  word-break: break-word !important;
+/* ตำแหน่ง/บทบาท (Column 3) */
+#employeeTable th:nth-child(3),
+#employeeTable td:nth-child(3) {
+  min-width: 100px !important;
+  max-width: 140px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-#employeeTable td {
-  vertical-align: middle !important;
+/* รายละเอียด/ด้านจ่าย (Column 4) */
+#employeeTable th:nth-child(4),
+#employeeTable td:nth-child(4) {
+  min-width: 100px !important;
+  max-width: 160px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 /* --- CLOUD DATABASE STATUS BADGE --- */
