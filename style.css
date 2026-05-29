@@ -929,7 +929,7 @@ tr:hover td {
 
   /* Make Name-Surname column stand out with a larger font size */
   .print-table td:nth-child(2) {
-    font-size: 8.5pt !important;
+    font-size: 14pt !important;
   }
 
   .print-table td:nth-child(1),
