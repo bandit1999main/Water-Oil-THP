@@ -2677,17 +2677,32 @@ async function renderSigProfilesTable() {
     `;
     
     tr.querySelector('.load-profile-btn').addEventListener('click', () => {
-      document.getElementById('sigMakerTitle').value = p.makerTitle || 'ผู้จัดทำ';
-      document.getElementById('sigMakerName').value = p.makerName || '';
-      document.getElementById('sigMakerPos').value = p.makerPos || '';
+      const activeSigs = {
+        makerTitle: p.makerTitle || 'ผู้จัดทำ',
+        makerName: p.makerName || '',
+        makerPos: p.makerPos || '',
+        checkerTitle: p.checkerTitle || 'ผู้ตรวจสอบ',
+        checkerName: p.checkerName || '',
+        checkerPos: p.checkerPos || '',
+        approverTitle: p.approverTitle || 'ผู้อนุมัติ',
+        approverName: p.approverName || '',
+        approverPos: p.approverPos || ''
+      };
+
+      document.getElementById('sigMakerTitle').value = activeSigs.makerTitle;
+      document.getElementById('sigMakerName').value = activeSigs.makerName;
+      document.getElementById('sigMakerPos').value = activeSigs.makerPos;
       
-      document.getElementById('sigCheckerTitle').value = p.checkerTitle || 'ผู้ตรวจสอบ';
-      document.getElementById('sigCheckerName').value = p.checkerName || '';
-      document.getElementById('sigCheckerPos').value = p.checkerPos || '';
+      document.getElementById('sigCheckerTitle').value = activeSigs.checkerTitle;
+      document.getElementById('sigCheckerName').value = activeSigs.checkerName;
+      document.getElementById('sigCheckerPos').value = activeSigs.checkerPos;
       
-      document.getElementById('sigApproverTitle').value = p.approverTitle || 'ผู้อนุมัติ';
-      document.getElementById('sigApproverName').value = p.approverName || '';
-      document.getElementById('sigApproverPos').value = p.approverPos || '';
+      document.getElementById('sigApproverTitle').value = activeSigs.approverTitle;
+      document.getElementById('sigApproverName').value = activeSigs.approverName;
+      document.getElementById('sigApproverPos').value = activeSigs.approverPos;
+
+      // Synchronize active signatories to other devices
+      saveGlobalSetting('signatories', activeSigs);
       
       const sigProfilesModal = document.getElementById('sigProfilesModal');
       sigProfilesModal.classList.remove('active');
