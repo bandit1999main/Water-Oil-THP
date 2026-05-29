@@ -1020,6 +1020,10 @@ tr:hover td {
     height: 14px !important; /* Extremely compact rows to fit 60 items */
   }
 
+  [data-mode="water"] #printWaterReportArea .print-table td:nth-child(2) {
+    font-size: 14pt !important;
+  }
+
   [data-mode="water"] #printWaterReportArea .print-summary-section {
     margin-top: 0.2rem !important;
     margin-bottom: 0.2rem !important;
