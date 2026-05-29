@@ -927,6 +927,7 @@ function wireEditModal() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const isWater = modal.dataset.isWater === '1';
+    // Snapshot the index at submit time (guard against real-time listener race condition)
     const idx = parseInt(document.getElementById('modalEditIndex').value);
 
     const name = document.getElementById('modalEmpName').value.trim();
@@ -937,15 +938,18 @@ function wireEditModal() {
 
     if (isWater) {
       const salary = parseFloat(document.getElementById('modalEmpSalary').value) || 0;
+      // Preserve id: read BEFORE overwriting object
       const existingId = waterEmployees[idx]?.id;
-      waterEmployees[idx] = { name, position, salary, workDays, remarks, signature };
-      if (existingId) waterEmployees[idx].id = existingId;
+      const updatedItem = { name, position, salary, workDays, remarks, signature };
+      if (existingId) updatedItem.id = existingId;
+      waterEmployees[idx] = updatedItem;
       await saveWaterEmployees(waterEmployees);
     } else {
       const route = document.getElementById('modalDeliveryRoute').value;
       const vehicle = document.getElementById('modalVehicleType').value;
       const method = document.getElementById('modalClaimMethod').value;
       const daysNotWorked = parseInt(document.getElementById('modalDaysNotWorked').value) || 0;
+      // Preserve id and existing fields (e.g. missions for supervisor)
       const existingId = employees[idx]?.id;
       employees[idx] = { ...employees[idx], name, position, route, vehicle, method, workDays, daysNotWorked, remarks, signature };
       if (existingId) employees[idx].id = existingId;
@@ -958,7 +962,7 @@ function wireEditModal() {
 }
 
 /* --- FORM SUBMISSION --- */
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
   e.preventDefault();
 
   const name = document.getElementById('empName').value.trim();
@@ -985,6 +989,9 @@ function handleFormSubmit(e) {
     };
 
     if (editIndexVal !== '') {
+      // Preserve existing id before overwriting
+      const existingId = waterEmployees[parseInt(editIndexVal)]?.id;
+      if (existingId) item.id = existingId;
       waterEmployees[parseInt(editIndexVal)] = item;
       document.getElementById('editIndex').value = '';
       saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
@@ -995,7 +1002,7 @@ function handleFormSubmit(e) {
       waterEmployees.push(item);
     }
 
-    saveWaterEmployees(waterEmployees);
+    await saveWaterEmployees(waterEmployees);
     employeeForm.reset();
     renderEmployeeTable();
     return;
@@ -1336,10 +1343,17 @@ function deleteRow(index) {
 
 function cancelEdit() {
   document.getElementById('editIndex').value = '';
-  saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
+  // Mode-aware button text
+  if (activeMode === 'water') {
+    saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+    const formTitle = document.getElementById('formTitle');
+    if (formTitle) formTitle.textContent = 'กรอกข้อมูลผู้รับค่าน้ำดื่ม';
+  } else {
+    saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
+    const formTitle = document.getElementById('formTitle');
+    if (formTitle) formTitle.textContent = 'กรอกข้อมูลผู้รับเงินค่าน้ำมัน';
+  }
   resetBtn.classList.add('hidden');
-  const formTitle = document.getElementById('formTitle');
-  if (formTitle) formTitle.textContent = 'กรอกข้อมูลผู้รับเงินค่าน้ำมัน';
   employeeForm.reset();
   routeStatsPreview.classList.add('hidden');
   tempMissions = [];
