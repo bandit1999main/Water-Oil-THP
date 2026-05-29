@@ -173,6 +173,60 @@ const resetAllRoutesBtn = document.getElementById('resetAllRoutesBtn');
 const routeEditorTableBody = document.getElementById('routeEditorTableBody');
 const toggleSigEditBtn = document.getElementById('toggleSigEditBtn');
 
+/* --- UI UTILITIES: TOAST & CONFIRM --- */
+
+/**
+ * showToast(message, type, duration)
+ * type: 'success' | 'error' | 'warning' | 'info'
+ */
+function showToast(message, type = 'info', duration = 3000) {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span style="font-size:1.1rem;flex-shrink:0;">${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
+
+  const dismiss = () => {
+    toast.classList.add('removing');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  };
+  toast.addEventListener('click', dismiss);
+  container.appendChild(toast);
+  setTimeout(dismiss, duration);
+}
+
+/**
+ * showConfirm({ title, message, icon, okText, okClass, onConfirm })
+ * Returns nothing – executes onConfirm() callback asynchronously when user clicks OK
+ */
+function showConfirm({ title = 'ยืนยัน', message = '', icon = '⚠️', okText = 'ยืนยัน', okClass = 'btn-danger', onConfirm }) {
+  const modal        = document.getElementById('confirmModal');
+  const titleEl      = document.getElementById('confirmModalTitle');
+  const msgEl        = document.getElementById('confirmModalMsg');
+  const iconEl       = document.getElementById('confirmModalIcon');
+  const okBtn        = document.getElementById('confirmModalOk');
+  const cancelBtn    = document.getElementById('confirmModalCancel');
+
+  titleEl.textContent = title;
+  msgEl.textContent   = message;
+  iconEl.textContent  = icon;
+  okBtn.textContent   = okText;
+  okBtn.className     = `btn ${okClass}`;
+  modal.classList.add('active');
+
+  const cleanup = () => modal.classList.remove('active');
+
+  const okHandler = () => { cleanup(); onConfirm && onConfirm(); };
+  const cancelHandler = () => cleanup();
+
+  // Remove old listeners before adding new ones
+  okBtn.replaceWith(okBtn.cloneNode(true));
+  cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+  document.getElementById('confirmModalOk').addEventListener('click', okHandler, { once: true });
+  document.getElementById('confirmModalCancel').addEventListener('click', cancelHandler, { once: true });
+  modal.addEventListener('click', (e) => { if (e.target === modal) cleanup(); }, { once: true });
+}
+
 /* --- INITIALIZATION --- */
 document.addEventListener('DOMContentLoaded', () => {
   // Populate Route Dropdowns
@@ -562,7 +616,7 @@ function addSupervisorMission() {
   const dates = missionDatesInput.value.trim() || `${days} วัน`;
 
   if (!route) {
-    alert('กรุณาเลือกด้านจ่ายที่จะปฏิบัติภารกิจ!');
+    showToast('กรุณาเลือกด้านจ่ายที่จะปฏิบัติภารกิจ!', 'warning');
     return;
   }
 
@@ -1005,6 +1059,10 @@ async function handleFormSubmit(e) {
     await saveWaterEmployees(waterEmployees);
     employeeForm.reset();
     renderEmployeeTable();
+    showToast(
+      editIndexVal !== '' ? 'อัปเดตข้อมูลสำเร็จ!' : 'เพิ่มรายชื่อสำเร็จ!',
+      'success'
+    );
     return;
   }
 
@@ -1012,7 +1070,7 @@ async function handleFormSubmit(e) {
 
   if (formMode === 'supervisor') {
     if (tempMissions.length === 0) {
-      alert('กรุณากรอกและบันทึกภารกิจอย่างน้อย 1 ภารกิจสำหรับ ชนจ.!');
+      showToast('กรุณากรอกและบันทึกภารกิจอย่างน้อย 1 ภารกิจสำหรับ ชนจ.!', 'warning');
       return;
     }
     // Calculate total days
@@ -1063,6 +1121,7 @@ async function handleFormSubmit(e) {
   }
 
   // Save state
+  const isEdit = editIndexVal !== '';
   saveEmployees(employees);
   employeeForm.reset();
   routeStatsPreview.classList.add('hidden');
@@ -1073,6 +1132,7 @@ async function handleFormSubmit(e) {
   }
   
   renderEmployeeTable();
+  showToast(isEdit ? 'อัปเดตข้อมูลสำเร็จ!' : 'บันทึกข้อมูลสำเร็จ!', 'success');
 }
 
 function editWaterEmployee(idx) {
@@ -1080,11 +1140,18 @@ function editWaterEmployee(idx) {
 }
 
 function deleteWaterEmployee(idx) {
-  if (confirm('คุณแน่ใจว่าต้องการลบรายชื่อนี้ใช่หรือไม่?')) {
-    waterEmployees.splice(idx, 1);
-    saveWaterEmployees(waterEmployees);
-    renderEmployeeTable();
-  }
+  showConfirm({
+    title: 'ยืนยันการลบ',
+    message: 'คุณแน่ใจว่าต้องการลบรายชื่อนี้ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    icon: '🗑️',
+    okText: 'ลบรายชื่อ',
+    onConfirm: () => {
+      waterEmployees.splice(idx, 1);
+      saveWaterEmployees(waterEmployees);
+      renderEmployeeTable();
+      showToast('ลบรายชื่อเรียบร้อยแล้ว!', 'success');
+    }
+  });
 }
 
 function renderEmployeeTable() {
@@ -1334,11 +1401,18 @@ function cloneRow(index) {
 }
 
 function deleteRow(index) {
-  if (confirm('คุณต้องการลบรายชื่อพนักงานนี้ใช่หรือไม่?')) {
-    employees.splice(index, 1);
-    saveEmployees(employees);
-    renderEmployeeTable();
-  }
+  showConfirm({
+    title: 'ยืนยันการลบ',
+    message: 'คุณต้องการลบรายชื่อพนักงานนี้ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    icon: '🗑️',
+    okText: 'ลบพนักงาน',
+    onConfirm: () => {
+      employees.splice(index, 1);
+      saveEmployees(employees);
+      renderEmployeeTable();
+      showToast('ลบรายชื่อเรียบร้อยแล้ว!', 'success');
+    }
+  });
 }
 
 function cancelEdit() {
@@ -1364,20 +1438,34 @@ function cancelEdit() {
 
 function clearAllData() {
   if (activeMode === 'water') {
-    if (confirm('คุณต้องการลบข้อมูลการเบิกค่าน้ำดื่มทั้งหมดใช่หรือไม่?')) {
-      waterEmployees = [];
-      saveWaterEmployees([]);
-      cancelEdit();
-      renderEmployeeTable();
-    }
+    showConfirm({
+      title: 'ล้างข้อมูลค่าน้ำดื่มทั้งหมด',
+      message: 'คุณต้องการลบข้อมูลการเบิกค่าน้ำดื่มทั้งหมดใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+      icon: '⚠️',
+      okText: 'ล้างข้อมูล',
+      onConfirm: () => {
+        waterEmployees = [];
+        saveWaterEmployees([]);
+        cancelEdit();
+        renderEmployeeTable();
+        showToast('ล้างข้อมูลค่าน้ำดื่มเรียบร้อยแล้ว', 'success');
+      }
+    });
     return;
   }
-  if (confirm('คุณต้องการลบข้อมูลพนักงานทั้งหมดในตารางใช่หรือไม่?')) {
-    employees = [];
-    saveEmployees([]);
-    cancelEdit();
-    renderEmployeeTable();
-  }
+  showConfirm({
+    title: 'ล้างข้อมูลค่าน้ำมันทั้งหมด',
+    message: 'คุณต้องการลบข้อมูลพนักงานทั้งหมดในตารางใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    icon: '⚠️',
+    okText: 'ล้างข้อมูล',
+    onConfirm: () => {
+      employees = [];
+      saveEmployees([]);
+      cancelEdit();
+      renderEmployeeTable();
+      showToast('ล้างข้อมูลเรียบร้อยแล้ว', 'success');
+    }
+  });
 }
 
 /* --- WEIGHTED AVERAGE CALCULATOR (MODAL LOGIC) --- */
@@ -1434,7 +1522,7 @@ function addPricePeriod() {
   const days = parseInt(daysInput.value);
 
   if (isNaN(price) || isNaN(days) || price <= 0 || days <= 0) {
-    alert('กรุณากรอกราคาน้ำมันและจำนวนวันให้ถูกต้อง!');
+    showToast('กรุณากรอกราคาน้ำมันและจำนวนวันให้ถูกต้อง!', 'warning');
     return;
   }
 
@@ -1561,7 +1649,7 @@ function loadDemoData() {
 function exportToCsv() {
   if (activeMode === 'water') {
     if (waterEmployees.length === 0) {
-      alert('ไม่มีข้อมูลที่จะส่งออก!');
+      showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
       return;
     }
     let csvContent = "\uFEFF";
@@ -1590,7 +1678,7 @@ function exportToCsv() {
   }
 
   if (employees.length === 0) {
-    alert('ไม่มีข้อมูลที่จะส่งออก!');
+    showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
     return;
   }
 
@@ -1701,7 +1789,7 @@ function exportToCsv() {
 function printReport() {
   if (activeMode === 'water') {
     if (waterEmployees.length === 0) {
-      alert('ไม่มีข้อมูลที่จะพิมพ์!');
+      showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
       return;
     }
     
@@ -1776,7 +1864,7 @@ function printReport() {
   }
 
   if (employees.length === 0) {
-    alert('ไม่มีข้อมูลที่จะพิมพ์!');
+    showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
     return;
   }
 
@@ -1946,12 +2034,12 @@ function updateTemplateSelectDropdown() {
 async function saveCurrentListAsTemplate() {
   const name = templateNameInput.value.trim();
   if (!name) {
-    alert('กรุณากรอกชื่อสำหรับบันทึกชุดรายชื่อ!');
+    showToast('กรุณากรอกชื่อสำหรับบันทึกชุดรายชื่อ!', 'warning');
     return;
   }
 
   if (employees.length === 0) {
-    alert('ไม่มีรายชื่อพนักงานในตารางเพื่อบันทึก!');
+    showToast('ไม่มีรายชื่อพนักงานในตารางเพื่อบันทึก!', 'warning');
     return;
   }
 
@@ -1959,13 +2047,13 @@ async function saveCurrentListAsTemplate() {
   templateNameInput.value = '';
   
   updateTemplateSelectDropdown();
-  alert(`บันทึกชุดรายชื่อ "${name}" เรียบร้อยแล้ว!`);
+  showToast(`บันทึกชุดรายชื่อ "${name}" เรียบร้อยแล้ว!`, 'success');
 }
 
 async function loadSelectedTemplate() {
   const selectedName = templateSelect.value;
   if (!selectedName) {
-    alert('กรุณาเลือกชุดรายชื่อที่ต้องการโหลด!');
+    showToast('กรุณาเลือกชุดรายชื่อที่ต้องการโหลด!', 'warning');
     return;
   }
 
@@ -1973,28 +2061,41 @@ async function loadSelectedTemplate() {
   const list = savedTemplates[selectedName];
   
   if (list) {
-    if (confirm(`คุณต้องการโหลดชุดรายชื่อ "${selectedName}" มาเขียนทับตารางปัจจุบันใช่หรือไม่?`)) {
-      employees = JSON.parse(JSON.stringify(list));
-      await saveEmployees(employees);
-      cancelEdit();
-      renderEmployeeTable();
-      alert(`โหลดชุดรายชื่อ "${selectedName}" สำเร็จ!`);
-    }
+    showConfirm({
+      title: 'โหลดชุดรายชื่อ',
+      message: `คุณต้องการโหลดชุดรายชื่อ "${selectedName}" มาเขียนทับตารางปัจจุบันใช่หรือไม่?`,
+      icon: '📂',
+      okText: 'โหลดใช้งาน',
+      okClass: 'btn-primary',
+      onConfirm: async () => {
+        employees = JSON.parse(JSON.stringify(list));
+        await saveEmployees(employees);
+        cancelEdit();
+        renderEmployeeTable();
+        showToast(`โหลดชุดรายชื่อ "${selectedName}" สำเร็จ!`, 'success');
+      }
+    });
   }
 }
 
 async function deleteSelectedTemplate() {
   const selectedName = templateSelect.value;
   if (!selectedName) {
-    alert('กรุณาเลือกชุดรายชื่อที่ต้องการลบ!');
+    showToast('กรุณาเลือกชุดรายชื่อที่ต้องการลบ!', 'warning');
     return;
   }
 
-  if (confirm(`คุณต้องการลบชุดรายชื่อ "${selectedName}" ใช่หรือไม่?`)) {
-    await deleteTemplate(selectedName);
-    updateTemplateSelectDropdown();
-    alert(`ลบชุดรายชื่อ "${selectedName}" เรียบร้อยแล้ว!`);
-  }
+  showConfirm({
+    title: 'ลบชุดรายชื่อ',
+    message: `คุณต้องการลบชุดรายชื่อ "${selectedName}" ใช่หรือไม่?`,
+    icon: '🗑️',
+    okText: 'ลบชุดนี้',
+    onConfirm: async () => {
+      await deleteTemplate(selectedName);
+      updateTemplateSelectDropdown();
+      showToast(`ลบชุดรายชื่อ "${selectedName}" เรียบร้อยแล้ว!`, 'success');
+    }
+  });
 }
 
 /* --- REFERENCE ROUTE DATA EDITOR MODAL FUNCTIONS --- */
@@ -2041,7 +2142,7 @@ async function saveSingleRouteSettings() {
   renderRouteEditorTable();
   renderEmployeeTable();
   
-  alert(`อัปเดตข้อมูลด้านจ่ายที่ ${route} สำเร็จ!`);
+  showToast(`อัปเดตข้อมูลด้านจ่ายที่ ${route} สำเร็จ!`, 'success');
 }
 
 function updateAllRouteDropdownTexts() {
@@ -2094,16 +2195,22 @@ function renderRouteEditorTable() {
 }
 
 async function resetRouteDataDefaults() {
-  if (confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตสถิติด้านจ่ายอ้างอิงทั้งหมดกลับไปเป็นค่าเริ่มต้นจากโรงงาน?')) {
-    await resetCloudRouteData();
-    ROUTE_DATA = initRouteData();
-    await saveRouteData(ROUTE_DATA);
-    updateAllRouteDropdownTexts();
-    renderRouteEditorTable();
-    loadSelectedRouteToEditorForm();
-    renderEmployeeTable();
-    alert('รีเซ็ตข้อมูลด้านจ่ายทั้งหมดเรียบร้อยแล้ว!');
-  }
+  showConfirm({
+    title: 'รีเซ็ตข้อมูลด้านจ่าย',
+    message: 'คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตสถิติด้านจ่ายอ้างอิงทั้งหมดกลับไปเป็นค่าเริ่มต้นจากโรงงาน? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    icon: '⚠️',
+    okText: 'รีเซ็ตทั้งหมด',
+    onConfirm: async () => {
+      await resetCloudRouteData();
+      ROUTE_DATA = initRouteData();
+      await saveRouteData(ROUTE_DATA);
+      updateAllRouteDropdownTexts();
+      renderRouteEditorTable();
+      loadSelectedRouteToEditorForm();
+      renderEmployeeTable();
+      showToast('รีเซ็ตข้อมูลด้านจ่ายทั้งหมดเรียบร้อยแล้ว!', 'success');
+    }
+  });
 }
 
 /* --- SIGNATORY INPUTS LOCK/UNLOCK TOGGLE --- */
@@ -2191,15 +2298,21 @@ async function renderSigProfilesTable() {
       
       const sigProfilesModal = document.getElementById('sigProfilesModal');
       sigProfilesModal.classList.remove('active');
-      alert(`โหลดชุดผู้ลงนาม "${name}" สำเร็จ!`);
+      showToast(`โหลดชุดผู้ลงนาม "${name}" สำเร็จ!`, 'success');
     });
     
     tr.querySelector('.delete-profile-btn').addEventListener('click', async () => {
-      if (confirm(`คุณต้องการลบเทมเพลตผู้ลงนาม "${name}" ใช่หรือไม่?`)) {
-        await deleteSignatoryProfile(name);
-        await renderSigProfilesTable();
-        alert(`ลบเทมเพลต "${name}" สำเร็จ!`);
-      }
+      showConfirm({
+        title: 'ลบเทมเพลตผู้ลงนาม',
+        message: `คุณต้องการลบเทมเพลตผู้ลงนาม "${name}" ใช่หรือไม่?`,
+        icon: '🗑️',
+        okText: 'ลบเทมเพลตนี้',
+        onConfirm: async () => {
+          await deleteSignatoryProfile(name);
+          await renderSigProfilesTable();
+          showToast(`ลบเทมเพลต "${name}" สำเร็จ!`, 'success');
+        }
+      });
     });
     
     sigProfilesTableBody.appendChild(tr);
@@ -2209,7 +2322,7 @@ async function renderSigProfilesTable() {
 async function handleSaveSigProfile() {
   const profileName = document.getElementById('sigProfileNameInput').value.trim();
   if (!profileName) {
-    alert('กรุณากรอกชื่อโปรไฟล์เทมเพลต!');
+    showToast('กรุณากรอกชื่อโปรไฟล์เทมเพลต!', 'warning');
     return;
   }
   
@@ -2228,7 +2341,7 @@ async function handleSaveSigProfile() {
   };
   
   if (!profileData.makerName) {
-    alert('กรุณากรอกชื่อผู้จัดทำเป็นอย่างน้อย!');
+    showToast('กรุณากรอกชื่อผู้จัดทำเป็นอย่างน้อย!', 'warning');
     return;
   }
   
@@ -2242,6 +2355,6 @@ async function handleSaveSigProfile() {
   document.getElementById('modalSigApproverPos').value = '';
   
   await renderSigProfilesTable();
-  alert(`บันทึกโปรไฟล์ "${profileName}" สำเร็จ!`);
+  showToast(`บันทึกโปรไฟล์ "${profileName}" สำเร็จ!`, 'success');
 }
 

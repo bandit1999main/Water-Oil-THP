@@ -436,6 +436,24 @@
       </div>
     </main>
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 1.2rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; pointer-events: none;"></div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirmModal" class="modal-overlay" style="z-index: 5000;">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 420px; padding: 2rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div id="confirmModalIcon" style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚠️</div>
+          <h3 id="confirmModalTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;"></h3>
+          <p id="confirmModalMsg" style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;"></p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button id="confirmModalCancel" class="btn btn-secondary" style="min-width: 100px;">ยกเลิก</button>
+          <button id="confirmModalOk" class="btn btn-danger" style="min-width: 100px;">ยืนยัน</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal: Weighted Average Oil Price Calculator -->
     <div id="avgCalcModal" class="modal-overlay">
       <div class="modal-content glass-modal animate-slide-in">
