@@ -929,7 +929,7 @@ tr:hover td {
 
   /* Make Name-Surname column stand out with a larger font size */
   .print-table td:nth-child(2) {
-    font-size: 14pt !important;
+    font-size: 12pt !important;
   }
 
   .print-table td:nth-child(1),
@@ -1021,7 +1021,7 @@ tr:hover td {
   }
 
   [data-mode="water"] #printWaterReportArea .print-table td:nth-child(2) {
-    font-size: 14pt !important;
+    font-size: 12pt !important;
   }
 
   [data-mode="water"] #printWaterReportArea .print-summary-section {
