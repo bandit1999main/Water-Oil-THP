@@ -1870,20 +1870,25 @@ function printReport() {
 
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
   
-  document.getElementById('printMonthText').textContent = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
-  document.getElementById('printYearText').textContent = globalYearSelect.value;
-  document.getElementById('printRefPriceText').textContent = currentFuelPrice.toFixed(2);
+  // Get signatory values onto print preview
+  const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
+  const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
+  const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
+  
+  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
+  const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
+  const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
+  
+  const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
+  const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
+  const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
 
-  const printTableBody = document.getElementById('printTableBody');
-  printTableBody.innerHTML = '';
+  const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+  const yearText = globalYearSelect.value;
 
-  let totalFuelCost = 0;
-  let totalMaintCost = 0;
-  let grandTotal = 0;
-
-  // Flatten the employees and their supervisor missions into separate rows
+  // 1. Process and aggregate employees to flatRows
   let flatRows = [];
-  employees.forEach((item, parentIndex) => {
+  employees.forEach((item) => {
     if (item.formMode !== 'supervisor') {
       const liters = calculateClaimLiters(item);
       const fuelCost = liters * currentFuelPrice;
@@ -1903,12 +1908,20 @@ function printReport() {
         remarks: item.remarks
       });
     } else {
+      // It's a supervisor (ชนจ.)
+      // We aggregate ALL their missions into ONE row per supervisor
+      let totalLiters = 0;
+      let totalMaint = 0;
+      let totalDays = 0;
+      let missionRouteStrings = [];
+
       // 1. Group 'ตรวจสอบการนำจ่าย'
       const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
       if (inspectMissions.length > 0) {
         let rawInspectionLiters = 0;
         let inspectDays = 0;
         let inspectMaint = 0;
+        let routesUsed = [];
 
         inspectMissions.forEach(m => {
           const routeInfo = ROUTE_DATA[m.route];
@@ -1916,106 +1929,189 @@ function printReport() {
           rawInspectionLiters += dailyLiters * m.days;
           inspectDays += m.days;
           inspectMaint += calculateSingleMissionMaint(item, m);
+          routesUsed.push(m.route);
         });
 
         const liters = Math.ceil(rawInspectionLiters / 2);
-        const fuelCost = liters * currentFuelPrice;
-        const sumTotal = fuelCost + inspectMaint;
-
-        flatRows.push({
-          name: item.name,
-          position: item.position,
-          routeDesc: `ตรวจสอบการนำจ่าย`,
-          workDays: inspectDays,
-          liters: liters,
-          fuelCost: fuelCost,
-          maintCost: inspectMaint,
-          sumTotal: sumTotal,
-          signature: item.signature,
-          remarks: item.remarks
-        });
+        totalLiters += liters;
+        totalMaint += inspectMaint;
+        totalDays += inspectDays;
+        missionRouteStrings.push(`ตรวจสอบการนำจ่าย (ด้าน ${routesUsed.join(', ')})`);
       }
 
-      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
+      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน')
       const otherMissions = item.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
       otherMissions.forEach(m => {
         const routeInfo = ROUTE_DATA[m.route];
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
-        const fuelCost = liters * currentFuelPrice;
         const maint = calculateSingleMissionMaint(item, m);
-        const sumTotal = fuelCost + maint;
 
-        flatRows.push({
-          name: item.name,
-          position: item.position,
-          routeDesc: `${m.type} (ด้าน ${m.route})`,
-          workDays: m.days,
-          liters: liters,
-          fuelCost: fuelCost,
-          maintCost: maint,
-          sumTotal: sumTotal,
-          signature: item.signature,
-          remarks: item.remarks
-        });
+        totalLiters += liters;
+        totalMaint += maint;
+        totalDays += m.days;
+        missionRouteStrings.push(`${m.type} (ด้าน ${m.route}) ${m.days} วัน`);
+      });
+
+      const fuelCost = totalLiters * currentFuelPrice;
+      const sumTotal = fuelCost + totalMaint;
+
+      flatRows.push({
+        name: item.name,
+        position: item.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)',
+        routeDesc: missionRouteStrings.join('<br>'),
+        workDays: totalDays,
+        liters: totalLiters,
+        fuelCost: fuelCost,
+        maintCost: totalMaint,
+        sumTotal: sumTotal,
+        signature: item.signature,
+        remarks: item.remarks
       });
     }
   });
 
-  flatRows.forEach((row, index) => {
-    totalFuelCost += row.fuelCost;
-    totalMaintCost += row.maintCost;
-    grandTotal += row.sumTotal;
+  // 2. Classify rows into 3 groups
+  // Group A: พนักงาน + ลูกจ้างประจำ
+  // Group B: ลูกจ้างชั่วคราว + ลูกจ้างรายวัน + หัวหน้าโซนนำจ่าย (ชนจ.) (ถ้าไม่ได้กำหนดเป็นอื่นๆ)
+  // Group C: ลูกจ้างเหมา (รวมถึง คำว่า "เหมา")
+  
+  const isGroupA = (pos) => {
+    const p = (pos || '').toLowerCase();
+    return p.includes('พนักงาน') || p.includes('ลูกจ้างประจำ');
+  };
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${row.name}</strong></td>
-      <td>${row.position}</td>
-      <td style="text-align: left !important; font-size: 8pt; line-height: 1.3;">${row.routeDesc}</td>
-      <td>${row.workDays} วัน</td>
-      <td>${row.liters.toFixed(2)}</td>
-      <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-      <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-      <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
-      <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #333;">${row.signature}</span></td>
-      <td><span style="font-size: 8pt; color: #444;">${row.remarks}</span></td>
-    `;
-    printTableBody.appendChild(tr);
+  const isGroupC = (pos) => {
+    const p = (pos || '').toLowerCase();
+    return p.includes('เหมา');
+  };
+
+  let groupA = [];
+  let groupB = [];
+  let groupC = [];
+
+  flatRows.forEach(row => {
+    if (isGroupA(row.position)) {
+      groupA.push(row);
+    } else if (isGroupC(row.position)) {
+      groupC.push(row);
+    } else {
+      groupB.push(row);
+    }
   });
 
-  document.getElementById('printTotalCount').textContent = flatRows.length.toString();
-  document.getElementById('printTotalFuel').textContent = totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  document.getElementById('printTotalMaintenance').textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  document.getElementById('printGrandTotal').textContent = grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  const categories = [
+    { title: 'พนักงาน และ ลูกจ้างประจำ', list: groupA },
+    { title: 'ลูกจ้างชั่วคราว/รายวัน และ ชนจ.', list: groupB },
+    { title: 'ลูกจ้างเหมาบริการ/เหมาจ่าย', list: groupC }
+  ].filter(cat => cat.list.length > 0);
 
-  // Map signatory values onto print preview
-  const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
-  const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
-  const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
-  
-  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
-  const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
-  const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
-  
-  const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
-  const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
-  const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
+  // 3. Clear printArea and build page by page dynamically
+  const printReportArea = document.getElementById('printReportArea');
+  printReportArea.innerHTML = '';
 
-  document.getElementById('printSigMakerTitleVal').textContent = sigMakerTitleVal;
-  document.getElementById('printSigMakerNameVal').textContent = sigMakerNameVal;
-  document.getElementById('printSigMakerPosVal').textContent = sigMakerPosVal;
-  
-  document.getElementById('printSigCheckerTitleVal').textContent = sigCheckerTitleVal;
-  document.getElementById('printSigCheckerNameVal').textContent = sigCheckerNameVal;
-  document.getElementById('printSigCheckerPosVal').textContent = sigCheckerPosVal;
-  
-  document.getElementById('printSigApproverTitleVal').textContent = sigApproverTitleVal;
-  document.getElementById('printSigApproverNameVal').textContent = sigApproverNameVal;
-  document.getElementById('printSigApproverPosVal').textContent = sigApproverPosVal;
+  categories.forEach((cat, catIdx) => {
+    const pageDiv = document.createElement('div');
+    // Set style page break for printed pages
+    pageDiv.className = 'print-page-section';
+    if (catIdx < categories.length - 1) {
+      pageDiv.style.pageBreakAfter = 'always';
+    }
+    pageDiv.style.marginBottom = '2cm';
+
+    let totalFuelCost = 0;
+    let totalMaintCost = 0;
+    let grandTotal = 0;
+
+    let tableRowsHtml = cat.list.map((row, idx) => {
+      totalFuelCost += row.fuelCost;
+      totalMaintCost += row.maintCost;
+      grandTotal += row.sumTotal;
+
+      return `
+        <tr>
+          <td>${idx + 1}</td>
+          <td><strong>${row.name}</strong></td>
+          <td>${row.position}</td>
+          <td style="text-align: left !important; font-size: 7.5pt; line-height: 1.3;">${row.routeDesc}</td>
+          <td>${row.workDays} วัน</td>
+          <td>${row.liters.toFixed(2)}</td>
+          <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></td>
+          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #333;">${row.signature}</span></td>
+          <td><span style="font-size: 7.5pt; color: #444;">${row.remarks}</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    pageDiv.innerHTML = `
+      <div class="print-header">
+        <div class="print-title-container">
+          <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
+          <h3>บริษัท ไปรษณีย์ไทย จำกัด (${cat.title})</h3>
+          <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+        </div>
+        <div class="print-meta-info">
+          <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
+        </div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 5%">ลำดับ</th>
+            <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
+            <th style="width: 12%">ตำแหน่ง / บทบาท</th>
+            <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
+            <th style="width: 8%">วันทำงาน</th>
+            <th style="width: 8%">น้ำมัน (ลิตร)</th>
+            <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
+            <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
+            <th style="width: 8%">รวมเงิน (บาท)</th>
+            <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
+            <th style="width: 10%">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <div class="print-summary-section">
+        <div class="summary-block">
+          <p>จำนวนรายชื่อผู้รับเงินกลุ่มนี้: <strong>${cat.list.length}</strong> ราย</p>
+          <p>รวมค่าน้ำมันเชื้อเพลิงกลุ่มนี้: <strong>${totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+          <p>รวมค่าบำรุงรักษากลุ่มนี้: <strong>${totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+          <p class="final-sum">ยอดเงินเบิกจ่ายรวมทั้งสิ้น (กลุ่มนี้): <strong>${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> บาท</p>
+        </div>
+      </div>
+
+      <div class="print-signatures">
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+          <p>ตำแหน่ง ${sigMakerPosVal}</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+          <p>ตำแหน่ง ${sigApproverPosVal}</p>
+        </div>
+      </div>
+    `;
+
+    printReportArea.appendChild(pageDiv);
+  });
 
   // Give browser 300ms to render print layout before opening dialog
   setTimeout(() => window.print(), 300);
+}
 }
 
 /* --- SAVED TEMPLATES / BATCH MANAGER LOGIC --- */
