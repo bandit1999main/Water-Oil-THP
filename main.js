@@ -685,6 +685,7 @@ async function switchAppMode(mode) {
     }
   }
   renderEmployeeTable();
+  updateTemplateSelectDropdown();
 }
 
 /* --- DRINKING WATER TAX CALC ENGINE --- */
@@ -2486,10 +2487,20 @@ function updateTemplateSelectDropdown() {
   templateSelect.innerHTML = '<option value="" disabled selected>-- เลือกรายชื่อที่บันทึกไว้ --</option>';
   
   Object.keys(savedTemplates).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    templateSelect.appendChild(opt);
+    const templateData = savedTemplates[name];
+    // Filter templates matching current active mode
+    const isWaterTemplate = templateData && templateData.mode === 'water';
+    const currentIsWater = activeMode === 'water';
+    
+    // Support legacy format where templateData is just an array of employees (defaults to fuel)
+    const templateMode = (templateData && templateData.mode) ? templateData.mode : 'fuel';
+
+    if (templateMode === activeMode) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      templateSelect.appendChild(opt);
+    }
   });
 }
 
@@ -2500,16 +2511,19 @@ async function saveCurrentListAsTemplate() {
     return;
   }
 
-  if (employees.length === 0) {
+  const targetList = activeMode === 'water' ? waterEmployees : employees;
+
+  if (targetList.length === 0) {
     showToast('ไม่มีรายชื่อพนักงานในตารางเพื่อบันทึก!', 'warning');
     return;
   }
 
-  await saveTemplate(name, employees);
+  // Pass activeMode to database helper
+  await saveTemplate(name, targetList, activeMode);
   templateNameInput.value = '';
   
   updateTemplateSelectDropdown();
-  showToast(`บันทึกชุดรายชื่อ "${name}" เรียบร้อยแล้ว!`, 'success');
+  showToast(`บันทึกชุดรายชื่อ "${name}" (${activeMode === 'fuel' ? 'ค่าน้ำมัน' : 'ค่าน้ำดื่ม'}) เรียบร้อยแล้ว!`, 'success');
 }
 
 async function loadSelectedTemplate() {
@@ -2520,18 +2534,32 @@ async function loadSelectedTemplate() {
   }
 
   const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
-  const list = savedTemplates[selectedName];
+  const templateData = savedTemplates[selectedName];
   
-  if (list) {
+  if (templateData) {
+    // Handle both new schema { employees, mode } and legacy array schema
+    const list = Array.isArray(templateData) ? templateData : (templateData.employees || []);
+    const templateMode = (templateData && templateData.mode) ? templateData.mode : 'fuel';
+
+    if (templateMode !== activeMode) {
+      showToast('ชุดรายชื่อนี้ไม่ตรงกับโหมดการทำงานปัจจุบัน!', 'error');
+      return;
+    }
+
     showConfirm({
       title: 'โหลดชุดรายชื่อ',
-      message: `คุณต้องการโหลดชุดรายชื่อ "${selectedName}" มาเขียนทับตารางปัจจุบันใช่หรือไม่?`,
+      message: `คุณต้องการโหลดชุดรายชื่อ "${selectedName}" มาเขียนทับตาราง${activeMode === 'fuel' ? 'ค่าน้ำมัน' : 'ค่าน้ำดื่ม'}ปัจจุบันใช่หรือไม่?`,
       icon: '📂',
       okText: 'โหลดใช้งาน',
       okClass: 'btn-primary',
       onConfirm: async () => {
-        employees = JSON.parse(JSON.stringify(list));
-        await saveEmployees(employees);
+        if (activeMode === 'water') {
+          waterEmployees = JSON.parse(JSON.stringify(list));
+          await saveWaterEmployees(waterEmployees);
+        } else {
+          employees = JSON.parse(JSON.stringify(list));
+          await saveEmployees(employees);
+        }
         cancelEdit();
         renderEmployeeTable();
         showToast(`โหลดชุดรายชื่อ "${selectedName}" สำเร็จ!`, 'success');

@@ -240,7 +240,12 @@ export async function fetchSavedTemplates() {
     const querySnapshot = await getDocs(collection(db, "templates"));
     const templates = {};
     querySnapshot.forEach((doc) => {
-      templates[doc.id] = doc.data().employees || [];
+      const data = doc.data();
+      // Backward compatibility: default to 'fuel' if no mode is specified
+      templates[doc.id] = {
+        employees: data.employees || [],
+        mode: data.mode || 'fuel'
+      };
     });
     localStorage.setItem('tp_saved_templates', JSON.stringify(templates));
     return templates;
@@ -251,17 +256,24 @@ export async function fetchSavedTemplates() {
 }
 
 // Save template
-export async function saveTemplate(templateName, employeesList) {
+export async function saveTemplate(templateName, employeesList, targetMode = 'fuel') {
   const templates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
-  templates[templateName] = employeesList;
+  templates[templateName] = {
+    employees: employeesList,
+    mode: targetMode
+  };
   localStorage.setItem('tp_saved_templates', JSON.stringify(templates));
 
   if (!isCloudConnected()) return false;
 
   try {
     const docRef = doc(db, "templates", templateName);
-    await setDoc(docRef, { employees: employeesList, updatedAt: Date.now() });
-    console.log(`✅ Template "${templateName}" successfully saved to Cloud Firestore.`);
+    await setDoc(docRef, { 
+      employees: employeesList, 
+      mode: targetMode,
+      updatedAt: Date.now() 
+    });
+    console.log(`✅ Template "${templateName}" (${targetMode}) successfully saved to Cloud Firestore.`);
     return true;
   } catch (error) {
     console.error("❌ Firestore saveTemplate failed.", error);
