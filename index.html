@@ -367,6 +367,9 @@
                 <button type="button" id="openRouteEditorBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange);">
                   ⚙️ ตั้งค่าระยะทาง/น้ำมัน
                 </button>
+                <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
+                  📥 นำเข้าวันทำงานจาก Excel
+                </button>
                 <button type="button" id="loadDemoBtn" class="btn btn-secondary btn-small">
                   🌟 โหลดข้อมูลตัวอย่าง
                 </button>
@@ -772,6 +775,68 @@
             <button type="submit" class="btn btn-primary">✔️ อัปเดตข้อมูล</button>
           </div>
         </form>
+      </div>
+    </div>
+
+
+    <!-- Modal: Attendance Import from Excel (Popup) -->
+    <div id="attendanceImportModal" class="modal-overlay">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+          <h3>📥 นำเข้าวันทำงานจาก Excel</h3>
+          <button type="button" id="closeImportModalBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <p class="modal-instruction" style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5;">
+            💡 <strong>วิธีใช้งาน:</strong> เลือกคัดลอกคอลัมน์ <strong>ชื่อ-นามสกุล</strong> และคอลัมน์ <strong>วันทำงาน</strong> ใน Excel (สามารถ Copy ทั้งแถวหรือเฉพาะรายชื่อพร้อมตัวเลขมาได้เลย) จากนั้นนำมาวาง (Ctrl+V) ในช่องด้านล่างนี้ ระบบจะจับคู่และคำนวณจำนวนวันทำงานให้โดยอัตโนมัติ
+          </p>
+
+          <div class="form-group">
+            <label for="importPastedText">วางข้อมูลจาก Excel ที่นี่</label>
+            <textarea id="importPastedText" class="form-input" style="height: 150px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ (เช่น:&#10;นาย นิพล ทรัพย์หมื่นแสน   16&#10;นาย พรชัย พาราพันธกุล   0&#10;นาย ศิษฏ์ กลิ่นมาลี   23)"></textarea>
+          </div>
+
+          <div class="form-group" style="margin: 1rem 0;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">เลือกเป้าหมายระบบที่จะนำเข้าข้อมูล:</label>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="radio" name="importTargetMode" value="both" checked />
+                🔄 ทั้ง 2 ระบบ (ค่าน้ำมัน & ค่าน้ำดื่ม)
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="radio" name="importTargetMode" value="fuel" />
+                ⛽ เฉพาะระบบค่าน้ำมัน
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                <input type="radio" name="importTargetMode" value="water" />
+                🥤 เฉพาะระบบค่าน้ำดื่ม
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-table-container" style="margin-top: 1rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 250px; overflow-y: auto;">
+            <table class="modal-table" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">รายชื่อที่ตรวจพบ</th>
+                  <th style="width: 35%;">สถานะการจับคู่พนักงาน</th>
+                  <th style="width: 20%;">วันทำงานใหม่</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewTableBody">
+                <tr>
+                  <td colspan="3" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอวางข้อมูลเพื่อประมวลผล</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelImportBtn" class="btn btn-secondary">ยกเลิก</button>
+          <button type="button" id="submitImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
+            ✔️ ยืนยันนำเข้าข้อมูล
+          </button>
+        </div>
       </div>
     </div>
 

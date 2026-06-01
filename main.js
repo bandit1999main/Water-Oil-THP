@@ -153,6 +153,16 @@ const themeToggleBtn = document.getElementById('themeToggleBtn');
 const sunIcon = document.getElementById('sunIcon');
 const moonIcon = document.getElementById('moonIcon');
 
+// Excel Import Modal DOM Elements
+const importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
+const attendanceImportModal = document.getElementById('attendanceImportModal');
+const closeImportModalBtn = document.getElementById('closeImportModalBtn');
+const cancelImportBtn = document.getElementById('cancelImportBtn');
+const submitImportBtn = document.getElementById('submitImportBtn');
+const importPastedText = document.getElementById('importPastedText');
+const importPreviewTableBody = document.getElementById('importPreviewTableBody');
+let tempParsedRecords = [];
+
 // Saved Templates Manager DOM Elements
 const templateNameInput = document.getElementById('templateNameInput');
 const saveTemplateBtn = document.getElementById('saveTemplateBtn');
@@ -278,6 +288,17 @@ document.addEventListener('DOMContentLoaded', () => {
   cancelAvgBtn.addEventListener('click', () => avgCalcModal.classList.remove('active'));
   addPeriodBtn.addEventListener('click', addPricePeriod);
   applyAvgPriceBtn.addEventListener('click', applyAvgPriceToGlobal);
+
+  // Attendance Import Modal Events
+  importExcelAttendanceBtn.addEventListener('click', openAttendanceImportModal);
+  closeImportModalBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
+  cancelImportBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
+  importPastedText.addEventListener('input', handleAttendancePaste);
+  importPastedText.addEventListener('paste', handleAttendancePaste);
+  submitImportBtn.addEventListener('click', handleConfirmImport);
+  document.querySelectorAll('input[name="importTargetMode"]').forEach(radio => {
+    radio.addEventListener('change', handleAttendancePaste);
+  });
 
   // Table Batch Actions
   loadDemoBtn.addEventListener('click', loadDemoData);
@@ -2777,4 +2798,179 @@ async function handleSaveSigProfile() {
   await renderSigProfilesTable();
   showToast(`บันทึกโปรไฟล์ "${profileName}" สำเร็จ!`, 'success');
 }
+
+/* --- EXCEL ATTENDANCE IMPORT LOGIC --- */
+function openAttendanceImportModal() {
+  importPastedText.value = '';
+  importPreviewTableBody.innerHTML = '<tr><td colspan="3" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอวางข้อมูลเพื่อประมวลผล</td></tr>';
+  submitImportBtn.disabled = true;
+  submitImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  tempParsedRecords = [];
+  attendanceImportModal.classList.add('active');
+}
+
+function cleanThaiNameForMatching(name) {
+  if (!name) return "";
+  // Remove all spaces, tabs, dots, dashes, asterisks and quotes
+  let cleaned = name.replace(/[\s\t\n\r\.\*\"\'\-]/g, "");
+  // Remove common Thai prefixes
+  cleaned = cleaned.replace(/^(นาย|นางสาว|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.)/, "");
+  return cleaned;
+}
+
+function handleAttendancePaste() {
+  // Allow text to load inside textarea on next event loop tick
+  setTimeout(() => {
+    const text = importPastedText.value;
+    const lines = text.split('\n');
+    
+    tempParsedRecords = [];
+    importPreviewTableBody.innerHTML = '';
+    
+    let matchCount = 0;
+    
+    // Check target systems
+    const targetRadio = document.querySelector('input[name="importTargetMode"]:checked');
+    const targetMode = targetRadio ? targetRadio.value : 'both';
+    
+    lines.forEach(line => {
+      const cleanedLine = line.trim();
+      if (!cleanedLine) return;
+      
+      // 1. Extract days (the last number in range 0-31)
+      const numbers = cleanedLine.match(/\b([0-9]{1,2})\b/g);
+      let workDays = null;
+      if (numbers && numbers.length > 0) {
+        for (let i = numbers.length - 1; i >= 0; i--) {
+          const num = parseInt(numbers[i]);
+          if (num >= 0 && num <= 31) {
+            workDays = num;
+            break;
+          }
+        }
+      }
+      
+      // 2. Extract name components
+      const tokens = cleanedLine.split(/[\t\s]+/).map(t => t.trim()).filter(Boolean);
+      let nameParts = [];
+      tokens.forEach(tok => {
+        // Skip common symbols and status abbreviations to isolate names
+        if (isNaN(tok) && tok !== '/' && tok !== 'ย' && tok !== 'พร' && tok !== 'ป' && tok !== 'ก' && tok.length > 1) {
+          nameParts.push(tok);
+        }
+      });
+      
+      let parsedName = nameParts.join(' ');
+      if (!parsedName) {
+        // Fallback cleaner
+        parsedName = cleanedLine.replace(/[0-9\/ยพรก\t\*\-\(\)]/g, ' ').replace(/\s+/g, ' ').trim();
+      }
+      
+      if (parsedName.length < 3) return;
+      
+      // 3. Find matching employee in systems
+      let matchStatusHtml = '';
+      let matchFound = false;
+      let matchingEmployeeName = '';
+      let targetLists = [];
+      
+      const cleanedParsedName = cleanThaiNameForMatching(parsedName);
+      
+      if (targetMode === 'fuel' || targetMode === 'both') {
+        const matchIdx = employees.findIndex(emp => cleanThaiNameForMatching(emp.name) === cleanedParsedName);
+        if (matchIdx !== -1) {
+          matchFound = true;
+          matchingEmployeeName = employees[matchIdx].name;
+          targetLists.push({ type: 'fuel', index: matchIdx, original: employees[matchIdx] });
+        }
+      }
+      
+      if (targetMode === 'water' || targetMode === 'both') {
+        const matchIdx = waterEmployees.findIndex(emp => cleanThaiNameForMatching(emp.name) === cleanedParsedName);
+        if (matchIdx !== -1) {
+          matchFound = true;
+          matchingEmployeeName = waterEmployees[matchIdx].name;
+          targetLists.push({ type: 'water', index: matchIdx, original: waterEmployees[matchIdx] });
+        }
+      }
+      
+      if (matchFound) {
+        matchCount++;
+        const typesLabel = targetLists.map(t => t.type === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม').join(' & ');
+        matchStatusHtml = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ จับคู่สำเร็จ (${matchingEmployeeName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel}</small></span>`;
+      } else {
+        matchStatusHtml = `<span style="color: #f59e0b;">⚠️ ไม่พบรายชื่อนี้ในระบบ</span>`;
+      }
+      
+      tempParsedRecords.push({
+        name: parsedName,
+        newDays: workDays !== null ? workDays : 26,
+        matched: matchFound,
+        targets: targetLists
+      });
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align: left; padding: 0.5rem 0.75rem;">
+          <strong>${parsedName}</strong>
+        </td>
+        <td style="text-align: left; padding: 0.5rem 0.75rem;">
+          ${matchStatusHtml}
+        </td>
+        <td style="padding: 0.5rem 0.75rem; font-weight: bold; color: var(--post-orange);">
+          ${workDays !== null ? workDays + ' วัน' : '26 วัน (ค่าเริ่มต้น)'}
+        </td>
+      `;
+      importPreviewTableBody.appendChild(tr);
+    });
+    
+    if (tempParsedRecords.length === 0) {
+      importPreviewTableBody.innerHTML = '<tr><td colspan="3" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอวางข้อมูลเพื่อประมวลผล</td></tr>';
+      submitImportBtn.disabled = true;
+    } else {
+      submitImportBtn.disabled = matchCount === 0;
+      submitImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${matchCount} รายชื่อ)`;
+    }
+  }, 100);
+}
+
+async function handleConfirmImport() {
+  let updatedFuelCount = 0;
+  let updatedWaterCount = 0;
+  
+  let updatedEmployees = [...employees];
+  let updatedWaterEmployees = [...waterEmployees];
+  
+  tempParsedRecords.forEach(rec => {
+    if (!rec.matched) return;
+    
+    rec.targets.forEach(target => {
+      if (target.type === 'fuel') {
+        updatedEmployees[target.index].workDays = rec.newDays;
+        updatedFuelCount++;
+      } else if (target.type === 'water') {
+        updatedWaterEmployees[target.index].workDays = rec.newDays;
+        updatedWaterCount++;
+      }
+    });
+  });
+  
+  if (updatedFuelCount > 0) {
+    employees = updatedEmployees;
+    localStorage.setItem('tp_employees', JSON.stringify(employees));
+    await saveEmployees(employees);
+  }
+  
+  if (updatedWaterCount > 0) {
+    waterEmployees = updatedWaterEmployees;
+    localStorage.setItem('tp_water_employees', JSON.stringify(waterEmployees));
+    await saveWaterEmployees(waterEmployees);
+  }
+  
+  attendanceImportModal.classList.remove('active');
+  renderEmployeeTable();
+  
+  showToast(`นำเข้าวันทำงานสำเร็จ! (ค่าน้ำมัน: ${updatedFuelCount} ราย, ค่าน้ำดื่ม: ${updatedWaterCount} ราย)`, 'success');
+}
+
 
