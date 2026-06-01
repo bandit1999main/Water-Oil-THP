@@ -2978,20 +2978,48 @@ function handleAttendancePaste() {
       } else {
         matchStatusHtml = `<span style="color: #f59e0b;">⚠️ ไม่พบรายชื่อนี้ในระบบ</span>`;
       }
-      
+      const recordIndex = tempParsedRecords.length;
       tempParsedRecords.push({
         name: parsedName,
         newDays: workDays !== null ? workDays : 26,
         matched: matchFound,
         targets: targetLists
       });
+
+      if (matchFound) {
+        matchCount++;
+        const typesLabel = targetLists.map(t => t.type === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม').join(' & ');
+        matchStatusHtml = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ จับคู่สำเร็จ (${matchingEmployeeName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel}</small></span>`;
+      } else {
+        // Find suggestions using Levenshtein distance
+        const suggestions = findCloseFuzzyMatches(parsedName, targetMode);
+        if (suggestions.length > 0) {
+          let sugButtons = suggestions.map(s => {
+            const label = s.type === 'fuel' ? '⛽ ' + s.name : '🥤 ' + s.name;
+            return `<button type="button" class="btn btn-secondary btn-small" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; margin: 0.15rem 0.15rem 0 0; background: rgba(245,158,11,0.08); border: 1px solid var(--post-orange); color: var(--post-orange);" onclick="window.manuallyBindImportName(${recordIndex}, '${s.type}', ${s.index}, '${s.name}')">✔️ ${label}</button>`;
+          }).join('');
+          
+          matchStatusHtml = `
+            <div id="import-status-cell-${recordIndex}">
+              <span style="color: #f59e0b; font-weight: 500;">⚠️ สะกดไม่ตรง / ไม่พบชื่อ</span><br>
+              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">แนะนําคลิกจับคู่:<br>${sugButtons}</div>
+            </div>
+          `;
+        } else {
+          matchStatusHtml = `
+            <div id="import-status-cell-${recordIndex}">
+              <span style="color: #d32f2f; font-weight: 500;">❌ ไม่พบรายชื่อนี้ในระบบ</span>
+            </div>
+          `;
+        }
+      }
       
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="text-align: left; padding: 0.5rem 0.75rem;">
           <strong>${parsedName}</strong>
         </td>
-        <td style="text-align: left; padding: 0.5rem 0.75rem;">
+        <td style="text-align: left; padding: 0.5rem 0.75rem; font-size: 0.8rem; line-height: 1.35;">
           ${matchStatusHtml}
         </td>
         <td style="padding: 0.5rem 0.75rem; font-weight: bold; color: var(--post-orange);">
@@ -3264,6 +3292,91 @@ function clearSelectedImportFile() {
   tempParsedRecords = [];
 }
 
+function levenshteinDistance(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function findCloseFuzzyMatches(inputName, targetMode) {
+  const cleanedInput = cleanThaiNameForMatching(inputName);
+  if (cleanedInput.length < 2) return [];
+  
+  const matches = [];
+  
+  if (targetMode === 'fuel' || targetMode === 'both') {
+    employees.forEach((emp, index) => {
+      const cleanedEmp = cleanThaiNameForMatching(emp.name);
+      const dist = levenshteinDistance(cleanedInput, cleanedEmp);
+      // If distance is small relative to name length, suggest it
+      if (dist <= 4) {
+        matches.push({ name: emp.name, type: 'fuel', index, dist });
+      }
+    });
+  }
+  
+  if (targetMode === 'water' || targetMode === 'both') {
+    waterEmployees.forEach((emp, index) => {
+      const cleanedEmp = cleanThaiNameForMatching(emp.name);
+      const dist = levenshteinDistance(cleanedInput, cleanedEmp);
+      if (dist <= 4 && !matches.some(m => m.name === emp.name && m.type === 'water')) {
+        matches.push({ name: emp.name, type: 'water', index, dist });
+      }
+    });
+  }
+  
+  // Sort by closest match (lowest edit distance)
+  return matches.sort((a, b) => a.dist - b.dist).slice(0, 3);
+}
+
+// Global callback triggered when clicking a suggested match button in import previews
+window.manuallyBindImportName = function(recordIndex, targetType, targetIndex, targetName) {
+  const rec = tempParsedRecords[recordIndex];
+  if (!rec) return;
+  
+  // Clean existing targets
+  rec.matched = true;
+  
+  const originalEmp = targetType === 'fuel' ? employees[targetIndex] : waterEmployees[targetIndex];
+  rec.targets = [{
+    type: targetType,
+    index: targetIndex,
+    original: originalEmp
+  }];
+  
+  // Update UI row status
+  const statusCellId = `import-status-cell-${recordIndex}`;
+  const cell = document.getElementById(statusCellId);
+  if (cell) {
+    const typesLabel = targetType === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม';
+    cell.innerHTML = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ เชื่อมต่อสำเร็จ (${targetName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel} (จับคู่ด้วยตนเอง)</small></span>`;
+  }
+  
+  // Update submit button counter
+  let matchedCount = tempParsedRecords.filter(r => r.matched).length;
+  submitImportBtn.disabled = matchedCount === 0;
+  submitImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${matchedCount} รายชื่อ)`;
+  showToast(`จับคู่ "${rec.name}" กับ "${targetName}" เรียบร้อย!`, 'success');
+};
+
 function processUploadedFile(file) {
   if (!file) return;
   
@@ -3340,15 +3453,7 @@ function processUploadedFile(file) {
           }
         }
         
-        let matchStatusHtml = '';
-        if (matchFound) {
-          matchCount++;
-          const typesLabel = targetLists.map(t => t.type === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม').join(' & ');
-          matchStatusHtml = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ จับคู่สำเร็จ (${matchingEmployeeName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel}</small></span>`;
-        } else {
-          matchStatusHtml = `<span style="color: #f59e0b;">⚠️ ไม่พบรายชื่อนี้ในระบบ</span>`;
-        }
-        
+        const recordIndex = tempParsedRecords.length;
         tempParsedRecords.push({
           name: nameVal,
           newDays: workDays,
@@ -3356,12 +3461,41 @@ function processUploadedFile(file) {
           targets: targetLists
         });
         
+        let matchStatusHtml = '';
+        if (matchFound) {
+          matchCount++;
+          const typesLabel = targetLists.map(t => t.type === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม').join(' & ');
+          matchStatusHtml = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ จับคู่สำเร็จ (${matchingEmployeeName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel}</small></span>`;
+        } else {
+          // Find suggestions using Levenshtein distance
+          const suggestions = findCloseFuzzyMatches(nameVal, targetMode);
+          if (suggestions.length > 0) {
+            let sugButtons = suggestions.map(s => {
+              const label = s.type === 'fuel' ? '⛽ ' + s.name : '🥤 ' + s.name;
+              return `<button type="button" class="btn btn-secondary btn-small" style="padding: 0.15rem 0.4rem; font-size: 0.7rem; margin: 0.15rem 0.15rem 0 0; background: rgba(245,158,11,0.08); border: 1px solid var(--post-orange); color: var(--post-orange);" onclick="window.manuallyBindImportName(${recordIndex}, '${s.type}', ${s.index}, '${s.name}')">✔️ ${label}</button>`;
+            }).join('');
+            
+            matchStatusHtml = `
+              <div id="import-status-cell-${recordIndex}">
+                <span style="color: #f59e0b; font-weight: 500;">⚠️ สะกดไม่ตรง / ไม่พบชื่อ</span><br>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">แนะนําคลิกจับคู่:<br>${sugButtons}</div>
+              </div>
+            `;
+          } else {
+            matchStatusHtml = `
+              <div id="import-status-cell-${recordIndex}">
+                <span style="color: #d32f2f; font-weight: 500;">❌ ไม่พบรายชื่อนี้ในระบบ</span>
+              </div>
+            `;
+          }
+        }
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td style="text-align: left; padding: 0.5rem 0.75rem;">
             <strong>${nameVal}</strong>
           </td>
-          <td style="text-align: left; padding: 0.5rem 0.75rem;">
+          <td style="text-align: left; padding: 0.5rem 0.75rem; font-size: 0.8rem; line-height: 1.35;">
             ${matchStatusHtml}
           </td>
           <td style="padding: 0.5rem 0.75rem; font-weight: bold; color: var(--post-orange);">
