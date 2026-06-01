@@ -791,6 +791,12 @@
             💡 <strong>วิธีใช้งาน:</strong> เลือกคัดลอกคอลัมน์ <strong>ชื่อ-นามสกุล</strong> และคอลัมน์ <strong>วันทำงาน</strong> ใน Excel (สามารถ Copy ทั้งแถวหรือเฉพาะรายชื่อพร้อมตัวเลขมาได้เลย) จากนั้นนำมาวาง (Ctrl+V) ในช่องด้านล่างนี้ ระบบจะจับคู่และคำนวณจำนวนวันทำงานให้โดยอัตโนมัติ
           </p>
 
+          <div style="margin-bottom: 1.25rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" id="downloadAttendanceTemplateBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem;">
+              🟢 ดาวน์โหลดเทมเพลต Excel บันทึกเวลา (.csv)
+            </button>
+          </div>
+
           <div class="form-group">
             <label for="importPastedText">วางข้อมูลจาก Excel ที่นี่</label>
             <textarea id="importPastedText" class="form-input" style="height: 150px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ (เช่น:&#10;นาย นิพล ทรัพย์หมื่นแสน   16&#10;นาย พรชัย พาราพันธกุล   0&#10;นาย ศิษฏ์ กลิ่นมาลี   23)"></textarea>

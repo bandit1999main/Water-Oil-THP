@@ -161,6 +161,7 @@ const cancelImportBtn = document.getElementById('cancelImportBtn');
 const submitImportBtn = document.getElementById('submitImportBtn');
 const importPastedText = document.getElementById('importPastedText');
 const importPreviewTableBody = document.getElementById('importPreviewTableBody');
+const downloadAttendanceTemplateBtn = document.getElementById('downloadAttendanceTemplateBtn');
 let tempParsedRecords = [];
 
 // Saved Templates Manager DOM Elements
@@ -296,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   importPastedText.addEventListener('input', handleAttendancePaste);
   importPastedText.addEventListener('paste', handleAttendancePaste);
   submitImportBtn.addEventListener('click', handleConfirmImport);
+  downloadAttendanceTemplateBtn.addEventListener('click', downloadAttendanceTemplateCsv);
   document.querySelectorAll('input[name="importTargetMode"]').forEach(radio => {
     radio.addEventListener('change', handleAttendancePaste);
   });
@@ -2972,5 +2974,70 @@ async function handleConfirmImport() {
   
   showToast(`นำเข้าวันทำงานสำเร็จ! (ค่าน้ำมัน: ${updatedFuelCount} ราย, ค่าน้ำดื่ม: ${updatedWaterCount} ราย)`, 'success');
 }
+
+function downloadAttendanceTemplateCsv() {
+  const nameSet = new Set();
+  const uniqueEmployees = [];
+  
+  employees.forEach(emp => {
+    if (!nameSet.has(emp.name)) {
+      nameSet.add(emp.name);
+      uniqueEmployees.push({ name: emp.name });
+    }
+  });
+  
+  waterEmployees.forEach(emp => {
+    if (!nameSet.has(emp.name)) {
+      nameSet.add(emp.name);
+      uniqueEmployees.push({ name: emp.name });
+    }
+  });
+  
+  if (uniqueEmployees.length === 0) {
+    uniqueEmployees.push({ name: "นายนิพล ทรัพย์หมื่นแสน" });
+    uniqueEmployees.push({ name: "นางสาวสมหญิง สุจริต" });
+    uniqueEmployees.push({ name: "นายปรีชา คุมงาน" });
+    uniqueEmployees.push({ name: "นายรุ่งโรจน์ สัญจร" });
+  }
+  
+  // Build CSV content with BOM for Excel Thai language support
+  let csvContent = "\uFEFF"; 
+  csvContent += "ลำดับ,ชื่อ-สกุล,";
+  
+  for (let i = 1; i <= 31; i++) {
+    csvContent += `${i},`;
+  }
+  csvContent += "รวมมาทำงาน\n";
+  
+  uniqueEmployees.forEach((emp, index) => {
+    const rowIdx = index + 1;
+    csvContent += `${rowIdx},"${emp.name}",`;
+    
+    // Default days to '/' (present)
+    for (let d = 1; d <= 31; d++) {
+      csvContent += "/,";
+    }
+    
+    // Add Excel COUNTIF formula to auto sum working day codes (/, พร, ป, ก)
+    const xlRow = index + 2;
+    const formula = `=COUNTIF(C${xlRow}:AG${xlRow},"/")+COUNTIF(C${xlRow}:AG${xlRow},"พร")+COUNTIF(C${xlRow}:AG${xlRow},"ป")+COUNTIF(C${xlRow}:AG${xlRow},"ก")`;
+    csvContent += `"${formula}"\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", "เทมเพลตบันทึกเวลาทำงาน.csv");
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showToast('ดาวน์โหลดเทมเพลต Excel (.csv) สำเร็จ! ลองเปิดกรอกใน Excel ได้เลย', 'success');
+}
+
 
 
