@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { 
   isCloudConnected,
   fetchEmployees,
@@ -3047,18 +3047,27 @@ function downloadAttendanceTemplateXlsx() {
     uniqueEmployees.push({ name: "นายรุ่งโรจน์ สัญจร" });
   }
   
-  // Create workbook and headers
+  // Create workbook
+  const wb = XLSX.book_new();
+  
+  // Format Sheet Data with Custom Premium Styling
+  const ws_data = [];
+  
+  // Title / Info Row
+  ws_data.push(["แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["คำชี้แจง: / = มาทำงานปกติ, พร = พักร้อน, ป = ป่วย, ก = กิจ (ระบบจะคำนวณวันทำงานให้อัตโนมัติ)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  
+  // Header row
   const headers = ["ลำดับ", "ชื่อ-สกุล"];
   for (let i = 1; i <= 31; i++) {
     headers.push(String(i));
   }
   headers.push("รวมมาทำงาน");
-
-  const rows = [headers];
+  ws_data.push(headers);
   
   uniqueEmployees.forEach((emp, index) => {
     const rowIdx = index + 1;
-    const xlRow = index + 2;
+    const xlRow = index + 4; // Headers are at row 3 (1-based index 3), data starts at row 4
     
     const rowData = [rowIdx, emp.name];
     
@@ -3071,18 +3080,123 @@ function downloadAttendanceTemplateXlsx() {
     const formula = `COUNTIF(C${xlRow}:AG${xlRow},"/")+COUNTIF(C${xlRow}:AG${xlRow},"พร")+COUNTIF(C${xlRow}:AG${xlRow},"ป")+COUNTIF(C${xlRow}:AG${xlRow},"ก")`;
     rowData.push({ f: formula });
     
-    rows.push(rowData);
+    ws_data.push(rowData);
   });
   
-  // Build sheet with SheetJS
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  
+  // Merge cells for premium header titles
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 33 } }, // Merge Title
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 33 } }  // Merge Info
+  ];
+  
+  // Set explicit professional column widths
+  const colWidths = [
+    { wch: 8 },  // ลำดับ
+    { wch: 30 }  // ชื่อ-สกุล
+  ];
+  for (let d = 1; d <= 31; d++) {
+    colWidths.push({ wch: 5 }); // 1 - 31 days
+  }
+  colWidths.push({ wch: 15 }); // รวมมาทำงาน
+  ws['!cols'] = colWidths;
+  
+  // Apply Premium Styling using xlsx-js-style specifications
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  
+  // Style Definitions
+  const titleStyle = {
+    font: { name: "Segoe UI", sz: 16, bold: true, color: { rgb: "FFFFFF" } },
+    fill: { fgColor: { rgb: "F55E0B" } }, // Thailand Post Orange Accent
+    alignment: { horizontal: "center", vertical: "center" }
+  };
+  
+  const descStyle = {
+    font: { name: "Segoe UI", sz: 11, italic: true, color: { rgb: "555555" } },
+    fill: { fgColor: { rgb: "FFF3E0" } }, // Soft Peach background
+    alignment: { horizontal: "center", vertical: "center" }
+  };
+  
+  const headerStyle = {
+    font: { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+    fill: { fgColor: { rgb: "212121" } }, // Premium Dark Charcoal
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      top: { style: "medium", color: { rgb: "000000" } },
+      bottom: { style: "medium", color: { rgb: "000000" } }
+    }
+  };
+  
+  const dataNameStyle = {
+    font: { name: "Segoe UI", sz: 11 },
+    alignment: { horizontal: "left", vertical: "center" },
+    border: {
+      bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+      left: { style: "thin", color: { rgb: "E0E0E0" } },
+      right: { style: "thin", color: { rgb: "E0E0E0" } }
+    }
+  };
+  
+  const dataCenterStyle = {
+    font: { name: "Segoe UI", sz: 11 },
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+      left: { style: "thin", color: { rgb: "E0E0E0" } },
+      right: { style: "thin", color: { rgb: "E0E0E0" } }
+    }
+  };
+  
+  const sumStyle = {
+    font: { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "D32F2F" } }, // High contrast red for summary
+    fill: { fgColor: { rgb: "FFEBEE" } }, // Soft pink highlight
+    alignment: { horizontal: "center", vertical: "center" },
+    border: {
+      bottom: { style: "double", color: { rgb: "D32F2F" } },
+      left: { style: "thin", color: { rgb: "E0E0E0" } },
+      right: { style: "thin", color: { rgb: "E0E0E0" } }
+    }
+  };
+  
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r: r, c: c });
+      const cell = ws[cellRef];
+      if (!cell) continue;
+      
+      if (r === 0) {
+        cell.s = titleStyle;
+      } else if (r === 1) {
+        cell.s = descStyle;
+      } else if (r === 2) {
+        cell.s = headerStyle;
+      } else {
+        // Data rows
+        if (c === 0) {
+          cell.s = dataCenterStyle;
+        } else if (c === 1) {
+          cell.s = dataNameStyle;
+        } else if (c === 33) {
+          cell.s = sumStyle;
+        } else {
+          cell.s = dataCenterStyle;
+        }
+      }
+    }
+  }
+  
+  // Set Title row height (40px) and Subtitle height (25px)
+  ws['!rows'] = [
+    { hpx: 40 },
+    { hpx: 25 },
+    { hpx: 30 }
+  ];
   
   XLSX.utils.book_append_sheet(wb, ws, "บันทึกเวลาทำงาน");
-  
   XLSX.writeFile(wb, "เทมเพลตบันทึกเวลาทำงาน.xlsx");
   
-  showToast('ดาวน์โหลดเทมเพลต Excel (.xlsx) สำเร็จ! ลองเปิดกรอกใน Excel ได้เลย', 'success');
+  showToast('ดาวน์โหลดเทมเพลต Excel (.xlsx) แบบมืออาชีพเรียบร้อย!', 'success');
 }
 
 /* --- PROFESSIONAL ATTENDANCE IMPORT FILE & TAB LOGIC --- */
@@ -3146,7 +3260,7 @@ function processUploadedFile(file) {
       const targetRadio = document.querySelector('input[name="importTargetMode"]:checked');
       const targetMode = targetRadio ? targetRadio.value : 'both';
       
-      for (let r = 1; r < rows.length; r++) {
+      for (let r = 3; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.length < 2) continue;
         
