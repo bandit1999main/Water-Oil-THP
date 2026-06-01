@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx';
 import { 
   isCloudConnected,
   fetchEmployees,
@@ -297,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   importPastedText.addEventListener('input', handleAttendancePaste);
   importPastedText.addEventListener('paste', handleAttendancePaste);
   submitImportBtn.addEventListener('click', handleConfirmImport);
-  downloadAttendanceTemplateBtn.addEventListener('click', downloadAttendanceTemplateCsv);
+  downloadAttendanceTemplateBtn.addEventListener('click', downloadAttendanceTemplateXlsx);
   document.querySelectorAll('input[name="importTargetMode"]').forEach(radio => {
     radio.addEventListener('change', handleAttendancePaste);
   });
@@ -2975,7 +2976,7 @@ async function handleConfirmImport() {
   showToast(`นำเข้าวันทำงานสำเร็จ! (ค่าน้ำมัน: ${updatedFuelCount} ราย, ค่าน้ำดื่ม: ${updatedWaterCount} ราย)`, 'success');
 }
 
-function downloadAttendanceTemplateCsv() {
+function downloadAttendanceTemplateXlsx() {
   const nameSet = new Set();
   const uniqueEmployees = [];
   
@@ -3000,43 +3001,43 @@ function downloadAttendanceTemplateCsv() {
     uniqueEmployees.push({ name: "นายรุ่งโรจน์ สัญจร" });
   }
   
-  // Build CSV content with BOM for Excel Thai language support
-  let csvContent = "\uFEFF"; 
-  csvContent += "ลำดับ,ชื่อ-สกุล,";
-  
+  // Create workbook and headers
+  const headers = ["ลำดับ", "ชื่อ-สกุล"];
   for (let i = 1; i <= 31; i++) {
-    csvContent += `${i},`;
+    headers.push(String(i));
   }
-  csvContent += "รวมมาทำงาน\n";
+  headers.push("รวมมาทำงาน");
+
+  const rows = [headers];
   
   uniqueEmployees.forEach((emp, index) => {
     const rowIdx = index + 1;
-    csvContent += `${rowIdx},"${emp.name}",`;
+    const xlRow = index + 2;
     
-    // Default days to '/' (present)
+    const rowData = [rowIdx, emp.name];
+    
+    // Pre-fill with '/' (present)
     for (let d = 1; d <= 31; d++) {
-      csvContent += "/,";
+      rowData.push("/");
     }
     
     // Add Excel COUNTIF formula to auto sum working day codes (/, พร, ป, ก)
-    const xlRow = index + 2;
-    const formula = `=COUNTIF(C${xlRow}:AG${xlRow},"/")+COUNTIF(C${xlRow}:AG${xlRow},"พร")+COUNTIF(C${xlRow}:AG${xlRow},"ป")+COUNTIF(C${xlRow}:AG${xlRow},"ก")`;
-    csvContent += `"${formula}"\n`;
+    const formula = `COUNTIF(C${xlRow}:AG${xlRow},"/")+COUNTIF(C${xlRow}:AG${xlRow},"พร")+COUNTIF(C${xlRow}:AG${xlRow},"ป")+COUNTIF(C${xlRow}:AG${xlRow},"ก")`;
+    rowData.push({ f: formula });
+    
+    rows.push(rowData);
   });
   
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
+  // Build sheet with SheetJS
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
   
-  link.setAttribute("href", url);
-  link.setAttribute("download", "เทมเพลตบันทึกเวลาทำงาน.csv");
-  link.style.visibility = 'hidden';
+  XLSX.utils.book_append_sheet(wb, ws, "บันทึกเวลาทำงาน");
   
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // Write and trigger browser download
+  XLSX.writeFile(wb, "เทมเพลตบันทึกเวลาทำงาน.xlsx");
   
-  showToast('ดาวน์โหลดเทมเพลต Excel (.csv) สำเร็จ! ลองเปิดกรอกใน Excel ได้เลย', 'success');
+  showToast('ดาวน์โหลดเทมเพลต Excel (.xlsx) สำเร็จ! ลองเปิดกรอกใน Excel ได้เลย', 'success');
 }
 
 
