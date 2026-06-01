@@ -3083,7 +3083,7 @@ function downloadAttendanceTemplateXlsx() {
   
   // Title / Info Row
   ws_data.push(["แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["คำชี้แจง: / = มาทำงานปกติ, พร = พักร้อน, ป = ป่วย, ก = กิจ (ระบบจะคำนวณวันทำงานให้อัตโนมัติ)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้าวันมาทำงาน)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
   
   // Header row
   const headers = ["ลำดับ", "ชื่อ-สกุล"];
@@ -3104,8 +3104,8 @@ function downloadAttendanceTemplateXlsx() {
       rowData.push("/");
     }
     
-    // Add Excel COUNTIF formula to auto sum working day codes (/, พร, ป, ก)
-    const formula = `COUNTIF(C${xlRow}:AG${xlRow},"/")+COUNTIF(C${xlRow}:AG${xlRow},"พร")+COUNTIF(C${xlRow}:AG${xlRow},"ป")+COUNTIF(C${xlRow}:AG${xlRow},"ก")`;
+    // Add Excel COUNTIF formula to ONLY sum '/' characters as requested
+    const formula = `COUNTIF(C${xlRow}:AG${xlRow},"/")`;
     rowData.push({ f: formula });
     
     ws_data.push(rowData);
@@ -3302,7 +3302,7 @@ function processUploadedFile(file) {
           const val = String(row[c] || '').trim();
           if (val) {
             dayColumnFilled = true;
-            if (val === '/' || val === 'พร' || val === 'ป' || val === 'ก') {
+            if (val === '/') {
               workDays++;
             }
           }
