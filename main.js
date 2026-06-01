@@ -3048,7 +3048,7 @@ function downloadAttendanceTemplateXlsx() {
   }
   
   // Create workbook
-  const wb = XLSX.book_new();
+  const wb = XLSX.utils.book_new();
   
   // Format Sheet Data with Custom Premium Styling
   const ws_data = [];
