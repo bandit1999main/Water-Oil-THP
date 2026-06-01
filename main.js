@@ -163,6 +163,15 @@ const submitImportBtn = document.getElementById('submitImportBtn');
 const importPastedText = document.getElementById('importPastedText');
 const importPreviewTableBody = document.getElementById('importPreviewTableBody');
 const downloadAttendanceTemplateBtn = document.getElementById('downloadAttendanceTemplateBtn');
+const tabImportFile = document.getElementById('tabImportFile');
+const tabImportText = document.getElementById('tabImportText');
+const importFileContent = document.getElementById('importFileContent');
+const importTextContent = document.getElementById('importTextContent');
+const dragDropZone = document.getElementById('dragDropZone');
+const attendanceFileSelector = document.getElementById('attendanceFileSelector');
+const selectedFileInfo = document.getElementById('selectedFileInfo');
+const fileNameLabel = document.getElementById('fileNameLabel');
+const clearSelectedFileBtn = document.getElementById('clearSelectedFileBtn');
 let tempParsedRecords = [];
 
 // Saved Templates Manager DOM Elements
@@ -300,8 +309,45 @@ document.addEventListener('DOMContentLoaded', () => {
   submitImportBtn.addEventListener('click', handleConfirmImport);
   downloadAttendanceTemplateBtn.addEventListener('click', downloadAttendanceTemplateXlsx);
   document.querySelectorAll('input[name="importTargetMode"]').forEach(radio => {
-    radio.addEventListener('change', handleAttendancePaste);
+    radio.addEventListener('change', () => {
+      if (attendanceFileSelector.files.length > 0) {
+        processUploadedFile(attendanceFileSelector.files[0]);
+      } else {
+        handleAttendancePaste();
+      }
+    });
   });
+
+  // Tab switching inside import modal
+  tabImportFile.addEventListener('click', () => switchImportTab('file'));
+  tabImportText.addEventListener('click', () => switchImportTab('text'));
+
+  // Drag & drop / File selection
+  dragDropZone.addEventListener('click', () => attendanceFileSelector.click());
+  attendanceFileSelector.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      processUploadedFile(e.target.files[0]);
+    }
+  });
+  dragDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dragDropZone.style.borderColor = 'var(--post-orange)';
+    dragDropZone.style.background = 'rgba(245, 158, 11, 0.05)';
+  });
+  dragDropZone.addEventListener('dragleave', () => {
+    dragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    dragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+  });
+  dragDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    dragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+    if (e.dataTransfer.files.length > 0) {
+      attendanceFileSelector.files = e.dataTransfer.files;
+      processUploadedFile(e.dataTransfer.files[0]);
+    }
+  });
+  clearSelectedFileBtn.addEventListener('click', clearSelectedImportFile);
 
   // Table Batch Actions
   loadDemoBtn.addEventListener('click', loadDemoData);
@@ -3034,11 +3080,173 @@ function downloadAttendanceTemplateXlsx() {
   
   XLSX.utils.book_append_sheet(wb, ws, "บันทึกเวลาทำงาน");
   
-  // Write and trigger browser download
   XLSX.writeFile(wb, "เทมเพลตบันทึกเวลาทำงาน.xlsx");
   
   showToast('ดาวน์โหลดเทมเพลต Excel (.xlsx) สำเร็จ! ลองเปิดกรอกใน Excel ได้เลย', 'success');
 }
+
+/* --- PROFESSIONAL ATTENDANCE IMPORT FILE & TAB LOGIC --- */
+function switchImportTab(tab) {
+  if (tab === 'file') {
+    tabImportFile.classList.add('active');
+    tabImportFile.style.color = 'var(--post-orange)';
+    tabImportFile.style.borderBottom = '3px solid var(--post-orange)';
+    
+    tabImportText.classList.remove('active');
+    tabImportText.style.color = 'var(--text-secondary)';
+    tabImportText.style.borderBottom = '3px solid transparent';
+    
+    importFileContent.classList.remove('hidden');
+    importTextContent.classList.add('hidden');
+  } else {
+    tabImportText.classList.add('active');
+    tabImportText.style.color = 'var(--post-orange)';
+    tabImportText.style.borderBottom = '3px solid var(--post-orange)';
+    
+    tabImportFile.classList.remove('active');
+    tabImportFile.style.color = 'var(--text-secondary)';
+    tabImportFile.style.borderBottom = '3px solid transparent';
+    
+    importTextContent.classList.remove('hidden');
+    importFileContent.classList.add('hidden');
+  }
+}
+
+function clearSelectedImportFile() {
+  attendanceFileSelector.value = '';
+  selectedFileInfo.classList.add('hidden');
+  dragDropZone.classList.remove('hidden');
+  importPreviewTableBody.innerHTML = '<tr><td colspan="3" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  submitImportBtn.disabled = true;
+  submitImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  tempParsedRecords = [];
+}
+
+function processUploadedFile(file) {
+  if (!file) return;
+  
+  fileNameLabel.textContent = `📂 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  selectedFileInfo.classList.remove('hidden');
+  dragDropZone.classList.add('hidden');
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      tempParsedRecords = [];
+      importPreviewTableBody.innerHTML = '';
+      
+      let matchCount = 0;
+      const targetRadio = document.querySelector('input[name="importTargetMode"]:checked');
+      const targetMode = targetRadio ? targetRadio.value : 'both';
+      
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length < 2) continue;
+        
+        const nameVal = String(row[1] || '').trim();
+        if (nameVal.length < 3 || nameVal === 'ชื่อ-สกุล') continue;
+        
+        let workDays = 0;
+        let dayColumnFilled = false;
+        
+        for (let c = 2; c <= 32; c++) {
+          const val = String(row[c] || '').trim();
+          if (val) {
+            dayColumnFilled = true;
+            if (val === '/' || val === 'พร' || val === 'ป' || val === 'ก') {
+              workDays++;
+            }
+          }
+        }
+        
+        if (!dayColumnFilled || workDays === 0) {
+          const lastVal = parseInt(row[row.length - 1]);
+          if (!isNaN(lastVal) && lastVal >= 0 && lastVal <= 31) {
+            workDays = lastVal;
+          } else {
+            workDays = 26;
+          }
+        }
+        
+        let matchFound = false;
+        let matchingEmployeeName = '';
+        let targetLists = [];
+        const cleanedParsedName = cleanThaiNameForMatching(nameVal);
+        
+        if (targetMode === 'fuel' || targetMode === 'both') {
+          const matchIdx = employees.findIndex(emp => cleanThaiNameForMatching(emp.name) === cleanedParsedName);
+          if (matchIdx !== -1) {
+            matchFound = true;
+            matchingEmployeeName = employees[matchIdx].name;
+            targetLists.push({ type: 'fuel', index: matchIdx, original: employees[matchIdx] });
+          }
+        }
+        
+        if (targetMode === 'water' || targetMode === 'both') {
+          const matchIdx = waterEmployees.findIndex(emp => cleanThaiNameForMatching(emp.name) === cleanedParsedName);
+          if (matchIdx !== -1) {
+            matchFound = true;
+            matchingEmployeeName = waterEmployees[matchIdx].name;
+            targetLists.push({ type: 'water', index: matchIdx, original: waterEmployees[matchIdx] });
+          }
+        }
+        
+        let matchStatusHtml = '';
+        if (matchFound) {
+          matchCount++;
+          const typesLabel = targetLists.map(t => t.type === 'fuel' ? '⛽ ค่าน้ำมัน' : '🥤 ค่าน้ำดื่ม').join(' & ');
+          matchStatusHtml = `<span style="color: var(--post-emerald); font-weight: bold;">✔️ จับคู่สำเร็จ (${matchingEmployeeName})<br><small style="color: var(--text-secondary); font-size: 0.75rem;">${typesLabel}</small></span>`;
+        } else {
+          matchStatusHtml = `<span style="color: #f59e0b;">⚠️ ไม่พบรายชื่อนี้ในระบบ</span>`;
+        }
+        
+        tempParsedRecords.push({
+          name: nameVal,
+          newDays: workDays,
+          matched: matchFound,
+          targets: targetLists
+        });
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: left; padding: 0.5rem 0.75rem;">
+            <strong>${nameVal}</strong>
+          </td>
+          <td style="text-align: left; padding: 0.5rem 0.75rem;">
+            ${matchStatusHtml}
+          </td>
+          <td style="padding: 0.5rem 0.75rem; font-weight: bold; color: var(--post-orange);">
+            ${workDays} วัน
+          </td>
+        `;
+        importPreviewTableBody.appendChild(tr);
+      }
+      
+      if (tempParsedRecords.length === 0) {
+        importPreviewTableBody.innerHTML = '<tr><td colspan="3" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลพนักงานในไฟล์นี้</td></tr>';
+        submitImportBtn.disabled = true;
+      } else {
+        submitImportBtn.disabled = matchCount === 0;
+        submitImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${matchCount} รายชื่อ)`;
+      }
+      
+    } catch(err) {
+      console.error(err);
+      showToast('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel กรุณาตรวจสอบว่าเลือกเทมเพลตที่ถูกต้อง', 'error');
+      clearSelectedImportFile();
+    }
+  };
+  
+  reader.readAsArrayBuffer(file);
+}
+
 
 
 
