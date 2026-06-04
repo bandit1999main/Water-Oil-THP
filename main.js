@@ -340,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
   personnelForm.addEventListener('submit', handlePersonnelFormSubmit);
   resetPersonnelBtn.addEventListener('click', cancelPersonnelEdit);
   empNameSelect.addEventListener('change', handleEmpNameSelectChange);
+  empNameSelect.addEventListener('input', handleEmpNameSelectChange);
 
   // Tab Events
   tabStandard.addEventListener('click', () => switchFormMode('standard'));
@@ -881,13 +882,14 @@ async function switchAppMode(mode) {
 /* --- PERSONNEL REGISTRY CONTROLLERS --- */
 
 function updateEmployeeSelectDropdown() {
-  if (!empNameSelect) return;
-  empNameSelect.innerHTML = '<option value="" disabled selected>-- เลือกรายชื่อบุคลากร --</option>';
+  const datalist = document.getElementById('personnelDatalist');
+  if (!datalist) return;
+  datalist.innerHTML = '';
   personnel.forEach((person) => {
     const opt = document.createElement('option');
     opt.value = person.name;
-    opt.textContent = `${person.name} (${person.position})`;
-    empNameSelect.appendChild(opt);
+    opt.textContent = `${person.name} (${person.position} / ${person.duty || '-'})`;
+    datalist.appendChild(opt);
   });
 }
 
@@ -2046,15 +2048,7 @@ function loadRowToForm(index) {
 
   document.getElementById('empName').value = item.name;
   if (empNameSelect) {
-    if (empNameSelect.querySelector(`option[value="${item.name}"]`)) {
-      empNameSelect.value = item.name;
-    } else {
-      const opt = document.createElement('option');
-      opt.value = item.name;
-      opt.textContent = item.name;
-      empNameSelect.appendChild(opt);
-      empNameSelect.value = item.name;
-    }
+    empNameSelect.value = item.name;
   }
   vehicleTypeSelect.value = item.vehicle;
   document.getElementById('isSubstitute').checked = item.isSubstitute || false;

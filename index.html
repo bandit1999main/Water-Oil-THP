@@ -168,10 +168,9 @@
               <input type="hidden" id="formMode" value="standard" /> <!-- standard or supervisor -->
 
               <div class="form-group" id="empNameSelectGroup">
-                <label for="empNameSelect">เลือกรายชื่อบุคลากร</label>
-                <select id="empNameSelect" class="form-select" required>
-                  <option value="" disabled selected>-- เลือกรายชื่อบุคลากร --</option>
-                </select>
+                <label for="empNameSelect">เลือกรายชื่อบุคลากร (พิมพ์ค้นหา)</label>
+                <input type="text" id="empNameSelect" class="form-input" list="personnelDatalist" placeholder="🔍 พิมพ์ชื่อเพื่อค้นหา..." required autocomplete="off" />
+                <datalist id="personnelDatalist"></datalist>
               </div>
 
               <div class="form-group hidden" id="empNameManualGroup">
