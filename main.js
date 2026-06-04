@@ -976,7 +976,7 @@ function renderPersonnelTable() {
       <td>${index + 1}</td>
       <td style="font-weight: 700;">${person.name}</td>
       <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
-      <td>${person.salary ? person.salary.toLocaleString() : '0'}</td>
+      <td>${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
       <td>${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
       <td>${person.vehicle || '-'}</td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ddd; font-weight: 300;">${person.signature || person.name}</span></td>
@@ -1697,9 +1697,9 @@ function renderEmployeeTable() {
         <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position}</span></td>
         <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
         <td style="text-align: center;">${item.workDays} วัน</td>
-        <td style="font-weight: 700;">${allowance.toFixed(2)} บาท</td>
-        <td style="color: ${tax > 0 ? 'var(--post-red)' : 'var(--text-secondary)'}; font-weight: ${tax > 0 ? '700' : '400'};">${tax.toFixed(2)} บาท</td>
-        <td style="font-weight: 800; color: var(--post-emerald);">${net.toFixed(2)} บาท</td>
+        <td style="font-weight: 700;">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
+        <td style="color: ${tax > 0 ? 'var(--post-red)' : 'var(--text-secondary)'}; font-weight: ${tax > 0 ? '700' : '400'};">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
+        <td style="font-weight: 800; color: var(--post-emerald);">${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
         <td style="font-family: var(--font-title); font-style: italic; color: #eee; font-weight: 300; font-size: 0.85rem;">${item.signature}</td>
         <td class="actions-col">
           <button class="row-action-btn edit-btn" title="แก้ไข">✏️</button>
@@ -1853,10 +1853,10 @@ function renderEmployeeTable() {
       <td><strong>${row.name}</strong></td>
       <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position}</span></td>
       <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>
-      <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2 })} ลิตร</td>
-      <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
-      <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</td>
-      <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ฿</strong></td>
+      <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ลิตร</td>
+      <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
+      <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
+      <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</strong></td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #eee; font-weight: 300;">${row.signature}</span></td>
       <td class="actions-col" style="width: 240px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
@@ -1898,9 +1898,9 @@ function renderEmployeeTable() {
     }
   }
 
-  sumFuelCostSpan.textContent = totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  sumMaintenanceCostSpan.textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
-  sumTotalCostSpan.textContent = grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+  sumFuelCostSpan.textContent = totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  sumMaintenanceCostSpan.textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  sumTotalCostSpan.textContent = grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function recalculateTableCosts() {
@@ -2056,9 +2056,9 @@ function renderPeriodTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td><strong>${period.price.toFixed(2)} บาท</strong></td>
+      <td><strong>${period.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</strong></td>
       <td>${period.days} วัน</td>
-      <td>${product.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท</td>
+      <td>${product.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
       <td><button type="button" class="row-action-btn delete-period-btn">❌</button></td>
     `;
     
@@ -2073,7 +2073,7 @@ function renderPeriodTable() {
   const avgPrice = sumWeightedProduct / sumDays;
 
   avgCalcTotalDays.textContent = `${sumDays} วัน`;
-  avgCalcTotalSum.textContent = `${sumWeightedProduct.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท`;
+  avgCalcTotalSum.textContent = `${sumWeightedProduct.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
   avgCalcResultPrice.textContent = `${avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท/ลิตร`;
   applyAvgPriceBtn.disabled = sumDays === 0;
 }
@@ -2394,9 +2394,9 @@ function printReport() {
     });
     
     document.getElementById('printWaterTotalCount').textContent = waterEmployees.length.toString();
-    document.getElementById('printWaterTotalCost').textContent = totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-    document.getElementById('printWaterTotalTax').textContent = totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-    document.getElementById('printWaterGrandTotal').textContent = totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2 });
+    document.getElementById('printWaterTotalCost').textContent = totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('printWaterTotalTax').textContent = totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('printWaterGrandTotal').textContent = totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
     // Signatures mapping for water print
     const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
@@ -4087,7 +4087,7 @@ function handlePersonnelPaste() {
       tr.innerHTML = `
         <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
         <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
-        <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
+        <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
         <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
@@ -4154,7 +4154,7 @@ function processUploadedPersonnelFile(file) {
           tr.innerHTML = `
             <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
             <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
-            <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
+            <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
             <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
             <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
