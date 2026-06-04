@@ -972,6 +972,81 @@
       </div>
     </div>
 
+    <!-- Modal: Edit Registry Personnel (Popup) -->
+    <div id="editRegistryPersonnelModal" class="modal-overlay">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 500px;">
+        <div class="modal-header">
+          <h3>✏️ แก้ไขข้อมูลบุคลากร</h3>
+          <button type="button" id="closeRegistryEditModalBtn" class="btn-close">&times;</button>
+        </div>
+        <form id="editRegistryPersonnelForm">
+          <input type="hidden" id="modalRegistryEditIndex" value="" />
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="modalPersonName">ชื่อ - นามสกุล</label>
+              <input type="text" id="modalPersonName" class="form-input" required />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="modalPersonPosition">ตำแหน่ง</label>
+                <select id="modalPersonPosition" class="form-select">
+                  <option value="หน.ปณ.">หน.ปณ.</option>
+                  <option value="พนักงาน">พนักงาน</option>
+                  <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                  <option value="ลูกจ้าง">ลูกจ้าง</option>
+                  <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="modalPersonDuty">หน้าที่</label>
+                <select id="modalPersonDuty" class="form-select">
+                  <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                  <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                  <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                  <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                  <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="modalPersonSalary">เงินเดือน (บาท)</label>
+              <input type="number" id="modalPersonSalary" class="form-input" value="0" required />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="modalPersonRoute">ด้านจ่ายหลัก</label>
+                <select id="modalPersonRoute" class="form-select">
+                  <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
+                  <!-- Dynamically filled in JS -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="modalPersonVehicle">ประเภทพาหนะหลัก</label>
+                <select id="modalPersonVehicle" class="form-select">
+                  <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                  <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
+                  <option value="เรือยนต์">เรือยนต์</option>
+                  <option value="รถยนต์">รถยนต์</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="modalPersonSignature">ลงนามรับเงินเริ่มต้น</label>
+              <input type="text" id="modalPersonSignature" class="form-input" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="cancelRegistryEditModalBtn" class="btn btn-secondary">ยกเลิก</button>
+            <button type="submit" class="btn btn-primary">✔️ อัปเดตข้อมูล</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
 
     <!-- Modal: Attendance Import from Excel (Popup) -->
     <div id="attendanceImportModal" class="modal-overlay">

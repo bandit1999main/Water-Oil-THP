@@ -311,6 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
     opt3.value = route;
     opt3.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
     personRouteSelect.appendChild(opt3);
+
+    const opt4 = document.createElement('option');
+    opt4.value = route;
+    opt4.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+    document.getElementById('modalPersonRoute').appendChild(opt4);
   });
 
   // Load Saved Theme
@@ -543,6 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
   saveSigProfileBtn.addEventListener('click', handleSaveSigProfile);
 
   wireEditModal();
+  wireRegistryEditModal();
 
   // Render Table & Initial Cloud Sync
   renderEmployeeTable();
@@ -1020,18 +1026,16 @@ function editPersonnel(index) {
   const person = personnel[index];
   if (!person) return;
 
-  personnelEditIndexInput.value = index;
-  personNameInput.value = person.name;
-  personPositionSelect.value = person.position;
-  personDutySelect.value = person.duty || '';
-  personSalaryInput.value = person.salary || 0;
-  personRouteSelect.value = person.route || '';
-  personVehicleSelect.value = person.vehicle || 'รถจักรยานยนต์';
-  personSignatureInput.value = person.signature || '';
+  document.getElementById('modalRegistryEditIndex').value = index;
+  document.getElementById('modalPersonName').value = person.name;
+  document.getElementById('modalPersonPosition').value = person.position;
+  document.getElementById('modalPersonDuty').value = person.duty || '';
+  document.getElementById('modalPersonSalary').value = person.salary || 0;
+  document.getElementById('modalPersonRoute').value = person.route || '';
+  document.getElementById('modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
+  document.getElementById('modalPersonSignature').value = person.signature || '';
 
-  document.getElementById('personnelFormTitle').textContent = '✏️ แก้ไขข้อมูลบุคลากร';
-  document.getElementById('savePersonnelBtn').innerHTML = '💾 อัปเดตข้อมูล';
-  resetPersonnelBtn.classList.remove('hidden');
+  document.getElementById('editRegistryPersonnelModal').classList.add('active');
 }
 
 function deletePersonnel(index) {
@@ -1056,6 +1060,56 @@ function cancelPersonnelEdit() {
   document.getElementById('personnelFormTitle').textContent = 'ลงทะเบียนข้อมูลบุคลากร';
   document.getElementById('savePersonnelBtn').innerHTML = '📥 บันทึกบุคลากร';
   resetPersonnelBtn.classList.add('hidden');
+}
+
+function wireRegistryEditModal() {
+  const modal = document.getElementById('editRegistryPersonnelModal');
+  const form = document.getElementById('editRegistryPersonnelForm');
+  const closeBtn = document.getElementById('closeRegistryEditModalBtn');
+  const cancelBtn = document.getElementById('cancelRegistryEditModalBtn');
+
+  closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+  cancelBtn.addEventListener('click', () => modal.classList.remove('active'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const idx = parseInt(document.getElementById('modalRegistryEditIndex').value);
+    
+    const name = document.getElementById('modalPersonName').value.trim();
+    const position = document.getElementById('modalPersonPosition').value;
+    const duty = document.getElementById('modalPersonDuty').value;
+    const salary = parseFloat(document.getElementById('modalPersonSalary').value) || 0;
+    const route = document.getElementById('modalPersonRoute').value;
+    const vehicle = document.getElementById('modalPersonVehicle').value;
+    const signature = document.getElementById('modalPersonSignature').value.trim() || name;
+
+    const item = {
+      name,
+      position,
+      duty,
+      salary,
+      route,
+      vehicle,
+      signature
+    };
+
+    showConfirm({
+      title: 'ยืนยันการแก้ไขข้อมูลบุคลากร',
+      message: `คุณต้องการบันทึกการแก้ไขข้อมูลของ "${name}" ใช่หรือไม่?`,
+      onConfirm: async () => {
+        // Read existing Firestore / ID reference if any
+        const existingId = personnel[idx]?.id;
+        if (existingId) item.id = existingId;
+        personnel[idx] = item;
+        
+        await savePersonnelList(personnel);
+        renderPersonnelTable();
+        modal.classList.remove('active');
+        showToast('อัปเดตข้อมูลบุคลากรสำเร็จ!', 'success');
+      }
+    });
+  });
 }
 
 
