@@ -3959,10 +3959,13 @@ function processUploadedFile(file) {
 
 /* --- PERSONNEL EXCEL/CSV IMPORT LOGIC --- */
 function openPersonnelImportModal() {
+  console.log("openPersonnelImportModal: click detected");
   const pastedText = document.getElementById('personnelImportPastedText');
   const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
   const submitBtn = document.getElementById('submitPersonnelImportBtn');
   const modal = document.getElementById('personnelImportModal');
+
+  console.log("openPersonnelImportModal: elements fetched", { pastedText, previewTableBody, submitBtn, modal });
 
   if (pastedText) pastedText.value = '';
   if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
@@ -3970,8 +3973,14 @@ function openPersonnelImportModal() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
   }
-  tempParsedPersonnelRecords = [];
-  if (modal) modal.classList.add('active');
+  
+  tempParsedPersonnelRecords.length = 0;
+  console.log("openPersonnelImportModal: tempParsedPersonnelRecords cleared");
+  
+  if (modal) {
+    modal.classList.add('active');
+    console.log("openPersonnelImportModal: active class added");
+  }
 }
 
 function switchPersonnelImportTab(tab) {
@@ -4024,7 +4033,7 @@ function clearSelectedPersonnelImportFile() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
   }
-  tempParsedPersonnelRecords = [];
+  tempParsedPersonnelRecords.length = 0;
 }
 
 function downloadPersonnelTemplateXlsx() {
@@ -4051,7 +4060,7 @@ function handlePersonnelPaste() {
     const text = pastedText.value;
     const lines = text.split('\n');
     
-    tempParsedPersonnelRecords = [];
+    tempParsedPersonnelRecords.length = 0;
     previewTableBody.innerHTML = '';
     
     lines.forEach(line => {
@@ -4120,7 +4129,7 @@ function processUploadedPersonnelFile(file) {
       const worksheet = workbook.Sheets[firstSheetName];
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       
-      tempParsedPersonnelRecords = [];
+      tempParsedPersonnelRecords.length = 0;
       if (previewTableBody) previewTableBody.innerHTML = '';
       
       for (let r = 1; r < rows.length; r++) {
