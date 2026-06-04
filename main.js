@@ -325,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
   modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
   deliveryRouteSelect.addEventListener('change', handleRouteSelect);
   empPositionSelect.addEventListener('change', handlePositionSelect);
+  document.getElementById('isSubstitute').addEventListener('change', handlePositionSelect);
   claimMethodSelect.addEventListener('change', handleClaimMethodSelect);
   employeeForm.addEventListener('submit', handleFormSubmit);
   resetBtn.addEventListener('click', cancelEdit);
@@ -900,6 +901,7 @@ function handleEmpNameSelectChange(e) {
     }
 
     empPositionSelect.value = person.position;
+    handlePositionSelect();
     if (person.route) {
       deliveryRouteSelect.value = person.route;
       // Trigger route stats preview
@@ -1203,15 +1205,24 @@ function handleRouteSelect() {
 
 function handlePositionSelect() {
   const pos = empPositionSelect.value;
-  if (pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ') {
+  const isSub = document.getElementById('isSubstitute').checked;
+  const isStaff = pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ';
+
+  if (isStaff && !isSub) {
     claimMethodSelect.value = 'monthly';
+    claimMethodSelect.disabled = true;
     daysNotWorkedGroup.classList.remove('hidden');
     workDaysInput.value = 26;
+    workDaysInput.disabled = true;
   } else {
-    claimMethodSelect.value = 'daily';
-    daysNotWorkedGroup.classList.add('hidden');
-    daysNotWorkedInput.value = 0;
-    workDaysInput.value = 26;
+    claimMethodSelect.disabled = false;
+    workDaysInput.disabled = false;
+    if (claimMethodSelect.value === 'monthly') {
+      daysNotWorkedGroup.classList.remove('hidden');
+    } else {
+      daysNotWorkedGroup.classList.add('hidden');
+      daysNotWorkedInput.value = 0;
+    }
   }
 }
 
@@ -1458,8 +1469,47 @@ function openEditModal(isWaterMode, idx) {
     modalSignature.value = item.signature || '';
   }
 
+  adjustModalClaimMethod();
+
   // Show modal
   modal.classList.add('active');
+}
+
+function adjustModalClaimMethod() {
+  const modal = document.getElementById('editEmployeeModal');
+  const isWater = modal.dataset.isWater === '1';
+  if (isWater) {
+    document.getElementById('modalWorkDays').disabled = false;
+    return;
+  }
+
+  const modalEmpPosition = document.getElementById('modalEmpPosition');
+  const modalClaimMethod = document.getElementById('modalClaimMethod');
+  const modalDaysNotWorkedGroup = document.getElementById('modalDaysNotWorkedGroup');
+  const modalIsSubstitute = document.getElementById('modalIsSubstitute');
+  const modalWorkDays = document.getElementById('modalWorkDays');
+  const modalDaysNotWorked = document.getElementById('modalDaysNotWorked');
+
+  const pos = modalEmpPosition.value;
+  const isSub = modalIsSubstitute.checked;
+  const isStaff = pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ';
+
+  if (isStaff && !isSub) {
+    modalClaimMethod.value = 'monthly';
+    modalClaimMethod.disabled = true;
+    modalDaysNotWorkedGroup.classList.remove('hidden');
+    modalWorkDays.value = 26;
+    modalWorkDays.disabled = true;
+  } else {
+    modalClaimMethod.disabled = false;
+    modalWorkDays.disabled = false;
+    if (modalClaimMethod.value === 'monthly') {
+      modalDaysNotWorkedGroup.classList.remove('hidden');
+    } else {
+      modalDaysNotWorkedGroup.classList.add('hidden');
+      modalDaysNotWorked.value = 0;
+    }
+  }
 }
 
 function wireEditModal() {
@@ -1474,14 +1524,9 @@ function wireEditModal() {
   cancelBtn.addEventListener('click', () => modal.classList.remove('active'));
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
 
-  modalClaimMethod.addEventListener('change', () => {
-    if (modalClaimMethod.value === 'monthly') {
-      modalDaysNotWorkedGroup.classList.remove('hidden');
-    } else {
-      modalDaysNotWorkedGroup.classList.add('hidden');
-      document.getElementById('modalDaysNotWorked').value = 0;
-    }
-  });
+  modalClaimMethod.addEventListener('change', adjustModalClaimMethod);
+  document.getElementById('modalEmpPosition').addEventListener('change', adjustModalClaimMethod);
+  document.getElementById('modalIsSubstitute').addEventListener('change', adjustModalClaimMethod);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1507,8 +1552,19 @@ function wireEditModal() {
       const route = document.getElementById('modalDeliveryRoute').value;
       const vehicle = document.getElementById('modalVehicleType').value;
       const method = document.getElementById('modalClaimMethod').value;
-      const daysNotWorked = parseInt(document.getElementById('modalDaysNotWorked').value) || 0;
+      const daysNotWorkedRaw = document.getElementById('modalDaysNotWorked').value;
       const isSubstitute = document.getElementById('modalIsSubstitute').checked;
+      
+      const isStaff = position === 'พนักงาน' || position === 'ลูกจ้างประจำ';
+      if (isStaff && !isSubstitute) {
+        if (daysNotWorkedRaw.trim() === '') {
+          showToast('กรุณาระบุจำนวนวันที่ไม่ได้นำรถมาใช้!', 'warning');
+          document.getElementById('modalDaysNotWorked').focus();
+          return;
+        }
+      }
+      
+      const daysNotWorked = parseInt(daysNotWorkedRaw) || 0;
       // Preserve id and existing fields (e.g. missions for supervisor)
       const existingId = employees[idx]?.id;
       employees[idx] = { ...employees[idx], name, position, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
@@ -1599,8 +1655,18 @@ async function handleFormSubmit(e) {
     const route = deliveryRouteSelect.value;
     const method = claimMethodSelect.value;
     const workDays = parseInt(workDaysInput.value) || 0;
-    const daysNotWorked = parseInt(daysNotWorkedInput.value) || 0;
+    
     const isSubstitute = document.getElementById('isSubstitute').checked;
+    const isStaff = position === 'พนักงาน' || position === 'ลูกจ้างประจำ';
+    if (isStaff && !isSubstitute) {
+      if (daysNotWorkedInput.value.trim() === '') {
+        showToast('กรุณาระบุจำนวนวันที่ไม่ได้นำรถมาใช้!', 'warning');
+        daysNotWorkedInput.focus();
+        return;
+      }
+    }
+    
+    const daysNotWorked = parseInt(daysNotWorkedInput.value) || 0;
 
     item = {
       formMode,
@@ -1955,8 +2021,8 @@ function loadRowToForm(index) {
     workDaysInput.value = item.workDays;
     daysNotWorkedInput.value = item.daysNotWorked;
     
+    handlePositionSelect();
     handleRouteSelect();
-    handleClaimMethodSelect();
   }
 }
 
