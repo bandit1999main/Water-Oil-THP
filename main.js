@@ -398,67 +398,80 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   // Personnel Import Modal Events
-  if (importPersonnelBtn) {
-    importPersonnelBtn.addEventListener('click', openPersonnelImportModal);
+  const btnImportPersonnel = document.getElementById('importPersonnelBtn');
+  const modalPersonnelImport = document.getElementById('personnelImportModal');
+  const btnClosePersonnelImportModal = document.getElementById('closePersonnelImportModalBtn');
+  const btnCancelPersonnelImport = document.getElementById('cancelPersonnelImportBtn');
+  const txtPersonnelImportPasted = document.getElementById('personnelImportPastedText');
+  const btnSubmitPersonnelImport = document.getElementById('submitPersonnelImportBtn');
+  const btnDownloadPersonnelTemplate = document.getElementById('downloadPersonnelTemplateBtn');
+  const btnTabPersonnelImportFile = document.getElementById('tabPersonnelImportFile');
+  const btnTabPersonnelImportText = document.getElementById('tabPersonnelImportText');
+  const zonePersonnelDragDrop = document.getElementById('personnelDragDropZone');
+  const selPersonnelFile = document.getElementById('personnelFileSelector');
+  const btnClearSelectedPersonnelFile = document.getElementById('clearSelectedPersonnelFileBtn');
+
+  if (btnImportPersonnel) {
+    btnImportPersonnel.addEventListener('click', openPersonnelImportModal);
   }
-  if (closePersonnelImportModalBtn) {
-    closePersonnelImportModalBtn.addEventListener('click', () => personnelImportModal.classList.remove('active'));
+  if (btnClosePersonnelImportModal) {
+    btnClosePersonnelImportModal.addEventListener('click', () => modalPersonnelImport.classList.remove('active'));
   }
-  if (cancelPersonnelImportBtn) {
-    cancelPersonnelImportBtn.addEventListener('click', () => personnelImportModal.classList.remove('active'));
+  if (btnCancelPersonnelImport) {
+    btnCancelPersonnelImport.addEventListener('click', () => modalPersonnelImport.classList.remove('active'));
   }
-  if (personnelImportPastedText) {
-    personnelImportPastedText.addEventListener('input', handlePersonnelPaste);
-    personnelImportPastedText.addEventListener('paste', handlePersonnelPaste);
+  if (txtPersonnelImportPasted) {
+    txtPersonnelImportPasted.addEventListener('input', handlePersonnelPaste);
+    txtPersonnelImportPasted.addEventListener('paste', handlePersonnelPaste);
   }
-  if (submitPersonnelImportBtn) {
-    submitPersonnelImportBtn.addEventListener('click', handleConfirmPersonnelImport);
+  if (btnSubmitPersonnelImport) {
+    btnSubmitPersonnelImport.addEventListener('click', handleConfirmPersonnelImport);
   }
-  if (downloadPersonnelTemplateBtn) {
-    downloadPersonnelTemplateBtn.addEventListener('click', downloadPersonnelTemplateXlsx);
+  if (btnDownloadPersonnelTemplate) {
+    btnDownloadPersonnelTemplate.addEventListener('click', downloadPersonnelTemplateXlsx);
   }
 
   // Tab switching inside personnel import modal
-  if (tabPersonnelImportFile) {
-    tabPersonnelImportFile.addEventListener('click', () => switchPersonnelImportTab('file'));
+  if (btnTabPersonnelImportFile) {
+    btnTabPersonnelImportFile.addEventListener('click', () => switchPersonnelImportTab('file'));
   }
-  if (tabPersonnelImportText) {
-    tabPersonnelImportText.addEventListener('click', () => switchPersonnelImportTab('text'));
+  if (btnTabPersonnelImportText) {
+    btnTabPersonnelImportText.addEventListener('click', () => switchPersonnelImportTab('text'));
   }
 
   // Drag & drop / File selection for personnel import
-  if (personnelDragDropZone) {
-    personnelDragDropZone.addEventListener('click', () => personnelFileSelector.click());
+  if (zonePersonnelDragDrop) {
+    zonePersonnelDragDrop.addEventListener('click', () => selPersonnelFile.click());
   }
-  if (personnelFileSelector) {
-    personnelFileSelector.addEventListener('change', (e) => {
+  if (selPersonnelFile) {
+    selPersonnelFile.addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
         processUploadedPersonnelFile(e.target.files[0]);
       }
     });
   }
-  if (personnelDragDropZone) {
-    personnelDragDropZone.addEventListener('dragover', (e) => {
+  if (zonePersonnelDragDrop) {
+    zonePersonnelDragDrop.addEventListener('dragover', (e) => {
       e.preventDefault();
-      personnelDragDropZone.style.borderColor = 'var(--post-orange)';
-      personnelDragDropZone.style.background = 'rgba(245, 158, 11, 0.05)';
+      zonePersonnelDragDrop.style.borderColor = 'var(--post-orange)';
+      zonePersonnelDragDrop.style.background = 'rgba(245, 158, 11, 0.05)';
     });
-    personnelDragDropZone.addEventListener('dragleave', () => {
-      personnelDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-      personnelDragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+    zonePersonnelDragDrop.addEventListener('dragleave', () => {
+      zonePersonnelDragDrop.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      zonePersonnelDragDrop.style.background = 'rgba(16, 185, 129, 0.02)';
     });
-    personnelDragDropZone.addEventListener('drop', (e) => {
+    zonePersonnelDragDrop.addEventListener('drop', (e) => {
       e.preventDefault();
-      personnelDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-      personnelDragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+      zonePersonnelDragDrop.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      zonePersonnelDragDrop.style.background = 'rgba(16, 185, 129, 0.02)';
       if (e.dataTransfer.files.length > 0) {
-        personnelFileSelector.files = e.dataTransfer.files;
+        selPersonnelFile.files = e.dataTransfer.files;
         processUploadedPersonnelFile(e.dataTransfer.files[0]);
       }
     });
   }
-  if (clearSelectedPersonnelFileBtn) {
-    clearSelectedPersonnelFileBtn.addEventListener('click', clearSelectedPersonnelImportFile);
+  if (btnClearSelectedPersonnelFile) {
+    btnClearSelectedPersonnelFile.addEventListener('click', clearSelectedPersonnelImportFile);
   }
 
   // Table Batch Actions
@@ -3946,47 +3959,71 @@ function processUploadedFile(file) {
 
 /* --- PERSONNEL EXCEL/CSV IMPORT LOGIC --- */
 function openPersonnelImportModal() {
-  personnelImportPastedText.value = '';
-  personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
-  submitPersonnelImportBtn.disabled = true;
-  submitPersonnelImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  const pastedText = document.getElementById('personnelImportPastedText');
+  const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
+  const submitBtn = document.getElementById('submitPersonnelImportBtn');
+  const modal = document.getElementById('personnelImportModal');
+
+  if (pastedText) pastedText.value = '';
+  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  }
   tempParsedPersonnelRecords = [];
-  personnelImportModal.classList.add('active');
+  if (modal) modal.classList.add('active');
 }
 
 function switchPersonnelImportTab(tab) {
+  const tabFile = document.getElementById('tabPersonnelImportFile');
+  const tabText = document.getElementById('tabPersonnelImportText');
+  const fileContent = document.getElementById('personnelImportFileContent');
+  const textContent = document.getElementById('personnelImportTextContent');
+
   if (tab === 'file') {
-    tabPersonnelImportFile.classList.add('active');
-    tabPersonnelImportFile.style.color = 'var(--post-orange)';
-    tabPersonnelImportFile.style.borderBottom = '3px solid var(--post-orange)';
-    
-    tabPersonnelImportText.classList.remove('active');
-    tabPersonnelImportText.style.color = 'var(--text-secondary)';
-    tabPersonnelImportText.style.borderBottom = '3px solid transparent';
-    
-    personnelImportFileContent.classList.remove('hidden');
-    personnelImportTextContent.classList.add('hidden');
+    if (tabFile) {
+      tabFile.classList.add('active');
+      tabFile.style.color = 'var(--post-orange)';
+      tabFile.style.borderBottom = '3px solid var(--post-orange)';
+    }
+    if (tabText) {
+      tabText.classList.remove('active');
+      tabText.style.color = 'var(--text-secondary)';
+      tabText.style.borderBottom = '3px solid transparent';
+    }
+    if (fileContent) fileContent.classList.remove('hidden');
+    if (textContent) textContent.classList.add('hidden');
   } else {
-    tabPersonnelImportText.classList.add('active');
-    tabPersonnelImportText.style.color = 'var(--post-orange)';
-    tabPersonnelImportText.style.borderBottom = '3px solid var(--post-orange)';
-    
-    tabPersonnelImportFile.classList.remove('active');
-    tabPersonnelImportFile.style.color = 'var(--text-secondary)';
-    tabPersonnelImportFile.style.borderBottom = '3px solid transparent';
-    
-    personnelImportTextContent.classList.remove('hidden');
-    personnelImportFileContent.classList.add('hidden');
+    if (tabText) {
+      tabText.classList.add('active');
+      tabText.style.color = 'var(--post-orange)';
+      tabText.style.borderBottom = '3px solid var(--post-orange)';
+    }
+    if (tabFile) {
+      tabFile.classList.remove('active');
+      tabFile.style.color = 'var(--text-secondary)';
+      tabFile.style.borderBottom = '3px solid transparent';
+    }
+    if (textContent) textContent.classList.remove('hidden');
+    if (fileContent) fileContent.classList.add('hidden');
   }
 }
 
 function clearSelectedPersonnelImportFile() {
-  personnelFileSelector.value = '';
-  personnelSelectedFileInfo.classList.add('hidden');
-  personnelDragDropZone.classList.remove('hidden');
-  personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
-  submitPersonnelImportBtn.disabled = true;
-  submitPersonnelImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  const fileSelector = document.getElementById('personnelFileSelector');
+  const selectedFileInfo = document.getElementById('personnelSelectedFileInfo');
+  const dragDropZone = document.getElementById('personnelDragDropZone');
+  const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
+  const submitBtn = document.getElementById('submitPersonnelImportBtn');
+
+  if (fileSelector) fileSelector.value = '';
+  if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
+  if (dragDropZone) dragDropZone.classList.remove('hidden');
+  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  }
   tempParsedPersonnelRecords = [];
 }
 
@@ -4005,11 +4042,17 @@ function downloadPersonnelTemplateXlsx() {
 
 function handlePersonnelPaste() {
   setTimeout(() => {
-    const text = personnelImportPastedText.value;
+    const pastedText = document.getElementById('personnelImportPastedText');
+    const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
+    const submitBtn = document.getElementById('submitPersonnelImportBtn');
+
+    if (!pastedText || !previewTableBody) return;
+    
+    const text = pastedText.value;
     const lines = text.split('\n');
     
     tempParsedPersonnelRecords = [];
-    personnelImportPreviewTableBody.innerHTML = '';
+    previewTableBody.innerHTML = '';
     
     lines.forEach(line => {
       const cleanedLine = line.trim();
@@ -4039,15 +4082,17 @@ function handlePersonnelPaste() {
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
         <td style="padding: 0.5rem 0.75rem;">${signature}</td>
       `;
-      personnelImportPreviewTableBody.appendChild(tr);
+      previewTableBody.appendChild(tr);
     });
     
     if (tempParsedPersonnelRecords.length === 0) {
-      personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
-      submitPersonnelImportBtn.disabled = true;
+      previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+      if (submitBtn) submitBtn.disabled = true;
     } else {
-      submitPersonnelImportBtn.disabled = false;
-      submitPersonnelImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+      }
     }
   }, 50);
 }
@@ -4055,9 +4100,15 @@ function handlePersonnelPaste() {
 function processUploadedPersonnelFile(file) {
   if (!file) return;
   
-  personnelFileNameLabel.textContent = `📂 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-  personnelSelectedFileInfo.classList.remove('hidden');
-  personnelDragDropZone.classList.add('hidden');
+  const fileNameLabel = document.getElementById('personnelFileNameLabel');
+  const selectedFileInfo = document.getElementById('personnelSelectedFileInfo');
+  const dragDropZone = document.getElementById('personnelDragDropZone');
+  const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
+  const submitBtn = document.getElementById('submitPersonnelImportBtn');
+
+  if (fileNameLabel) fileNameLabel.textContent = `📂 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  if (selectedFileInfo) selectedFileInfo.classList.remove('hidden');
+  if (dragDropZone) dragDropZone.classList.add('hidden');
   
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -4070,7 +4121,7 @@ function processUploadedPersonnelFile(file) {
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       
       tempParsedPersonnelRecords = [];
-      personnelImportPreviewTableBody.innerHTML = '';
+      if (previewTableBody) previewTableBody.innerHTML = '';
       
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
@@ -4088,24 +4139,28 @@ function processUploadedPersonnelFile(file) {
         const record = { name, position, salary, route, vehicle, signature };
         tempParsedPersonnelRecords.push(record);
         
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
-          <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
-          <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
-          <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
-          <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
-          <td style="padding: 0.5rem 0.75rem;">${signature}</td>
-        `;
-        personnelImportPreviewTableBody.appendChild(tr);
+        if (previewTableBody) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
+            <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+            <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
+            <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
+            <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
+            <td style="padding: 0.5rem 0.75rem;">${signature}</td>
+          `;
+          previewTableBody.appendChild(tr);
+        }
       }
       
       if (tempParsedPersonnelRecords.length === 0) {
-        personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
-        submitPersonnelImportBtn.disabled = true;
+        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
+        if (submitBtn) submitBtn.disabled = true;
       } else {
-        submitPersonnelImportBtn.disabled = false;
-        submitPersonnelImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+        }
       }
       
     } catch(err) {
@@ -4138,9 +4193,12 @@ async function handleConfirmPersonnelImport() {
   renderPersonnelTable();
   updateEmployeeSelectDropdown();
   
-  personnelImportModal.classList.remove('active');
+  const modal = document.getElementById('personnelImportModal');
+  if (modal) modal.classList.remove('active');
+  
   clearSelectedPersonnelImportFile();
-  personnelImportPastedText.value = '';
+  const pastedText = document.getElementById('personnelImportPastedText');
+  if (pastedText) pastedText.value = '';
   
   let msg = `นำเข้าข้อมูลสำเร็จ ${addedCount} รายการ`;
   if (skipCount > 0) {
