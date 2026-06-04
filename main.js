@@ -4089,7 +4089,7 @@ function handlePersonnelPaste() {
         <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
-        <td style="padding: 0.5rem 0.75rem;">${signature}</td>
+        <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
       `;
       previewTableBody.appendChild(tr);
     });
@@ -4156,7 +4156,7 @@ function processUploadedPersonnelFile(file) {
             <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
             <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
-            <td style="padding: 0.5rem 0.75rem;">${signature}</td>
+            <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
           `;
           previewTableBody.appendChild(tr);
         }
