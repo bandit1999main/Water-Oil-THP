@@ -969,6 +969,9 @@ function renderPersonnelTable() {
     return;
   }
 
+  // Sort personnel by name in Thai alphabetical order (ก-ฮ)
+  personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+
   personnelTableBody.innerHTML = '';
   personnel.forEach((person, index) => {
     const tr = document.createElement('tr');
@@ -1664,6 +1667,9 @@ function renderEmployeeTable() {
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
 
   if (activeMode === 'water') {
+    // Sort water employees by name (Thai alphabetical order ก-ฮ)
+    waterEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+
     if (waterEmployees.length === 0) {
       employeeTableBody.innerHTML = `
         <tr>
@@ -1718,6 +1724,9 @@ function renderEmployeeTable() {
     sumTotalCostSpan.textContent = totalNetVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return;
   }
+
+  // Sort fuel employees by name (Thai alphabetical order ก-ฮ)
+  employees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
   if (employees.length === 0) {
     employeeTableBody.innerHTML = `
@@ -2357,6 +2366,9 @@ function printReport() {
       showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
       return;
     }
+
+    // Sort water employees by name (Thai alphabetical order ก-ฮ)
+    waterEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
     
     document.getElementById('printWaterMonthText').textContent = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
     document.getElementById('printWaterYearText').textContent = globalYearSelect.value;
@@ -2432,6 +2444,9 @@ function printReport() {
     showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
     return;
   }
+
+  // Sort employees by name (Thai alphabetical order ก-ฮ)
+  employees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
   const currentFuelPrice = parseFloat(globalFuelPriceInput.value) || 38.50;
   
