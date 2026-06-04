@@ -4184,6 +4184,29 @@ function downloadPersonnelTemplateXlsx() {
   
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(headers);
+  
+  // Add dropdown list data validation for columns C, D, and G
+  ws['!dataValidation'] = [
+    {
+      sqref: 'C2:C500',
+      type: 'list',
+      allowBlank: true,
+      formula1: '"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"'
+    },
+    {
+      sqref: 'D2:D500',
+      type: 'list',
+      allowBlank: true,
+      formula1: '"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"'
+    },
+    {
+      sqref: 'G2:G500',
+      type: 'list',
+      allowBlank: true,
+      formula1: '"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"'
+    }
+  ];
+
   XLSX.utils.book_append_sheet(wb, ws, "รายชื่อบุคลากร");
   XLSX.writeFile(wb, "เทมเพลตรายชื่อบุคลากร.xlsx");
 }
