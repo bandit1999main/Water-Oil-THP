@@ -163,7 +163,6 @@ const personSalaryInput = document.getElementById('personSalary');
 const personRouteSelect = document.getElementById('personRoute');
 const personVehicleSelect = document.getElementById('personVehicle');
 const personSignatureInput = document.getElementById('personSignature');
-const clearAllPersonnelBtn = document.getElementById('clearAllPersonnelBtn');
 const resetPersonnelBtn = document.getElementById('resetPersonnelBtn');
 
 // Other Button Actions
@@ -312,7 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   personnelForm.addEventListener('submit', handlePersonnelFormSubmit);
   resetPersonnelBtn.addEventListener('click', cancelPersonnelEdit);
-  clearAllPersonnelBtn.addEventListener('click', clearAllPersonnelData);
   empNameSelect.addEventListener('change', handleEmpNameSelectChange);
 
   // Tab Events
@@ -952,18 +950,6 @@ function cancelPersonnelEdit() {
   resetPersonnelBtn.classList.add('hidden');
 }
 
-function clearAllPersonnelData() {
-  showConfirm({
-    title: 'ล้างข้อมูลทั้งหมด',
-    message: 'คุณยืนยันต้องการล้างข้อมูลบุคลากรทั้งหมดใช่หรือไม่? (ข้อมูลนี้จะไม่สามารถกู้คืนได้)',
-    onConfirm: async () => {
-      personnel = [];
-      await savePersonnelList(personnel);
-      renderPersonnelTable();
-      showToast('ล้างรายชื่อบุคลากรทั้งหมดเรียบร้อยแล้ว!', 'success');
-    }
-  });
-}
 
 /* --- DRINKING WATER TAX CALC ENGINE --- */
 function calculateWaterTax(salary, totalAllowance) {
