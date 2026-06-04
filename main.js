@@ -1353,6 +1353,7 @@ function openEditModal(isWaterMode, idx) {
     } else {
       modalDaysNotWorkedGroup.classList.add('hidden');
     }
+    document.getElementById('modalIsSubstitute').checked = item.isSubstitute || false;
     modalWorkDays.value = item.workDays;
     modalRemarks.value = item.remarks || '';
     modalSignature.value = item.signature || '';
@@ -1408,9 +1409,10 @@ function wireEditModal() {
       const vehicle = document.getElementById('modalVehicleType').value;
       const method = document.getElementById('modalClaimMethod').value;
       const daysNotWorked = parseInt(document.getElementById('modalDaysNotWorked').value) || 0;
+      const isSubstitute = document.getElementById('modalIsSubstitute').checked;
       // Preserve id and existing fields (e.g. missions for supervisor)
       const existingId = employees[idx]?.id;
-      employees[idx] = { ...employees[idx], name, position, route, vehicle, method, workDays, daysNotWorked, remarks, signature };
+      employees[idx] = { ...employees[idx], name, position, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
       if (existingId) employees[idx].id = existingId;
       await saveEmployees(employees);
     }
@@ -1499,6 +1501,7 @@ async function handleFormSubmit(e) {
     const method = claimMethodSelect.value;
     const workDays = parseInt(workDaysInput.value) || 0;
     const daysNotWorked = parseInt(daysNotWorkedInput.value) || 0;
+    const isSubstitute = document.getElementById('isSubstitute').checked;
 
     item = {
       formMode,
@@ -1510,8 +1513,10 @@ async function handleFormSubmit(e) {
       workDays,
       daysNotWorked,
       remarks,
-      signature
+      signature,
+      isSubstitute
     };
+    document.getElementById('isSubstitute').checked = false;
   }
 
   if (editIndexVal !== '') {
@@ -1726,14 +1731,29 @@ function renderEmployeeTable() {
   });
 
   // Render the flattened rows
-  flatRows.forEach((row, index) => {
+  const employeeSubstituteTableBody = document.getElementById('employeeSubstituteTableBody');
+  const substituteTableContainer = document.getElementById('substituteTableContainer');
+  
+  employeeTableBody.innerHTML = '';
+  if (employeeSubstituteTableBody) {
+    employeeSubstituteTableBody.innerHTML = '';
+  }
+
+  let regularCount = 0;
+  let substituteCount = 0;
+
+  flatRows.forEach((row) => {
     totalFuelCost += row.fuelCost;
     totalMaintCost += row.maintCost;
     grandTotal += row.sumTotal;
 
     const tr = document.createElement('tr');
+    
+    // index is relative to the table section
+    const currentTableIndex = row.item.isSubstitute ? ++substituteCount : ++regularCount;
+
     tr.innerHTML = `
-      <td>${index + 1}</td>
+      <td>${currentTableIndex}</td>
       <td><strong>${row.name}</strong></td>
       <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position}</span></td>
       <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>
@@ -1753,8 +1773,34 @@ function renderEmployeeTable() {
     tr.querySelector('.clone-row-btn').addEventListener('click', () => cloneRow(row.parentIndex));
     tr.querySelector('.delete-row-btn').addEventListener('click', () => deleteRow(row.parentIndex));
 
-    employeeTableBody.appendChild(tr);
+    if (row.item.isSubstitute) {
+      employeeSubstituteTableBody.appendChild(tr);
+    } else {
+      employeeTableBody.appendChild(tr);
+    }
   });
+
+  // Handle placeholders and visibility
+  if (regularCount === 0) {
+    employeeTableBody.innerHTML = `
+      <tr>
+        <td colspan="10" class="no-data">ยังไม่มีรายการเบิกค่าน้ำมันหลัก</td>
+      </tr>
+    `;
+  }
+
+  if (substituteCount > 0) {
+    substituteTableContainer.classList.remove('hidden');
+  } else {
+    substituteTableContainer.classList.add('hidden');
+    if (employeeSubstituteTableBody) {
+      employeeSubstituteTableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="no-data">ยังไม่มีรายการวิ่งแทน</td>
+        </tr>
+      `;
+    }
+  }
 
   sumFuelCostSpan.textContent = totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
   sumMaintenanceCostSpan.textContent = totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2 });
@@ -1784,6 +1830,7 @@ function loadRowToForm(index) {
     }
   }
   vehicleTypeSelect.value = item.vehicle;
+  document.getElementById('isSubstitute').checked = item.isSubstitute || false;
   document.getElementById('remarks').value = item.remarks;
   document.getElementById('signature').value = item.signature;
   document.getElementById('editIndex').value = index;
@@ -1846,6 +1893,7 @@ function cancelEdit() {
   }
   resetBtn.classList.add('hidden');
   employeeForm.reset();
+  document.getElementById('isSubstitute').checked = false;
   routeStatsPreview.classList.add('hidden');
   tempMissions = [];
   if (formModeInput.value === 'supervisor') {
@@ -2118,8 +2166,8 @@ function exportToCsv() {
 
       flatRows.push({
         name: item.name,
-        position: item.position,
-        routeDesc: `ด้านจ่ายที่ ${item.route}`,
+        position: item.isSubstitute ? `${item.position} (วิ่งแทน)` : item.position,
+        routeDesc: `ด้านจ่ายที่ ${item.route}` + (item.isSubstitute ? ' (วิ่งแทน)' : ''),
         workDays: item.workDays,
         liters: liters,
         fuelCost: fuelCost,
@@ -2431,7 +2479,8 @@ function printReport() {
   let listStaffAndRegular = []; // Page 1: พนักงาน และ ลูกจ้างประจำ
   let listDailyAndTemp = [];     // Page 2: ลูกจ้างรายวัน และ ลูกจ้าง (ลูกจ้างชั่วคราว/รายวันทั่วไป)
   let listContractors = [];     // Page 3: ลูกจ้างเหมา
-  let supervisors = [];         // Page 4+: หัวหน้าโซนนำจ่าย (ชนจ.)
+  let listSubstitutes = [];     // Page 4: วิ่งแทน
+  let supervisors = [];         // Page 5+: หัวหน้าโซนนำจ่าย (ชนจ.)
 
   employees.forEach((item) => {
     if (item.formMode === 'supervisor') {
@@ -2455,15 +2504,18 @@ function printReport() {
         remarks: item.remarks
       };
 
-      const posLower = (item.position || '').toLowerCase();
-      
-      if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
-        listStaffAndRegular.push(rowObj);
-      } else if (posLower.includes('เหมา')) {
-        listContractors.push(rowObj);
+      if (item.isSubstitute) {
+        listSubstitutes.push(rowObj);
       } else {
-        // Daily and other temporary employees
-        listDailyAndTemp.push(rowObj);
+        const posLower = (item.position || '').toLowerCase();
+        if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
+          listStaffAndRegular.push(rowObj);
+        } else if (posLower.includes('เหมา')) {
+          listContractors.push(rowObj);
+        } else {
+          // Daily and other temporary employees
+          listDailyAndTemp.push(rowObj);
+        }
       }
     }
   });
@@ -2571,12 +2623,24 @@ function printReport() {
     printReportArea.appendChild(pageDiv);
   };
 
-  // Render Page 1, Page 2, Page 3 sequentially
+  // Render Page 1, Page 2, Page 3, Page 4 sequentially
+  const hasSubstitutes = listSubstitutes.length > 0;
   const hasSupervisors = supervisors.length > 0;
   
-  renderStandardPage('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular, listDailyAndTemp.length === 0 && listContractors.length === 0 && !hasSupervisors);
-  renderStandardPage('ลูกจ้างรายวัน และ ลูกจ้าง', listDailyAndTemp, listContractors.length === 0 && !hasSupervisors);
-  renderStandardPage('ลูกจ้างเหมา', listContractors, !hasSupervisors);
+  const showStaff = listStaffAndRegular.length > 0;
+  const showDaily = listDailyAndTemp.length > 0;
+  const showContract = listContractors.length > 0;
+  const showSub = listSubstitutes.length > 0;
+
+  const staffLast = !showDaily && !showContract && !showSub && !hasSupervisors;
+  const dailyLast = !showContract && !showSub && !hasSupervisors;
+  const contractLast = !showSub && !hasSupervisors;
+  const subLast = !hasSupervisors;
+
+  renderStandardPage('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular, staffLast);
+  renderStandardPage('ลูกจ้างรายวัน และ ลูกจ้าง', listDailyAndTemp, dailyLast);
+  renderStandardPage('ลูกจ้างเหมา', listContractors, contractLast);
+  renderStandardPage('วิ่งแทน', listSubstitutes, subLast);
 
   // Render Page 4+ for individual Supervisors (ชนจ.)
   supervisors.forEach((sv, svIdx) => {

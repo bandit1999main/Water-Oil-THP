@@ -305,6 +305,13 @@
                 </div>
               </div>
 
+              <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
+                <input type="checkbox" id="isSubstitute" style="width: 20px; height: 20px; cursor: pointer;" />
+                <label for="isSubstitute" style="font-weight: 700; color: var(--post-orange); cursor: pointer; margin: 0; user-select: none;">
+                  🏃 ปฏิบัติงานวิ่งแทน (เบิกเฉพาะค่าน้ำมัน ไม่เบิกค่าบำรุงรักษา)
+                </label>
+              </div>
+
               <div class="form-row-2" id="workDaysRow">
                 <div class="form-group">
                   <label for="workDays">จำนวนวันที่ทำงานจริง (วัน)</label>
@@ -491,7 +498,7 @@
             </div>
 
             <!-- Scrollable Table Container -->
-            <div class="table-container">
+            <div class="table-container" id="regularTableContainer">
               <table id="employeeTable">
                 <thead>
                   <tr>
@@ -510,6 +517,34 @@
                 <tbody id="employeeTableBody">
                   <tr>
                     <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Scrollable Table Container (Substitute) -->
+            <div class="table-container hidden" id="substituteTableContainer" style="margin-top: 2rem; border-top: 1px dashed var(--border-glass); padding-top: 1.5rem;">
+              <h4 style="font-weight: 700; color: var(--post-orange); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span>🏃 รายการเบิกวิ่งแทน (วิ่งแทน)</span>
+              </h4>
+              <table id="employeeSubstituteTable">
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>ตำแหน่ง/บทบาท</th>
+                    <th>รายละเอียด/ด้านจ่าย</th>
+                    <th>ปริมาณน้ำมัน (ลิตร)</th>
+                    <th>ค่าน้ำมัน (บาท)</th>
+                    <th>ค่าบำรุงรักษา (บาท)</th>
+                    <th>รวมเบิกจ่าย (บาท)</th>
+                    <th>ลงนามผู้รับ</th>
+                    <th class="actions-col">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="employeeSubstituteTableBody">
+                  <tr>
+                    <td colspan="10" class="no-data">ยังไม่มีรายการวิ่งแทน</td>
                   </tr>
                 </tbody>
               </table>
@@ -859,6 +894,12 @@
                 <label for="modalDaysNotWorked">จำนวนวันที่ไม่ได้นำรถมาใช้ (วัน)</label>
                 <input type="number" id="modalDaysNotWorked" class="form-input" min="0" max="31" value="0" />
               </div>
+              <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                <input type="checkbox" id="modalIsSubstitute" style="width: 20px; height: 20px; cursor: pointer;" />
+                <label for="modalIsSubstitute" style="font-weight: 700; color: var(--post-orange); cursor: pointer; margin: 0; user-select: none;">
+                  🏃 ปฏิบัติงานวิ่งแทน (เบิกเฉพาะค่าน้ำมัน)
+                </label>
+              </div>
             </div>
 
             <!-- Water Mode specific inputs -->
@@ -1025,6 +1066,33 @@
           <!-- Rendered via JS -->
         </tbody>
       </table>
+
+      <!-- Substitute Table for Print -->
+      <div id="printSubstituteSection" class="hidden" style="margin-top: 2rem;">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; text-decoration: underline;">
+          ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิง (วิ่งแทน)
+        </h3>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 4%">ลำดับ</th>
+              <th style="width: 18%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 10%">ตำแหน่ง / บทบาท</th>
+              <th style="width: 12%">รายละเอียดภารกิจ / ด้านจ่าย</th>
+              <th style="width: 5%">วันทำงาน</th>
+              <th style="width: 6%">น้ำมัน (ลิตร)</th>
+              <th style="width: 6%">ค่าน้ำมัน (บาท)</th>
+              <th style="width: 6%">ค่าบำรุงรักษา (บาท)</th>
+              <th style="width: 7%">รวมเงิน (บาท)</th>
+              <th style="width: 20%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 6%">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="printSubstituteTableBody">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
 
       <div class="print-summary-section">
         <div class="summary-block">
