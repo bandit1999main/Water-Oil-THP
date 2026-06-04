@@ -558,6 +558,11 @@
                 <span class="card-icon">👥</span>
                 <h3>ทำเนียบข้อมูลบุคลากรทั้งหมด</h3>
               </div>
+              <div class="header-actions-flex">
+                <button type="button" id="importPersonnelBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
+                  📥 นำเข้าบุคลากรจาก Excel / CSV
+                </button>
+              </div>
             </div>
 
             <div class="table-container">
@@ -1026,6 +1031,84 @@
         <div class="modal-footer">
           <button type="button" id="cancelImportBtn" class="btn btn-secondary">ยกเลิก</button>
           <button type="button" id="submitImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
+            ✔️ ยืนยันนำเข้าข้อมูล
+          </button>
+        </div>
+      </div>
+    <!-- Modal: Personnel Import from Excel (Popup) -->
+    <div id="personnelImportModal" class="modal-overlay">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+          <h3>📥 นำเข้าทำเนียบข้อมูลบุคลากร</h3>
+          <button type="button" id="closePersonnelImportModalBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.5rem;">
+          <p class="modal-instruction" style="margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6;">
+            💡 <strong>คำแนะนำ:</strong> ดาวน์โหลดเทมเพลต Excel ด้านล่างนี้เพื่อกรอกข้อมูลบุคลากร จากนั้นนำมาอัปโหลดเข้าสู่ระบบ หรือใช้การวางข้อมูลดิบเพื่อประมวลผลทันที
+          </p>
+
+          <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" id="downloadPersonnelTemplateBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem;">
+              🟢 ดาวน์โหลดเทมเพลต Excel ข้อมูลบุคลากร (.xlsx)
+            </button>
+          </div>
+
+          <!-- Sleek Tab Controls -->
+          <div class="import-tabs" style="display: flex; border-bottom: 2px solid var(--border-glass); margin-bottom: 1.25rem; gap: 1rem;">
+            <button type="button" id="tabPersonnelImportFile" class="import-tab-btn active" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--post-orange); border-bottom: 3px solid var(--post-orange); cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              📂 นำเข้าจากไฟล์โดยตรง
+            </button>
+            <button type="button" id="tabPersonnelImportText" class="import-tab-btn" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--text-secondary); border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              📋 วางข้อความแบบเดิม
+            </button>
+          </div>
+
+          <!-- Tab Content 1: File Upload (Drag & Drop) -->
+          <div id="personnelImportFileContent" class="tab-panel">
+            <div id="personnelDragDropZone" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 12px; background: rgba(16, 185, 129, 0.02); padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+              <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.15));">📊</span>
+              <div style="font-weight: bold; color: var(--text-primary); font-size: 0.95rem;">ลากและวางไฟล์เทมเพลต Excel (.xlsx) ที่นี่</div>
+              <div style="color: var(--text-secondary); font-size: 0.8rem;">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ</div>
+              <input type="file" id="personnelFileSelector" accept=".xlsx, .xls" style="display: none;" />
+            </div>
+            <div id="personnelSelectedFileInfo" class="hidden" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+              <span id="personnelFileNameLabel" style="font-size: 0.85rem; font-weight: bold; color: var(--post-emerald);"></span>
+              <button type="button" id="clearSelectedPersonnelFileBtn" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 0.9rem;">✕ นำออก</button>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Textarea Paste -->
+          <div id="personnelImportTextContent" class="tab-panel hidden">
+            <div class="form-group">
+              <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
+              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างชั่วคราว	12000	12	รถยนต์	สมศรี"></textarea>
+            </div>
+          </div>
+
+          <!-- Preview Area -->
+          <div class="modal-table-container" style="margin-top: 1.5rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 250px; overflow-y: auto;">
+            <table class="modal-table" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">ชื่อ - นามสกุล</th>
+                  <th style="width: 20%;">ตำแหน่ง</th>
+                  <th style="width: 15%;">เงินเดือน</th>
+                  <th style="width: 12%;">ด้านจ่ายหลัก</th>
+                  <th style="width: 15%;">ประเภทพาหนะ</th>
+                  <th style="width: 13%;">ลงนามเริ่มต้น</th>
+                </tr>
+              </thead>
+              <tbody id="personnelImportPreviewTableBody">
+                <tr>
+                  <td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelPersonnelImportBtn" class="btn btn-secondary">ยกเลิก</button>
+          <button type="button" id="submitPersonnelImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
             ✔️ ยืนยันนำเข้าข้อมูล
           </button>
         </div>

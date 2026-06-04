@@ -194,6 +194,26 @@ const fileNameLabel = document.getElementById('fileNameLabel');
 const clearSelectedFileBtn = document.getElementById('clearSelectedFileBtn');
 let tempParsedRecords = [];
 
+// Personnel Import Modal DOM Elements
+const importPersonnelBtn = document.getElementById('importPersonnelBtn');
+const personnelImportModal = document.getElementById('personnelImportModal');
+const closePersonnelImportModalBtn = document.getElementById('closePersonnelImportModalBtn');
+const cancelPersonnelImportBtn = document.getElementById('cancelPersonnelImportBtn');
+const submitPersonnelImportBtn = document.getElementById('submitPersonnelImportBtn');
+const personnelImportPastedText = document.getElementById('personnelImportPastedText');
+const personnelImportPreviewTableBody = document.getElementById('personnelImportPreviewTableBody');
+const downloadPersonnelTemplateBtn = document.getElementById('downloadPersonnelTemplateBtn');
+const tabPersonnelImportFile = document.getElementById('tabPersonnelImportFile');
+const tabPersonnelImportText = document.getElementById('tabPersonnelImportText');
+const personnelImportFileContent = document.getElementById('personnelImportFileContent');
+const personnelImportTextContent = document.getElementById('personnelImportTextContent');
+const personnelDragDropZone = document.getElementById('personnelDragDropZone');
+const personnelFileSelector = document.getElementById('personnelFileSelector');
+const personnelSelectedFileInfo = document.getElementById('personnelSelectedFileInfo');
+const personnelFileNameLabel = document.getElementById('personnelFileNameLabel');
+const clearSelectedPersonnelFileBtn = document.getElementById('clearSelectedPersonnelFileBtn');
+let tempParsedPersonnelRecords = [];
+
 // Saved Templates Manager DOM Elements
 const templateNameInput = document.getElementById('templateNameInput');
 const saveTemplateBtn = document.getElementById('saveTemplateBtn');
@@ -377,7 +397,69 @@ document.addEventListener('DOMContentLoaded', () => {
       processUploadedFile(e.dataTransfer.files[0]);
     }
   });
-  clearSelectedFileBtn.addEventListener('click', clearSelectedImportFile);
+  // Personnel Import Modal Events
+  if (importPersonnelBtn) {
+    importPersonnelBtn.addEventListener('click', openPersonnelImportModal);
+  }
+  if (closePersonnelImportModalBtn) {
+    closePersonnelImportModalBtn.addEventListener('click', () => personnelImportModal.classList.remove('active'));
+  }
+  if (cancelPersonnelImportBtn) {
+    cancelPersonnelImportBtn.addEventListener('click', () => personnelImportModal.classList.remove('active'));
+  }
+  if (personnelImportPastedText) {
+    personnelImportPastedText.addEventListener('input', handlePersonnelPaste);
+    personnelImportPastedText.addEventListener('paste', handlePersonnelPaste);
+  }
+  if (submitPersonnelImportBtn) {
+    submitPersonnelImportBtn.addEventListener('click', handleConfirmPersonnelImport);
+  }
+  if (downloadPersonnelTemplateBtn) {
+    downloadPersonnelTemplateBtn.addEventListener('click', downloadPersonnelTemplateXlsx);
+  }
+
+  // Tab switching inside personnel import modal
+  if (tabPersonnelImportFile) {
+    tabPersonnelImportFile.addEventListener('click', () => switchPersonnelImportTab('file'));
+  }
+  if (tabPersonnelImportText) {
+    tabPersonnelImportText.addEventListener('click', () => switchPersonnelImportTab('text'));
+  }
+
+  // Drag & drop / File selection for personnel import
+  if (personnelDragDropZone) {
+    personnelDragDropZone.addEventListener('click', () => personnelFileSelector.click());
+  }
+  if (personnelFileSelector) {
+    personnelFileSelector.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        processUploadedPersonnelFile(e.target.files[0]);
+      }
+    });
+  }
+  if (personnelDragDropZone) {
+    personnelDragDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      personnelDragDropZone.style.borderColor = 'var(--post-orange)';
+      personnelDragDropZone.style.background = 'rgba(245, 158, 11, 0.05)';
+    });
+    personnelDragDropZone.addEventListener('dragleave', () => {
+      personnelDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      personnelDragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+    });
+    personnelDragDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      personnelDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      personnelDragDropZone.style.background = 'rgba(16, 185, 129, 0.02)';
+      if (e.dataTransfer.files.length > 0) {
+        personnelFileSelector.files = e.dataTransfer.files;
+        processUploadedPersonnelFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+  if (clearSelectedPersonnelFileBtn) {
+    clearSelectedPersonnelFileBtn.addEventListener('click', clearSelectedPersonnelImportFile);
+  }
 
   // Table Batch Actions
   loadDemoBtn.addEventListener('click', loadDemoData);
@@ -3861,6 +3943,212 @@ function processUploadedFile(file) {
   
   reader.readAsArrayBuffer(file);
 }
+
+/* --- PERSONNEL EXCEL/CSV IMPORT LOGIC --- */
+function openPersonnelImportModal() {
+  personnelImportPastedText.value = '';
+  personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  submitPersonnelImportBtn.disabled = true;
+  submitPersonnelImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  tempParsedPersonnelRecords = [];
+  personnelImportModal.classList.add('active');
+}
+
+function switchPersonnelImportTab(tab) {
+  if (tab === 'file') {
+    tabPersonnelImportFile.classList.add('active');
+    tabPersonnelImportFile.style.color = 'var(--post-orange)';
+    tabPersonnelImportFile.style.borderBottom = '3px solid var(--post-orange)';
+    
+    tabPersonnelImportText.classList.remove('active');
+    tabPersonnelImportText.style.color = 'var(--text-secondary)';
+    tabPersonnelImportText.style.borderBottom = '3px solid transparent';
+    
+    personnelImportFileContent.classList.remove('hidden');
+    personnelImportTextContent.classList.add('hidden');
+  } else {
+    tabPersonnelImportText.classList.add('active');
+    tabPersonnelImportText.style.color = 'var(--post-orange)';
+    tabPersonnelImportText.style.borderBottom = '3px solid var(--post-orange)';
+    
+    tabPersonnelImportFile.classList.remove('active');
+    tabPersonnelImportFile.style.color = 'var(--text-secondary)';
+    tabPersonnelImportFile.style.borderBottom = '3px solid transparent';
+    
+    personnelImportTextContent.classList.remove('hidden');
+    personnelImportFileContent.classList.add('hidden');
+  }
+}
+
+function clearSelectedPersonnelImportFile() {
+  personnelFileSelector.value = '';
+  personnelSelectedFileInfo.classList.add('hidden');
+  personnelDragDropZone.classList.remove('hidden');
+  personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  submitPersonnelImportBtn.disabled = true;
+  submitPersonnelImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
+  tempParsedPersonnelRecords = [];
+}
+
+function downloadPersonnelTemplateXlsx() {
+  const headers = [
+    ["ลำดับ", "ชื่อ-นามสกุล", "ตำแหน่ง", "เงินเดือน (บาท)", "ด้านจ่ายหลัก", "ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)", "ลงนามเริ่มต้น (ชื่อเรียก)"],
+    [1, "นายสมศักดิ์ รักดี", "ลูกจ้างประจำ", 15000, "5", "รถจักรยานยนต์", "สมศักดิ์"],
+    [2, "นางสาวสมศรี ทรงดี", "ลูกจ้างชั่วคราว", 12000, "12", "รถยนต์", "สมศรี"]
+  ];
+  
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(headers);
+  XLSX.utils.book_append_sheet(wb, ws, "รายชื่อบุคลากร");
+  XLSX.writeFile(wb, "เทมเพลตรายชื่อบุคลากร.xlsx");
+}
+
+function handlePersonnelPaste() {
+  setTimeout(() => {
+    const text = personnelImportPastedText.value;
+    const lines = text.split('\n');
+    
+    tempParsedPersonnelRecords = [];
+    personnelImportPreviewTableBody.innerHTML = '';
+    
+    lines.forEach(line => {
+      const cleanedLine = line.trim();
+      if (!cleanedLine) return;
+      
+      const tokens = cleanedLine.split('\t');
+      if (tokens.length < 2) return;
+      
+      let name = tokens[0].trim();
+      let position = tokens[1] ? tokens[1].trim() : 'ลูกจ้างประจำ';
+      let salary = tokens[2] ? parseFloat(tokens[2].replace(/,/g, '')) || 0 : 0;
+      let route = tokens[3] ? tokens[3].trim() : '';
+      let vehicle = tokens[4] ? tokens[4].trim() : 'รถจักรยานยนต์';
+      let signature = tokens[5] ? tokens[5].trim() : name.split(' ')[0];
+      
+      if (name === "ชื่อ-นามสกุล" || name === "ชื่อ - นามสกุล" || name.length < 2) return;
+      
+      const record = { name, position, salary, route, vehicle, signature };
+      tempParsedPersonnelRecords.push(record);
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
+        <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+        <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
+        <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
+        <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
+        <td style="padding: 0.5rem 0.75rem;">${signature}</td>
+      `;
+      personnelImportPreviewTableBody.appendChild(tr);
+    });
+    
+    if (tempParsedPersonnelRecords.length === 0) {
+      personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+      submitPersonnelImportBtn.disabled = true;
+    } else {
+      submitPersonnelImportBtn.disabled = false;
+      submitPersonnelImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+    }
+  }, 50);
+}
+
+function processUploadedPersonnelFile(file) {
+  if (!file) return;
+  
+  personnelFileNameLabel.textContent = `📂 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  personnelSelectedFileInfo.classList.remove('hidden');
+  personnelDragDropZone.classList.add('hidden');
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      tempParsedPersonnelRecords = [];
+      personnelImportPreviewTableBody.innerHTML = '';
+      
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length < 2) continue;
+        
+        let name = String(row[1] || '').trim();
+        if (name.length < 2 || name === 'ชื่อ-นามสกุล' || name === 'ชื่อ - นามสกุล') continue;
+        
+        let position = String(row[2] || 'ลูกจ้างประจำ').trim();
+        let salary = parseFloat(String(row[3] || '0').replace(/,/g, '')) || 0;
+        let route = String(row[4] || '').trim();
+        let vehicle = String(row[5] || 'รถจักรยานยนต์').trim();
+        let signature = String(row[6] || '').trim() || name.split(' ')[0];
+        
+        const record = { name, position, salary, route, vehicle, signature };
+        tempParsedPersonnelRecords.push(record);
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
+          <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+          <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString()} ฿</td>
+          <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
+          <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
+          <td style="padding: 0.5rem 0.75rem;">${signature}</td>
+        `;
+        personnelImportPreviewTableBody.appendChild(tr);
+      }
+      
+      if (tempParsedPersonnelRecords.length === 0) {
+        personnelImportPreviewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
+        submitPersonnelImportBtn.disabled = true;
+      } else {
+        submitPersonnelImportBtn.disabled = false;
+        submitPersonnelImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${tempParsedPersonnelRecords.length} รายชื่อ)`;
+      }
+      
+    } catch(err) {
+      console.error(err);
+      showToast('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel กรุณาตรวจสอบรูปแบบตารางข้อมูล', 'error');
+      clearSelectedPersonnelImportFile();
+    }
+  };
+  
+  reader.readAsArrayBuffer(file);
+}
+
+async function handleConfirmPersonnelImport() {
+  if (tempParsedPersonnelRecords.length === 0) return;
+  
+  let addedCount = 0;
+  let skipCount = 0;
+  
+  tempParsedPersonnelRecords.forEach(record => {
+    const exists = personnel.some(p => p.name.trim().toLowerCase() === record.name.trim().toLowerCase());
+    if (!exists) {
+      personnel.push(record);
+      addedCount++;
+    } else {
+      skipCount++;
+    }
+  });
+  
+  await savePersonnelList(personnel);
+  renderPersonnelTable();
+  updateEmployeeSelectDropdown();
+  
+  personnelImportModal.classList.remove('active');
+  clearSelectedPersonnelImportFile();
+  personnelImportPastedText.value = '';
+  
+  let msg = `นำเข้าข้อมูลสำเร็จ ${addedCount} รายการ`;
+  if (skipCount > 0) {
+    msg += ` (ข้ามชื่อที่ซ้ำกัน ${skipCount} รายการ)`;
+  }
+  showToast(msg, 'success');
+}
+
 
 
 
