@@ -2510,7 +2510,6 @@ function printReport() {
         <td>${index + 1}</td>
         <td><strong>${item.name}</strong></td>
         <td>${item.position} / ${item.duty || '-'}</td>
-        <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>${item.workDays} วัน</td>
         <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
