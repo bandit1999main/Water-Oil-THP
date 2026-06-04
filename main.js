@@ -1296,6 +1296,7 @@ function calculateSingleMissionMaint(item, m) {
  * Calculates Maintenance Cost based on Post regulations
  */
 function calculateMaintenanceCost(item) {
+  if (item.isSubstitute) return 0;
   const isStaff = item.position === 'พนักงาน' || item.position === 'ลูกจ้างประจำ';
 
   if (item.formMode === 'supervisor') {
