@@ -44,6 +44,9 @@
             <button id="modeWaterBtn" class="btn btn-small" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: transparent; color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
               <span>🥤</span> ค่าน้ำดื่ม
             </button>
+            <button id="modePersonnelBtn" class="btn btn-small" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: transparent; color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
+              <span>👥</span> จัดการบุคลากร
+            </button>
           </div>
           
           <div id="dbStatusBadge" class="db-status-badge connecting">
@@ -153,7 +156,7 @@
           </div>
 
           <!-- Card 2: Form Input (Staff / Supervisor Tab Switching) -->
-          <div class="glass-card">
+          <div class="glass-card" id="calculationFormCard">
             <div class="auth-tabs" style="display: flex; position: relative; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
               <button class="auth-tab active" id="tabStandard" style="flex: 1; padding: 0.5rem; background: transparent; border: none; color: var(--text-primary); font-family: var(--font-main); font-weight: 700; cursor: pointer; transition: color var(--transition-fast); text-align: center;">พนักงาน / ลูกจ้างประจำ-ชั่วคราว</button>
               <button class="auth-tab" id="tabSupervisor" style="flex: 1; padding: 0.5rem; background: transparent; border: none; color: var(--text-secondary); font-family: var(--font-main); font-weight: 700; cursor: pointer; transition: color var(--transition-fast); text-align: center;">หัวหน้าโซนนำจ่าย (ชนจ.)</button>
@@ -164,9 +167,16 @@
               <input type="hidden" id="editIndex" value="" />
               <input type="hidden" id="formMode" value="standard" /> <!-- standard or supervisor -->
 
-              <div class="form-group">
+              <div class="form-group" id="empNameSelectGroup">
+                <label for="empNameSelect">เลือกรายชื่อบุคลากร</label>
+                <select id="empNameSelect" class="form-select" required>
+                  <option value="" disabled selected>-- เลือกรายชื่อบุคลากร --</option>
+                </select>
+              </div>
+
+              <div class="form-group hidden" id="empNameManualGroup">
                 <label for="empName">ชื่อ - นามสกุล</label>
-                <input type="text" id="empName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+                <input type="text" id="empName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" />
               </div>
 
               <!-- Salary field for water calculation (hidden by default) -->
@@ -327,6 +337,80 @@
               </div>
             </form>
           </div>
+
+          <!-- Card 3: Personnel Management Form -->
+          <div id="personnelCard" class="glass-card hidden">
+            <div class="card-header">
+              <span class="card-icon">👥</span>
+              <h3 id="personnelFormTitle">ลงทะเบียนข้อมูลบุคลากร</h3>
+            </div>
+            
+            <form id="personnelForm">
+              <input type="hidden" id="personnelEditIndex" value="" />
+              
+              <div class="form-group">
+                <label for="personName">ชื่อ - นามสกุล</label>
+                <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personPosition">ตำแหน่ง</label>
+                  <select id="personPosition" class="form-select">
+                    <!-- Standard options -->
+                    <option value="พนักงาน">พนักงาน</option>
+                    <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                    <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
+                    <option value="ลูกจ้าง">ลูกจ้าง</option>
+                    <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+                    <!-- Water options -->
+                    <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                    <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                    <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                    <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                    <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
+                  <input type="number" id="personSalary" class="form-input" value="0" />
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personRoute">ด้านจ่ายหลัก</label>
+                  <select id="personRoute" class="form-select">
+                    <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
+                    <!-- Dynamically filled in JS -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="personVehicle">ประเภทพาหนะหลัก</label>
+                  <select id="personVehicle" class="form-select">
+                    <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                    <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
+                    <option value="เรือยนต์">เรือยนต์</option>
+                    <option value="รถยนต์">รถยนต์</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="personSignature">ลงนามรับเงินเริ่มต้น</label>
+                <input type="text" id="personSignature" class="form-input" placeholder="ว่างไว้ใช้ชื่อตนเอง" />
+              </div>
+
+              <div class="button-group" style="margin-top: 1rem;">
+                <button type="submit" id="savePersonnelBtn" class="btn btn-primary btn-full">
+                  📥 บันทึกบุคลากร
+                </button>
+                <button type="button" id="resetPersonnelBtn" class="btn btn-secondary hidden">
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- RIGHT: Live Output Table & Statistics -->
@@ -357,7 +441,7 @@
           </div>
 
           <!-- Main Table Card -->
-          <div class="glass-card full-width">
+          <div class="glass-card full-width" id="mainTableCard">
             <div class="card-header table-header-flex">
               <div class="header-left">
                 <span class="card-icon">📋</span>
@@ -426,6 +510,43 @@
                 <tbody id="employeeTableBody">
                   <tr>
                     <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Personnel Table Card -->
+          <div id="personnelTableCard" class="glass-card full-width hidden">
+            <div class="card-header table-header-flex">
+              <div class="header-left">
+                <span class="card-icon">👥</span>
+                <h3>ทำเนียบข้อมูลบุคลากรทั้งหมด</h3>
+              </div>
+              <div class="header-actions-flex">
+                <button type="button" id="clearAllPersonnelBtn" class="btn btn-danger btn-small">
+                  🗑️ ล้างรายชื่อทั้งหมด
+                </button>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table id="personnelTable">
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>ตำแหน่ง</th>
+                    <th>เงินเดือน (บาท)</th>
+                    <th>ด้านจ่ายหลัก</th>
+                    <th>ประเภทพาหนะ</th>
+                    <th>ลงนามเริ่มต้น</th>
+                    <th class="actions-col">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="personnelTableBody">
+                  <tr>
+                    <td colspan="8" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
                   </tr>
                 </tbody>
               </table>

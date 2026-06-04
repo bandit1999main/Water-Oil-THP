@@ -11,13 +11,13 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDnR7tGFh4oKCn0ikjbWmtku-EyC1sohxI",
-  authDomain: "thailandpost-oil.firebaseapp.com",
-  projectId: "thailandpost-oil",
-  storageBucket: "thailandpost-oil.firebasestorage.app",
-  messagingSenderId: "962360442157",
-  appId: "1:962360442157:web:c0039bedac937fb41467a4",
-  measurementId: "G-45JK3HG71J"
+  apiKey: "AIzaSyDJc5TGxm8oFPYPwhQXT7X3mS7BrTBVT8U",
+  authDomain: "water-oil-thp.firebaseapp.com",
+  projectId: "water-oil-thp",
+  storageBucket: "water-oil-thp.firebasestorage.app",
+  messagingSenderId: "326764898632",
+  appId: "1:326764898632:web:db857c7aeda75af7f2b7d",
+  measurementId: "G-NQFY3EGD3B"
 };
 
 let db = null;
@@ -442,5 +442,75 @@ export function listenToGlobalSettings(callback) {
     console.error("Firestore listenToGlobalSettings failed:", error);
   });
 }
+
+/**
+ * --- PERSONNEL MANAGEMENT CRUD ---
+ */
+
+export async function fetchPersonnelList() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, "personnel"));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem('tp_personnel', JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error("❌ Firestore fetchPersonnelList failed. Falling back to local storage.", error);
+    return JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  }
+}
+
+export async function savePersonnelList(personnelList) {
+  const now = Date.now();
+  personnelList.forEach((person, i) => {
+    if (!person.id) person.id = `person_${now}_${i}`;
+  });
+
+  localStorage.setItem('tp_personnel', JSON.stringify(personnelList));
+
+  if (!isCloudConnected()) return false;
+
+  try {
+    const batch = writeBatch(db);
+    const querySnapshot = await getDocs(collection(db, "personnel"));
+    querySnapshot.forEach((d) => {
+      if (!personnelList.some(p => String(p.id) === d.id)) {
+        batch.delete(doc(db, "personnel", d.id));
+      }
+    });
+
+    personnelList.forEach((person) => {
+      const docRef = doc(db, "personnel", String(person.id));
+      batch.set(docRef, person);
+    });
+
+    await batch.commit();
+    console.log("✅ Personnel list successfully synced to Cloud Firestore.");
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore savePersonnelList failed.", error);
+    return false;
+  }
+}
+
+export function listenToPersonnel(callback) {
+  if (!isCloudConnected()) return null;
+  return onSnapshot(collection(db, "personnel"), (snapshot) => {
+    const list = [];
+    snapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem('tp_personnel', JSON.stringify(list));
+    callback(list);
+  }, (error) => {
+    console.error("Firestore listenToPersonnel failed:", error);
+  });
+}
+
 
 

@@ -18,12 +18,16 @@ import {
   deleteSignatoryProfile,
   fetchGlobalSettings,
   saveGlobalSetting,
-  listenToGlobalSettings
+  listenToGlobalSettings,
+  fetchPersonnelList,
+  savePersonnelList,
+  listenToPersonnel
 } from './database.js';
 
 // Global Mode State
-let activeMode = 'fuel'; // 'fuel' or 'water'
+let activeMode = 'fuel'; // 'fuel', 'water', or 'personnel'
 let waterEmployees = JSON.parse(localStorage.getItem('tp_water_employees')) || [];
+let personnel = JSON.parse(localStorage.getItem('tp_personnel')) || [];
 
 const OFFICIAL_ROUTE_DATA = {
   "1": { hasCar: false, staffDist: 1300.00, staffLiters: 52.00, workerDist: 50.0, workerLiters: 2.00 },
@@ -142,8 +146,25 @@ const avgCalcResultPrice = document.getElementById('avgCalcResultPrice');
 // Mode Switch & Water Calculator DOM Elements
 const modeFuelBtn = document.getElementById('modeFuelBtn');
 const modeWaterBtn = document.getElementById('modeWaterBtn');
+const modePersonnelBtn = document.getElementById('modePersonnelBtn');
 const salaryGroup = document.getElementById('salaryGroup');
 const empSalaryInput = document.getElementById('empSalary');
+const empNameSelect = document.getElementById('empNameSelect');
+
+// Personnel Management DOM Elements
+const personnelCard = document.getElementById('personnelCard');
+const personnelForm = document.getElementById('personnelForm');
+const personnelTableBody = document.getElementById('personnelTableBody');
+const personnelTableCard = document.getElementById('personnelTableCard');
+const personnelEditIndexInput = document.getElementById('personnelEditIndex');
+const personNameInput = document.getElementById('personName');
+const personPositionSelect = document.getElementById('personPosition');
+const personSalaryInput = document.getElementById('personSalary');
+const personRouteSelect = document.getElementById('personRoute');
+const personVehicleSelect = document.getElementById('personVehicle');
+const personSignatureInput = document.getElementById('personSignature');
+const clearAllPersonnelBtn = document.getElementById('clearAllPersonnelBtn');
+const resetPersonnelBtn = document.getElementById('resetPersonnelBtn');
 
 // Other Button Actions
 const loadDemoBtn = document.getElementById('loadDemoBtn');
@@ -264,6 +285,11 @@ document.addEventListener('DOMContentLoaded', () => {
     opt2.value = route;
     opt2.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
     missionRouteSelect.appendChild(opt2);
+
+    const opt3 = document.createElement('option');
+    opt3.value = route;
+    opt3.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+    personRouteSelect.appendChild(opt3);
   });
 
   // Load Saved Theme
@@ -277,11 +303,17 @@ document.addEventListener('DOMContentLoaded', () => {
   themeToggleBtn.addEventListener('click', toggleTheme);
   modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
   modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
+  modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
   deliveryRouteSelect.addEventListener('change', handleRouteSelect);
   empPositionSelect.addEventListener('change', handlePositionSelect);
   claimMethodSelect.addEventListener('change', handleClaimMethodSelect);
   employeeForm.addEventListener('submit', handleFormSubmit);
   resetBtn.addEventListener('click', cancelEdit);
+  
+  personnelForm.addEventListener('submit', handlePersonnelFormSubmit);
+  resetPersonnelBtn.addEventListener('click', cancelPersonnelEdit);
+  clearAllPersonnelBtn.addEventListener('click', clearAllPersonnelData);
+  empNameSelect.addEventListener('change', handleEmpNameSelectChange);
 
   // Tab Events
   tabStandard.addEventListener('click', () => switchFormMode('standard'));
@@ -418,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render Table & Initial Cloud Sync
   renderEmployeeTable();
+  updateEmployeeSelectDropdown();
   initCloudSync();
 });
 
@@ -441,6 +474,12 @@ async function initCloudSync() {
       const cloudWaterEmployees = await fetchWaterEmployees();
       if (cloudWaterEmployees && cloudWaterEmployees.length > 0) {
         waterEmployees = cloudWaterEmployees;
+      }
+
+      // Fetch cloud personnel list (initial load)
+      const cloudPersonnel = await fetchPersonnelList();
+      if (cloudPersonnel && cloudPersonnel.length > 0) {
+        personnel = cloudPersonnel;
       }
       
       // Fetch cloud route data
@@ -490,6 +529,12 @@ async function initCloudSync() {
       listenToWaterEmployees((updatedList) => {
         waterEmployees = updatedList;
         if (activeMode === 'water') renderEmployeeTable();
+      });
+
+      listenToPersonnel((updatedList) => {
+        personnel = updatedList;
+        if (activeMode === 'personnel') renderPersonnelTable();
+        else updateEmployeeSelectDropdown();
       });
 
       listenToGlobalSettings((updatedSettings) => {
@@ -556,136 +601,368 @@ async function switchAppMode(mode) {
   const sumFuelCostLabel = document.querySelector('.metric-card.bg-orange-glow h3');
   const sumMaintCostLabel = document.querySelector('.metric-card.bg-blue-glow h3');
   const sumTotalCostLabel = document.querySelector('.metric-card.bg-emerald-glow h3');
-  const tableTitle = document.querySelector('.table-header-flex h3');
+  const tableTitle = document.querySelector('#mainTableCard .table-header-flex h3');
   
-  if (mode === 'fuel') {
+  // Toggle Card/Table Visibility based on mode
+  if (mode === 'personnel') {
+    calculationFormCard.classList.add('hidden');
+    mainTableCard.classList.add('hidden');
+    document.querySelector('.metrics-grid').classList.add('hidden');
+    
+    personnelCard.classList.remove('hidden');
+    personnelTableCard.classList.remove('hidden');
+    
     // Buttons styling
-    modeFuelBtn.style.background = 'var(--post-orange)';
-    modeFuelBtn.style.color = 'white';
+    modePersonnelBtn.style.background = 'var(--post-orange)';
+    modePersonnelBtn.style.color = 'white';
+    modeFuelBtn.style.background = 'transparent';
+    modeFuelBtn.style.color = 'var(--text-secondary)';
     modeWaterBtn.style.background = 'transparent';
     modeWaterBtn.style.color = 'var(--text-secondary)';
     
-    // Header texts
-    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Fuel Engine v2.5';
-    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.';
-    if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว';
+    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Personnel Registry v1.0';
+    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบจัดการข้อมูลบุคลากรประจำที่ทำการ / ปณ.';
+    if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
     
-    // Form & Tab configs
-    document.querySelector('.auth-tabs').style.display = 'flex';
-    document.getElementById('positionRouteRow').classList.remove('hidden');
-    document.getElementById('deliveryRouteGroup').classList.remove('hidden');
-    document.getElementById('claimMethodGroup').classList.remove('hidden');
-    document.getElementById('workDaysRow').classList.remove('hidden');
-    document.getElementById('daysNotWorkedGroup').classList.remove('hidden');
-    salaryGroup.classList.add('hidden');
-    // Restore required on route select for fuel mode form validation
-    deliveryRouteSelect.setAttribute('required', 'true');
-    
-    // Reset position dropdown to standard
-    empPositionSelect.innerHTML = `
-      <option value="พนักงาน">พนักงาน</option>
-      <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-      <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
-      <option value="ลูกจ้าง">ลูกจ้าง</option>
-      <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-    `;
-    
-    // Metric Card Texts
-    if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำมันเชื้อเพลิงรวม';
-    if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ค่าบำรุงรักษารวม';
-    if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
-    
-    // Table Configs
-    if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.';
-    document.querySelector('#employeeTable thead').innerHTML = `
-      <tr>
-        <th>ลำดับ</th>
-        <th>ชื่อ - นามสกุล</th>
-        <th>ตำแหน่ง/บทบาท</th>
-        <th>รายละเอียด/ด้านจ่าย</th>
-        <th>ปริมาณน้ำมัน (ลิตร)</th>
-        <th>ค่าน้ำมัน (บาท)</th>
-        <th>ค่าบำรุงรักษา (บาท)</th>
-        <th>รวมเบิกจ่าย (บาท)</th>
-        <th>ลงนามผู้รับ</th>
-        <th class="actions-col">จัดการ</th>
-      </tr>
-    `;
-    saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
-  } else {
-    // Water Mode
-    modeWaterBtn.style.background = 'var(--post-orange)';
-    modeWaterBtn.style.color = 'white';
-    modeFuelBtn.style.background = 'transparent';
-    modeFuelBtn.style.color = 'var(--text-secondary)';
-    
-    // Header texts
-    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Drinking Water Engine v1.0';
-    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำดื่มเจ้าหน้าที่ปฏิบัติงานภายนอกที่ทำการ';
-    if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำดื่มพร้อมหักภาษี ณ ที่จ่ายตามเกณฑ์เงินเดือน 25,833 บาท ตามระเบียบใหม่ล่าสุด';
-    
-    // Form & Tab configs - Hide standard fuel inputs & show salary input
-    document.querySelector('.auth-tabs').style.display = 'none';
-    document.getElementById('positionRouteRow').classList.remove('hidden');
-    document.getElementById('deliveryRouteGroup').classList.add('hidden');
-    document.getElementById('claimMethodGroup').classList.add('hidden');
-    document.getElementById('workDaysRow').classList.remove('hidden');
-    document.getElementById('daysNotWorkedGroup').classList.add('hidden');
-    supervisorMissionSection.classList.add('hidden');
-    routeStatsPreview.classList.add('hidden');
-    salaryGroup.classList.remove('hidden');
-    // CRITICAL: Remove required from hidden route select so water form can submit
-    deliveryRouteSelect.removeAttribute('required');
-    
-    // Populate position select with specific drinking water claimable roles (Image 2)
-    empPositionSelect.innerHTML = `
-      <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
-      <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
-      <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
-      <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
-      <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
-    `;
-    
-    // Metric Card Texts
-    if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำดื่มก่อนหักภาษีรวม';
-    if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ภาษีหัก ณ ที่จ่ายรวม';
-    if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
-    
-    // Table Configs
-    if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกค่าน้ำดื่มประจำที่ทำการ ปณ.';
-    document.querySelector('#employeeTable thead').innerHTML = `
-      <tr>
-        <th>ลำดับ</th>
-        <th>ชื่อ - นามสกุล</th>
-        <th>ปฏิบัติหน้าที่</th>
-        <th>เงินเดือน (บาท)</th>
-        <th>วันทำงาน (วัน)</th>
-        <th>รวมค่าน้ำดื่ม (บาท)</th>
-        <th>ภาษี (บาท)</th>
-        <th>ยอดสุทธิคงเหลือ (บาท)</th>
-        <th>ลงนามผู้รับ</th>
-        <th class="actions-col">จัดการ</th>
-      </tr>
-    `;
-    saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
-  }
-  
-  // Clear any active edits
-  cancelEdit();
-  // Fetch from DB & render
-  if (isCloudConnected()) {
-    try {
-      if (mode === 'fuel') {
-        employees = await fetchEmployees();
-      } else {
-        waterEmployees = await fetchWaterEmployees();
+    cancelPersonnelEdit();
+    if (isCloudConnected()) {
+      try {
+        personnel = await fetchPersonnelList();
+      } catch (err) {
+        console.error("Error fetching personnel:", err);
       }
-    } catch (err) {
-      console.error("Error loading mode data:", err);
     }
+    renderPersonnelTable();
+  } else {
+    // Show calculation panels, hide personnel panels
+    calculationFormCard.classList.remove('hidden');
+    mainTableCard.classList.remove('hidden');
+    document.querySelector('.metrics-grid').classList.remove('hidden');
+    
+    personnelCard.classList.add('hidden');
+    personnelTableCard.classList.add('hidden');
+    
+    modePersonnelBtn.style.background = 'transparent';
+    modePersonnelBtn.style.color = 'var(--text-secondary)';
+    
+    updateEmployeeSelectDropdown();
+    
+    if (mode === 'fuel') {
+      // Buttons styling
+      modeFuelBtn.style.background = 'var(--post-orange)';
+      modeFuelBtn.style.color = 'white';
+      modeWaterBtn.style.background = 'transparent';
+      modeWaterBtn.style.color = 'var(--text-secondary)';
+      
+      // Header texts
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Fuel Engine v2.5';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว';
+      
+      // Form & Tab configs
+      document.querySelector('.auth-tabs').style.display = 'flex';
+      document.getElementById('positionRouteRow').classList.remove('hidden');
+      document.getElementById('deliveryRouteGroup').classList.remove('hidden');
+      document.getElementById('claimMethodGroup').classList.remove('hidden');
+      document.getElementById('workDaysRow').classList.remove('hidden');
+      document.getElementById('daysNotWorkedGroup').classList.remove('hidden');
+      salaryGroup.classList.add('hidden');
+      deliveryRouteSelect.setAttribute('required', 'true');
+      
+      // Reset position dropdown to standard
+      empPositionSelect.innerHTML = `
+        <option value="พนักงาน">พนักงาน</option>
+        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+        <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
+        <option value="ลูกจ้าง">ลูกจ้าง</option>
+        <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+      `;
+      
+      // Metric Card Texts
+      if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำมันเชื้อเพลิงรวม';
+      if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ค่าบำรุงรักษารวม';
+      if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+      
+      // Table Configs
+      if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.';
+      document.querySelector('#employeeTable thead').innerHTML = `
+        <tr>
+          <th>ลำดับ</th>
+          <th>ชื่อ - นามสกุล</th>
+          <th>ตำแหน่ง/บทบาท</th>
+          <th>รายละเอียด/ด้านจ่าย</th>
+          <th>ปริมาณน้ำมัน (ลิตร)</th>
+          <th>ค่าน้ำมัน (บาท)</th>
+          <th>ค่าบำรุงรักษา (บาท)</th>
+          <th>รวมเบิกจ่าย (บาท)</th>
+          <th>ลงนามผู้รับ</th>
+          <th class="actions-col">จัดการ</th>
+        </tr>
+      `;
+      saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
+    } else {
+      // Water Mode
+      modeWaterBtn.style.background = 'var(--post-orange)';
+      modeWaterBtn.style.color = 'white';
+      modeFuelBtn.style.background = 'transparent';
+      modeFuelBtn.style.color = 'var(--text-secondary)';
+      
+      // Header texts
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Drinking Water Engine v1.0';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำดื่มเจ้าหน้าที่ปฏิบัติงานภายนอกที่ทำการ';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำดื่มพร้อมหักภาษี ณ ที่จ่ายตามเกณฑ์เงินเดือน 25,833 บาท ตามระเบียบใหม่ล่าสุด';
+      
+      // Form & Tab configs - Hide standard fuel inputs & show salary input
+      document.querySelector('.auth-tabs').style.display = 'none';
+      document.getElementById('positionRouteRow').classList.remove('hidden');
+      document.getElementById('deliveryRouteGroup').classList.add('hidden');
+      document.getElementById('claimMethodGroup').classList.add('hidden');
+      document.getElementById('workDaysRow').classList.remove('hidden');
+      document.getElementById('daysNotWorkedGroup').classList.add('hidden');
+      supervisorMissionSection.classList.add('hidden');
+      routeStatsPreview.classList.add('hidden');
+      salaryGroup.classList.remove('hidden');
+      deliveryRouteSelect.removeAttribute('required');
+      
+      // Populate position select with specific drinking water claimable roles
+      empPositionSelect.innerHTML = `
+        <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+        <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+        <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+        <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+        <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+      `;
+      
+      // Metric Card Texts
+      if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำดื่มก่อนหักภาษีรวม';
+      if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ภาษีหัก ณ ที่จ่ายรวม';
+      if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+      
+      // Table Configs
+      if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกค่าน้ำดื่มประจำที่ทำการ ปณ.';
+      document.querySelector('#employeeTable thead').innerHTML = `
+        <tr>
+          <th>ลำดับ</th>
+          <th>ชื่อ - นามสกุล</th>
+          <th>ปฏิบัติหน้าที่</th>
+          <th>เงินเดือน (บาท)</th>
+          <th>วันทำงาน (วัน)</th>
+          <th>รวมค่าน้ำดื่ม (บาท)</th>
+          <th>ภาษี (บาท)</th>
+          <th>ยอดสุทธิคงเหลือ (บาท)</th>
+          <th>ลงนามผู้รับ</th>
+          <th class="actions-col">จัดการ</th>
+        </tr>
+      `;
+      saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+    }
+    
+    // Clear any active edits
+    cancelEdit();
+    // Fetch from DB & render
+    if (isCloudConnected()) {
+      try {
+        if (mode === 'fuel') {
+          employees = await fetchEmployees();
+        } else {
+          waterEmployees = await fetchWaterEmployees();
+        }
+      } catch (err) {
+        console.error("Error loading mode data:", err);
+      }
+    }
+    renderEmployeeTable();
+    updateTemplateSelectDropdown();
   }
-  renderEmployeeTable();
-  updateTemplateSelectDropdown();
+}
+
+/* --- PERSONNEL REGISTRY CONTROLLERS --- */
+
+function updateEmployeeSelectDropdown() {
+  if (!empNameSelect) return;
+  empNameSelect.innerHTML = '<option value="" disabled selected>-- เลือกรายชื่อบุคลากร --</option>';
+  personnel.forEach((person) => {
+    const opt = document.createElement('option');
+    opt.value = person.name;
+    opt.textContent = `${person.name} (${person.position})`;
+    empNameSelect.appendChild(opt);
+  });
+}
+
+function handleEmpNameSelectChange(e) {
+  const selectedName = e.target.value;
+  const person = personnel.find(p => p.name === selectedName);
+  if (!person) return;
+
+  // Set the hidden empName input to keep compatibility with existing calculation submits
+  document.getElementById('empName').value = person.name;
+
+  // Autofill fields depending on mode
+  if (activeMode === 'fuel') {
+    // Determine standard vs supervisor based on position
+    if (person.position === 'หัวหน้าโซนนำจ่าย (ชนจ.)' || person.position === 'หัวหน้าโซนนำจ่าย') {
+      switchFormMode('supervisor', true);
+    } else {
+      switchFormMode('standard', true);
+    }
+
+    empPositionSelect.value = person.position;
+    if (person.route) {
+      deliveryRouteSelect.value = person.route;
+      // Trigger route stats preview
+      handleRouteSelect();
+    }
+    if (person.vehicle) {
+      vehicleTypeSelect.value = person.vehicle;
+    }
+  } else if (activeMode === 'water') {
+    empPositionSelect.value = person.position;
+    empSalaryInput.value = person.salary || 0;
+  }
+
+  document.getElementById('signature').value = person.signature || person.name;
+}
+
+async function handlePersonnelFormSubmit(e) {
+  e.preventDefault();
+  
+  const name = personNameInput.value.trim();
+  const position = personPositionSelect.value;
+  const salary = parseFloat(personSalaryInput.value) || 0;
+  const route = personRouteSelect.value;
+  const vehicle = personVehicleSelect.value;
+  const signature = personSignatureInput.value.trim() || name;
+  const editIndexVal = personnelEditIndexInput.value;
+
+  const item = {
+    name,
+    position,
+    salary,
+    route,
+    vehicle,
+    signature
+  };
+
+  if (editIndexVal !== '') {
+    const existingId = personnel[parseInt(editIndexVal)]?.id;
+    if (existingId) item.id = existingId;
+    personnel[parseInt(editIndexVal)] = item;
+    personnelEditIndexInput.value = '';
+    document.getElementById('personnelFormTitle').textContent = 'ลงทะเบียนข้อมูลบุคลากร';
+    document.getElementById('savePersonnelBtn').innerHTML = '📥 บันทึกบุคลากร';
+    resetPersonnelBtn.classList.add('hidden');
+  } else {
+    // Check if name already exists
+    if (personnel.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      showToast('มีรายชื่อบุคลากรรายนี้ในระบบอยู่แล้ว!', 'warning');
+      return;
+    }
+    personnel.push(item);
+  }
+
+  await savePersonnelList(personnel);
+  personnelForm.reset();
+  renderPersonnelTable();
+  showToast(editIndexVal !== '' ? 'อัปเดตข้อมูลบุคลากรสำเร็จ!' : 'ลงทะเบียนบุคลากรสำเร็จ!', 'success');
+}
+
+function renderPersonnelTable() {
+  if (personnel.length === 0) {
+    personnelTableBody.innerHTML = `
+      <tr>
+        <td colspan="8" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+      </tr>
+    `;
+    return;
+  }
+
+  personnelTableBody.innerHTML = '';
+  personnel.forEach((person, index) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td style="font-weight: 700;">${person.name}</td>
+      <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
+      <td>${person.salary ? person.salary.toLocaleString() : '0'}</td>
+      <td>${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
+      <td>${person.vehicle || '-'}</td>
+      <td>${person.signature || person.name}</td>
+      <td class="actions-col">
+        <button class="row-action-btn edit-person-btn" data-index="${index}" title="แก้ไข">✏️</button>
+        <button class="row-action-btn delete-person-btn" data-index="${index}" title="ลบ" style="color: var(--post-red);">🗑️</button>
+      </td>
+    `;
+    personnelTableBody.appendChild(tr);
+  });
+
+  // Bind row actions
+  personnelTableBody.querySelectorAll('.edit-person-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      editPersonnel(idx);
+    });
+  });
+
+  personnelTableBody.querySelectorAll('.delete-person-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      deletePersonnel(idx);
+    });
+  });
+}
+
+function editPersonnel(index) {
+  const person = personnel[index];
+  if (!person) return;
+
+  personnelEditIndexInput.value = index;
+  personNameInput.value = person.name;
+  personPositionSelect.value = person.position;
+  personSalaryInput.value = person.salary || 0;
+  personRouteSelect.value = person.route || '';
+  personVehicleSelect.value = person.vehicle || 'รถจักรยานยนต์';
+  personSignatureInput.value = person.signature || '';
+
+  document.getElementById('personnelFormTitle').textContent = '✏️ แก้ไขข้อมูลบุคลากร';
+  document.getElementById('savePersonnelBtn').innerHTML = '💾 อัปเดตข้อมูล';
+  resetPersonnelBtn.classList.remove('hidden');
+}
+
+function deletePersonnel(index) {
+  const person = personnel[index];
+  if (!person) return;
+
+  showConfirm({
+    title: 'ยืนยันการลบรายชื่อ',
+    message: `คุณต้องการลบข้อมูลบุคลากร "${person.name}" ใช่หรือไม่?`,
+    onConfirm: async () => {
+      personnel.splice(index, 1);
+      await savePersonnelList(personnel);
+      renderPersonnelTable();
+      showToast('ลบรายชื่อบุคลากรสำเร็จ!', 'success');
+    }
+  });
+}
+
+function cancelPersonnelEdit() {
+  personnelEditIndexInput.value = '';
+  personnelForm.reset();
+  document.getElementById('personnelFormTitle').textContent = 'ลงทะเบียนข้อมูลบุคลากร';
+  document.getElementById('savePersonnelBtn').innerHTML = '📥 บันทึกบุคลากร';
+  resetPersonnelBtn.classList.add('hidden');
+}
+
+function clearAllPersonnelData() {
+  showConfirm({
+    title: 'ล้างข้อมูลทั้งหมด',
+    message: 'คุณยืนยันต้องการล้างข้อมูลบุคลากรทั้งหมดใช่หรือไม่? (ข้อมูลนี้จะไม่สามารถกู้คืนได้)',
+    onConfirm: async () => {
+      personnel = [];
+      await savePersonnelList(personnel);
+      renderPersonnelTable();
+      showToast('ล้างรายชื่อบุคลากรทั้งหมดเรียบร้อยแล้ว!', 'success');
+    }
+  });
 }
 
 /* --- DRINKING WATER TAX CALC ENGINE --- */
@@ -1509,6 +1786,17 @@ function loadRowToForm(index) {
   switchFormMode(item.formMode || 'standard', true);
 
   document.getElementById('empName').value = item.name;
+  if (empNameSelect) {
+    if (empNameSelect.querySelector(`option[value="${item.name}"]`)) {
+      empNameSelect.value = item.name;
+    } else {
+      const opt = document.createElement('option');
+      opt.value = item.name;
+      opt.textContent = item.name;
+      empNameSelect.appendChild(opt);
+      empNameSelect.value = item.name;
+    }
+  }
   vehicleTypeSelect.value = item.vehicle;
   document.getElementById('remarks').value = item.remarks;
   document.getElementById('signature').value = item.signature;
@@ -1559,6 +1847,7 @@ function deleteRow(index) {
 
 function cancelEdit() {
   document.getElementById('editIndex').value = '';
+  if (empNameSelect) empNameSelect.value = '';
   // Mode-aware button text
   if (activeMode === 'water') {
     saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';

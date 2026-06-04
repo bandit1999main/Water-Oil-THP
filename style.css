@@ -68,6 +68,36 @@
   box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
 }
 
+/* --- DYNAMIC MODE STYLING (PERSONNEL THEME) --- */
+[data-mode="personnel"] {
+  --post-orange-rgb: 139, 92, 246;
+  --post-orange: hsl(263, 90%, 50%);
+  --post-orange-hover: hsl(263, 90%, 42%);
+  --post-red: hsl(280, 80%, 40%);
+  --text-highlight: hsl(263, 90%, 42%);
+}
+
+[data-mode="personnel"][data-theme="dark"] {
+  --post-orange-rgb: 167, 139, 250;
+  --post-orange: hsl(263, 90%, 65%);
+  --post-orange-hover: hsl(263, 90%, 55%);
+  --post-red: hsl(280, 80%, 55%);
+  --text-highlight: hsl(263, 90%, 65%);
+}
+
+[data-mode="personnel"] .orb-red {
+  background: radial-gradient(circle, hsl(270, 95%, 55%) 0%, transparent 70%) !important;
+}
+
+[data-mode="personnel"] .orb-orange {
+  background: radial-gradient(circle, hsl(240, 90%, 50%) 0%, transparent 70%) !important;
+}
+
+[data-mode="personnel"] .brand-logo {
+  background: linear-gradient(135deg, hsl(263, 90%, 50%), hsl(280, 80%, 40%)) !important;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;
+}
+
 /* --- BASE STYLING --- */
 * {
   box-sizing: border-box;
