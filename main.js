@@ -4175,40 +4175,79 @@ function clearSelectedPersonnelImportFile() {
   tempParsedPersonnelRecords.length = 0;
 }
 
-function downloadPersonnelTemplateXlsx() {
-  const headers = [
-    ["ลำดับ", "ชื่อ-นามสกุล", "ตำแหน่ง", "หน้าที่", "เงินเดือน (บาท)", "ด้านจ่ายหลัก", "ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)", "ลงนามเริ่มต้น (ชื่อเรียก)"],
-    [1, "นายสมศักดิ์ รักดี", "ลูกจ้างประจำ", "เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ", 15000, "5", "รถจักรยานยนต์", "สมศักดิ์"],
-    [2, "นางสาวสมศรี ทรงดี", "ลูกจ้างเหมา", "เจ้าหน้าที่ไขตู้ไปรษณีย์", 12000, "12", "รถยนต์", "สมศรี"]
-  ];
-  
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(headers);
-  
-  // Add dropdown list data validation for columns C, D, and G
-  ws['!dataValidation'] = [
-    {
-      sqref: 'C2:C500',
-      type: 'list',
-      allowBlank: true,
-      formula1: '"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"'
-    },
-    {
-      sqref: 'D2:D500',
-      type: 'list',
-      allowBlank: true,
-      formula1: '"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"'
-    },
-    {
-      sqref: 'G2:G500',
-      type: 'list',
-      allowBlank: true,
-      formula1: '"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"'
-    }
+async function downloadPersonnelTemplateXlsx() {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('รายชื่อบุคลากร');
+
+  // Add headers
+  worksheet.columns = [
+    { header: 'ลำดับ', key: 'id', width: 8 },
+    { header: 'ชื่อ-นามสกุล', key: 'name', width: 25 },
+    { header: 'ตำแหน่ง', key: 'position', width: 18 },
+    { header: 'หน้าที่', key: 'duty', width: 45 },
+    { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
+    { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
+    { header: 'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)', key: 'vehicle', width: 35 },
+    { header: 'ลงนามเริ่มต้น (ชื่อเรียก)', key: 'signature', width: 25 }
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, "รายชื่อบุคลากร");
-  XLSX.writeFile(wb, "เทมเพลตรายชื่อบุคลากร.xlsx");
+  // Add mock rows
+  worksheet.addRow({
+    id: 1,
+    name: 'นายสมศักดิ์ รักดี',
+    position: 'ลูกจ้างประจำ',
+    duty: 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ',
+    salary: 15000,
+    route: '5',
+    vehicle: 'รถจักรยานยนต์',
+    signature: 'สมศักดิ์'
+  });
+
+  worksheet.addRow({
+    id: 2,
+    name: 'นางสาวสมศรี ทรงดี',
+    position: 'ลูกจ้างเหมา',
+    duty: 'เจ้าหน้าที่ไขตู้ไปรษณีย์',
+    salary: 12000,
+    route: '12',
+    vehicle: 'รถยนต์',
+    signature: 'สมศรี'
+  });
+
+  // Apply dropdown data validations to columns C, D, and G
+  // Position (ตำแหน่ง) - Column C (3)
+  for (let i = 2; i <= 500; i++) {
+    worksheet.getCell(`C${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"']
+    };
+
+    // Duty (หน้าที่) - Column D (4)
+    worksheet.getCell(`D${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"']
+    };
+
+    // Vehicle Type (ประเภทพาหนะ) - Column G (7)
+    worksheet.getCell(`G${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
+    };
+  }
+
+  // Generate buffer and trigger download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'เทมเพลตรายชื่อบุคลากร.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function handlePersonnelPaste() {
