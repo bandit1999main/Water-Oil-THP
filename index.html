@@ -185,25 +185,36 @@
                 <input type="number" id="empSalary" class="form-input text-highlight" placeholder="ระบุเงินเดือน (เช่น 26000)" value="0" />
               </div>
 
-              <!-- POSITION / ROUTE SELECTION -->
+              <!-- POSITION / DUTY / ROUTE SELECTION -->
               <div class="form-row-2" id="positionRouteRow">
                 <div class="form-group">
                   <label for="empPosition">ตำแหน่ง</label>
                   <select id="empPosition" class="form-select">
+                    <option value="หน.ปณ.">หน.ปณ.</option>
                     <option value="พนักงาน">พนักงาน</option>
                     <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-                    <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
                     <option value="ลูกจ้าง">ลูกจ้าง</option>
                     <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
                   </select>
                 </div>
-                <div class="form-group" id="deliveryRouteGroup">
-                  <label for="deliveryRoute">ด้านจ่ายประจำที่</label>
-                  <select id="deliveryRoute" class="form-select" required>
-                    <option value="" disabled selected>-- เลือกด้านจ่าย --</option>
-                    <!-- Options loaded via JS -->
+                <div class="form-group" id="empDutyGroup">
+                  <label for="empDuty">หน้าที่</label>
+                  <select id="empDuty" class="form-select">
+                    <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                    <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                    <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                    <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                    <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
                   </select>
                 </div>
+              </div>
+
+              <div class="form-group" id="deliveryRouteGroup" style="margin-bottom: 1.25rem;">
+                <label for="deliveryRoute">ด้านจ่ายประจำที่</label>
+                <select id="deliveryRoute" class="form-select" required>
+                  <option value="" disabled selected>-- เลือกด้านจ่าย --</option>
+                  <!-- Options loaded via JS -->
+                </select>
               </div>
 
               <!-- SUPERVISOR SPECIAL MISSION CONFIGURATOR -->
@@ -364,13 +375,16 @@
                 <div class="form-group">
                   <label for="personPosition">ตำแหน่ง</label>
                   <select id="personPosition" class="form-select">
-                    <!-- Standard options -->
+                    <option value="หน.ปณ.">หน.ปณ.</option>
                     <option value="พนักงาน">พนักงาน</option>
                     <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-                    <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
                     <option value="ลูกจ้าง">ลูกจ้าง</option>
                     <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-                    <!-- Water options -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="personDuty">หน้าที่</label>
+                  <select id="personDuty" class="form-select">
                     <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
                     <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
                     <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
@@ -378,10 +392,11 @@
                     <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
-                  <input type="number" id="personSalary" class="form-input" value="0" />
-                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
+                <input type="number" id="personSalary" class="form-input" value="0" />
               </div>
 
               <div class="form-row-2">
@@ -572,6 +587,7 @@
                     <th>ลำดับ</th>
                     <th>ชื่อ - นามสกุล</th>
                     <th>ตำแหน่ง</th>
+                    <th>หน้าที่</th>
                     <th>เงินเดือน (บาท)</th>
                     <th>ด้านจ่ายหลัก</th>
                     <th>ประเภทพาหนะ</th>
@@ -581,7 +597,7 @@
                 </thead>
                 <tbody id="personnelTableBody">
                   <tr>
-                    <td colspan="8" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+                    <td colspan="9" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
                   </tr>
                 </tbody>
               </table>
@@ -862,11 +878,27 @@
               <input type="text" id="modalEmpName" class="form-input" required />
             </div>
 
-            <div class="form-group">
-              <label for="modalEmpPosition">ตำแหน่ง/บทบาท</label>
-              <select id="modalEmpPosition" class="form-select">
-                <!-- Dynamically populated depending on activeMode -->
-              </select>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="modalEmpPosition">ตำแหน่ง</label>
+                <select id="modalEmpPosition" class="form-select">
+                  <option value="หน.ปณ.">หน.ปณ.</option>
+                  <option value="พนักงาน">พนักงาน</option>
+                  <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                  <option value="ลูกจ้าง">ลูกจ้าง</option>
+                  <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+                </select>
+              </div>
+              <div class="form-group" id="modalEmpDutyGroup">
+                <label for="modalEmpDuty">หน้าที่</label>
+                <select id="modalEmpDuty" class="form-select">
+                  <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                  <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                  <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                  <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                  <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                </select>
+              </div>
             </div>
 
             <!-- Fuel Mode specific inputs -->
@@ -1082,7 +1114,7 @@
           <div id="personnelImportTextContent" class="tab-panel hidden">
             <div class="form-group">
               <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
-              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างชั่วคราว	12000	12	รถยนต์	สมศรี"></textarea>
+              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	สมศรี"></textarea>
             </div>
           </div>
 
@@ -1091,17 +1123,18 @@
             <table class="modal-table" style="width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 25%;">ชื่อ - นามสกุล</th>
-                  <th style="width: 20%;">ตำแหน่ง</th>
-                  <th style="width: 15%;">เงินเดือน</th>
-                  <th style="width: 12%;">ด้านจ่ายหลัก</th>
-                  <th style="width: 15%;">ประเภทพาหนะ</th>
-                  <th style="width: 13%;">ลงนามเริ่มต้น</th>
+                  <th style="width: 20%;">ชื่อ - นามสกุล</th>
+                  <th style="width: 15%;">ตำแหน่ง</th>
+                  <th style="width: 20%;">หน้าที่</th>
+                  <th style="width: 12%;">เงินเดือน</th>
+                  <th style="width: 10%;">ด้านจ่ายหลัก</th>
+                  <th style="width: 13%;">ประเภทพาหนะ</th>
+                  <th style="width: 10%;">ลงนามเริ่มต้น</th>
                 </tr>
               </thead>
               <tbody id="personnelImportPreviewTableBody">
                 <tr>
-                  <td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+                  <td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
                 </tr>
               </tbody>
             </table>

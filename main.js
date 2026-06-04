@@ -89,6 +89,7 @@ const globalMonthSelect = document.getElementById('globalMonth');
 const globalYearSelect = document.getElementById('globalYear');
 const deliveryRouteSelect = document.getElementById('deliveryRoute');
 const empPositionSelect = document.getElementById('empPosition');
+const empDutySelect = document.getElementById('empDuty');
 const vehicleTypeSelect = document.getElementById('vehicleType');
 const claimMethodSelect = document.getElementById('claimMethod');
 const claimMethodGroup = document.getElementById('claimMethodGroup');
@@ -159,6 +160,7 @@ const personnelTableCard = document.getElementById('personnelTableCard');
 const personnelEditIndexInput = document.getElementById('personnelEditIndex');
 const personNameInput = document.getElementById('personName');
 const personPositionSelect = document.getElementById('personPosition');
+const personDutySelect = document.getElementById('personDuty');
 const personSalaryInput = document.getElementById('personSalary');
 const personRouteSelect = document.getElementById('personRoute');
 const personVehicleSelect = document.getElementById('personVehicle');
@@ -765,9 +767,9 @@ async function switchAppMode(mode) {
       
       // Reset position dropdown to standard
       empPositionSelect.innerHTML = `
+        <option value="หน.ปณ.">หน.ปณ.</option>
         <option value="พนักงาน">พนักงาน</option>
         <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-        <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
         <option value="ลูกจ้าง">ลูกจ้าง</option>
         <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
       `;
@@ -818,13 +820,13 @@ async function switchAppMode(mode) {
       salaryGroup.classList.remove('hidden');
       deliveryRouteSelect.removeAttribute('required');
       
-      // Populate position select with specific drinking water claimable roles
+      // Populate position select with standard choices
       empPositionSelect.innerHTML = `
-        <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
-        <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
-        <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
-        <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
-        <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+        <option value="หน.ปณ.">หน.ปณ.</option>
+        <option value="พนักงาน">พนักงาน</option>
+        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+        <option value="ลูกจ้าง">ลูกจ้าง</option>
+        <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
       `;
       
       // Metric Card Texts
@@ -893,14 +895,15 @@ function handleEmpNameSelectChange(e) {
 
   // Autofill fields depending on mode
   if (activeMode === 'fuel') {
-    // Determine standard vs supervisor based on position
-    if (person.position === 'หัวหน้าโซนนำจ่าย (ชนจ.)' || person.position === 'หัวหน้าโซนนำจ่าย') {
+    // Determine standard vs supervisor based on duty (หน้าที่)
+    if (person.duty === 'หัวหน้าโซนนำจ่าย') {
       switchFormMode('supervisor', true);
     } else {
       switchFormMode('standard', true);
     }
 
     empPositionSelect.value = person.position;
+    empDutySelect.value = person.duty || '';
     handlePositionSelect();
     if (person.route) {
       deliveryRouteSelect.value = person.route;
@@ -912,6 +915,7 @@ function handleEmpNameSelectChange(e) {
     }
   } else if (activeMode === 'water') {
     empPositionSelect.value = person.position;
+    empDutySelect.value = person.duty || '';
     empSalaryInput.value = person.salary || 0;
   }
 
@@ -923,6 +927,7 @@ async function handlePersonnelFormSubmit(e) {
   
   const name = personNameInput.value.trim();
   const position = personPositionSelect.value;
+  const duty = personDutySelect.value;
   const salary = parseFloat(personSalaryInput.value) || 0;
   const route = personRouteSelect.value;
   const vehicle = personVehicleSelect.value;
@@ -932,6 +937,7 @@ async function handlePersonnelFormSubmit(e) {
   const item = {
     name,
     position,
+    duty,
     salary,
     route,
     vehicle,
@@ -965,7 +971,7 @@ function renderPersonnelTable() {
   if (personnel.length === 0) {
     personnelTableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+        <td colspan="9" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
       </tr>
     `;
     return;
@@ -981,6 +987,7 @@ function renderPersonnelTable() {
       <td>${index + 1}</td>
       <td style="font-weight: 700;">${person.name}</td>
       <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
+      <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: var(--post-emerald); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.duty || '-'}</span></td>
       <td>${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
       <td>${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
       <td>${person.vehicle || '-'}</td>
@@ -1016,6 +1023,7 @@ function editPersonnel(index) {
   personnelEditIndexInput.value = index;
   personNameInput.value = person.name;
   personPositionSelect.value = person.position;
+  personDutySelect.value = person.duty || '';
   personSalaryInput.value = person.salary || 0;
   personRouteSelect.value = person.route || '';
   personVehicleSelect.value = person.vehicle || 'รถจักรยานยนต์';
@@ -1411,21 +1419,15 @@ function openEditModal(isWaterMode, idx) {
   modalEditIndex.value = idx;
   modal.dataset.isWater = isWaterMode ? '1' : '0';
 
-  // Populate position dropdown
+  // Populate values
   if (isWaterMode) {
     modalTitle.textContent = '✏️ แก้ไขข้อมูลค่าน้ำดื่ม';
     modalFuelFields.classList.add('hidden');
     modalWaterFields.classList.remove('hidden');
-    modalEmpPosition.innerHTML = `
-      <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
-      <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
-      <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
-      <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
-      <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
-    `;
     const item = waterEmployees[idx];
     modalEmpName.value = item.name;
     modalEmpPosition.value = item.position;
+    document.getElementById('modalEmpDuty').value = item.duty || '';
     modalEmpSalary.value = item.salary;
     modalWorkDays.value = item.workDays;
     modalRemarks.value = item.remarks || '';
@@ -1434,13 +1436,6 @@ function openEditModal(isWaterMode, idx) {
     modalTitle.textContent = '✏️ แก้ไขข้อมูลพนักงาน';
     modalFuelFields.classList.remove('hidden');
     modalWaterFields.classList.add('hidden');
-    modalEmpPosition.innerHTML = `
-      <option value="พนักงาน">พนักงาน</option>
-      <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-      <option value="ลูกจ้างรายวัน">ลูกจ้างรายวัน</option>
-      <option value="ลูกจ้าง">ลูกจ้าง</option>
-      <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-    `;
 
     // Populate route dropdown from current ROUTE_DATA
     modalDeliveryRoute.innerHTML = '<option value="" disabled>-- เลือกด้านจ่าย --</option>';
@@ -1454,6 +1449,7 @@ function openEditModal(isWaterMode, idx) {
     const item = employees[idx];
     modalEmpName.value = item.name;
     modalEmpPosition.value = item.position;
+    document.getElementById('modalEmpDuty').value = item.duty || '';
     modalDeliveryRoute.value = item.route || '';
     modalVehicleType.value = item.vehicle || 'รถจักรยานยนต์';
     modalClaimMethod.value = item.method || 'monthly';
@@ -1536,6 +1532,7 @@ function wireEditModal() {
 
     const name = document.getElementById('modalEmpName').value.trim();
     const position = document.getElementById('modalEmpPosition').value;
+    const duty = document.getElementById('modalEmpDuty').value;
     const workDays = parseInt(document.getElementById('modalWorkDays').value) || 0;
     const remarks = document.getElementById('modalRemarks').value.trim();
     const signature = document.getElementById('modalSignature').value.trim() || name;
@@ -1544,7 +1541,7 @@ function wireEditModal() {
       const salary = parseFloat(document.getElementById('modalEmpSalary').value) || 0;
       // Preserve id: read BEFORE overwriting object
       const existingId = waterEmployees[idx]?.id;
-      const updatedItem = { name, position, salary, workDays, remarks, signature };
+      const updatedItem = { name, position, duty, salary, workDays, remarks, signature };
       if (existingId) updatedItem.id = existingId;
       waterEmployees[idx] = updatedItem;
       await saveWaterEmployees(waterEmployees);
@@ -1567,7 +1564,7 @@ function wireEditModal() {
       const daysNotWorked = parseInt(daysNotWorkedRaw) || 0;
       // Preserve id and existing fields (e.g. missions for supervisor)
       const existingId = employees[idx]?.id;
-      employees[idx] = { ...employees[idx], name, position, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
+      employees[idx] = { ...employees[idx], name, position, duty, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
       if (existingId) employees[idx].id = existingId;
       await saveEmployees(employees);
     }
@@ -1592,12 +1589,14 @@ async function handleFormSubmit(e) {
 
   if (activeMode === 'water') {
     const position = empPositionSelect.value;
+    const duty = empDutySelect.value;
     const salary = parseFloat(empSalaryInput.value) || 0;
     const workDays = parseInt(workDaysInput.value) || 0;
 
     item = {
       name,
       position,
+      duty,
       salary,
       workDays,
       remarks,
@@ -1642,7 +1641,8 @@ async function handleFormSubmit(e) {
     item = {
       formMode,
       name,
-      position: 'หัวหน้าโซนนำจ่าย (ชนจ.)',
+      position: empPositionSelect.value,
+      duty: 'หัวหน้าโซนนำจ่าย',
       vehicle,
       missions: [...tempMissions],
       workDays: totalDays,
@@ -1652,6 +1652,7 @@ async function handleFormSubmit(e) {
   } else {
     // Standard Mode
     const position = empPositionSelect.value;
+    const duty = empDutySelect.value;
     const route = deliveryRouteSelect.value;
     const method = claimMethodSelect.value;
     const workDays = parseInt(workDaysInput.value) || 0;
@@ -1672,6 +1673,7 @@ async function handleFormSubmit(e) {
       formMode,
       name,
       position,
+      duty,
       route,
       vehicle,
       method,
@@ -1766,7 +1768,7 @@ function renderEmployeeTable() {
       tr.innerHTML = `
         <td>${parentIndex + 1}</td>
         <td style="font-weight: 700; color: var(--text-primary);">${item.name}</td>
-        <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position}</span></td>
+        <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position} / ${item.duty || '-'}</span></td>
         <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
         <td style="text-align: center;">${item.workDays} วัน</td>
         <td style="font-weight: 700;">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
@@ -1926,7 +1928,7 @@ function renderEmployeeTable() {
     tr.innerHTML = `
       <td>${currentTableIndex}</td>
       <td><strong>${row.name}</strong></td>
-      <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position}</span></td>
+      <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position} / ${row.item.duty || '-'}</span></td>
       <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>
       <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ลิตร</td>
       <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
@@ -2299,7 +2301,7 @@ function exportToCsv() {
       const allowance = item.workDays * 30;
       const tax = calculateWaterTax(item.salary, allowance);
       const net = allowance - tax;
-      csvContent += `${index + 1},"${item.name}","${item.position}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
+      csvContent += `${index + 1},"${item.name}","${item.position} / ${item.duty || '-'}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
     });
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -2337,7 +2339,7 @@ function exportToCsv() {
 
       flatRows.push({
         name: item.name,
-        position: item.isSubstitute ? `${item.position} (วิ่งแทน)` : item.position,
+        position: item.isSubstitute ? `${item.position} / ${item.duty || '-'} (วิ่งแทน)` : `${item.position} / ${item.duty || '-'}`,
         routeDesc: `ด้านจ่ายที่ ${item.route}` + (item.isSubstitute ? ' (วิ่งแทน)' : ''),
         workDays: item.workDays,
         liters: liters,
@@ -2369,7 +2371,7 @@ function exportToCsv() {
 
         flatRows.push({
           name: item.name,
-          position: item.position,
+          position: `${item.position} / ${item.duty || '-'}`,
           routeDesc: `ตรวจสอบการนำจ่าย`,
           workDays: inspectDays,
           liters: liters,
@@ -2393,7 +2395,7 @@ function exportToCsv() {
 
         flatRows.push({
           name: item.name,
-          position: item.position,
+          position: `${item.position} / ${item.duty || '-'}`,
           routeDesc: `${m.type} (ด้าน ${m.route})`,
           workDays: m.days,
           liters: liters,
@@ -2459,7 +2461,7 @@ function printReport() {
       tr.innerHTML = `
         <td>${index + 1}</td>
         <td><strong>${item.name}</strong></td>
-        <td>${item.position}</td>
+        <td>${item.position} / ${item.duty || '-'}</td>
         <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td>${item.workDays} วัน</td>
         <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -2671,6 +2673,7 @@ function printReport() {
       const rowObj = {
         name: item.name,
         position: item.position,
+        duty: item.duty || '-',
         routeDesc: `ด้านจ่ายที่ ${item.route}`,
         workDays: item.workDays,
         liters: liters,
@@ -2724,7 +2727,7 @@ function printReport() {
         <tr>
           <td>${idx + 1}</td>
           <td><strong>${row.name}</strong></td>
-          <td>${row.position}</td>
+          <td>${row.position} / ${row.duty || '-'}</td>
           <td style="text-align: left !important; font-size: 7.5pt; line-height: 1.3;">${row.routeDesc}</td>
           <td>${row.workDays} วัน</td>
           <td>${row.liters.toFixed(2)}</td>
@@ -2870,7 +2873,7 @@ function printReport() {
         <tr>
           <td>${rowIdx++}</td>
           <td><strong>${sv.name}</strong></td>
-          <td>${sv.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)'}</td>
+          <td>${sv.position || 'หัวหน้าโซนนำจ่าย'} / ${sv.duty || '-'}</td>
           <td style="text-align: left !important; font-size: 7.5pt;">ตรวจสอบการนำจ่าย (ด้าน ${routesUsed.join(', ')})</td>
           <td>${inspectDays} วัน</td>
           <td>${liters.toFixed(2)}</td>
@@ -2903,7 +2906,7 @@ function printReport() {
         <tr>
           <td>${rowIdx++}</td>
           <td><strong>${sv.name}</strong></td>
-          <td>${sv.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)'}</td>
+          <td>${sv.position || 'หัวหน้าโซนนำจ่าย'} / ${sv.duty || '-'}</td>
           <td style="text-align: left !important; font-size: 7.5pt;">${m.type} (ด้าน ${m.route})</td>
           <td>${m.days} วัน</td>
           <td>${liters.toFixed(2)}</td>
@@ -4120,9 +4123,9 @@ function clearSelectedPersonnelImportFile() {
 
 function downloadPersonnelTemplateXlsx() {
   const headers = [
-    ["ลำดับ", "ชื่อ-นามสกุล", "ตำแหน่ง", "เงินเดือน (บาท)", "ด้านจ่ายหลัก", "ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)", "ลงนามเริ่มต้น (ชื่อเรียก)"],
-    [1, "นายสมศักดิ์ รักดี", "ลูกจ้างประจำ", 15000, "5", "รถจักรยานยนต์", "สมศักดิ์"],
-    [2, "นางสาวสมศรี ทรงดี", "ลูกจ้างชั่วคราว", 12000, "12", "รถยนต์", "สมศรี"]
+    ["ลำดับ", "ชื่อ-นามสกุล", "ตำแหน่ง", "หน้าที่", "เงินเดือน (บาท)", "ด้านจ่ายหลัก", "ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)", "ลงนามเริ่มต้น (ชื่อเรียก)"],
+    [1, "นายสมศักดิ์ รักดี", "ลูกจ้างประจำ", "เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ", 15000, "5", "รถจักรยานยนต์", "สมศักดิ์"],
+    [2, "นางสาวสมศรี ทรงดี", "ลูกจ้างเหมา", "เจ้าหน้าที่ไขตู้ไปรษณีย์", 12000, "12", "รถยนต์", "สมศรี"]
   ];
   
   const wb = XLSX.utils.book_new();
@@ -4154,20 +4157,22 @@ function handlePersonnelPaste() {
       
       let name = tokens[0].trim();
       let position = tokens[1] ? tokens[1].trim() : 'ลูกจ้างประจำ';
-      let salary = tokens[2] ? parseFloat(tokens[2].replace(/,/g, '')) || 0 : 0;
-      let route = tokens[3] ? tokens[3].trim() : '';
-      let vehicle = tokens[4] ? tokens[4].trim() : 'รถจักรยานยนต์';
-      let signature = tokens[5] ? tokens[5].trim() : name.split(' ')[0];
+      let duty = tokens[2] ? tokens[2].trim() : 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ';
+      let salary = tokens[3] ? parseFloat(tokens[3].replace(/,/g, '')) || 0 : 0;
+      let route = tokens[4] ? tokens[4].trim() : '';
+      let vehicle = tokens[5] ? tokens[5].trim() : 'รถจักรยานยนต์';
+      let signature = tokens[6] ? tokens[6].trim() : name.split(' ')[0];
       
       if (name === "ชื่อ-นามสกุล" || name === "ชื่อ - นามสกุล" || name.length < 2) return;
       
-      const record = { name, position, salary, route, vehicle, signature };
+      const record = { name, position, duty, salary, route, vehicle, signature };
       tempParsedPersonnelRecords.push(record);
       
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
         <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+        <td style="text-align: left; padding: 0.5rem 0.75rem;">${duty}</td>
         <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
@@ -4177,7 +4182,7 @@ function handlePersonnelPaste() {
     });
     
     if (tempParsedPersonnelRecords.length === 0) {
-      previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+      previewTableBody.innerHTML = '<tr><td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
       if (submitBtn) submitBtn.disabled = true;
     } else {
       if (submitBtn) {
@@ -4222,12 +4227,13 @@ function processUploadedPersonnelFile(file) {
         if (name.length < 2 || name === 'ชื่อ-นามสกุล' || name === 'ชื่อ - นามสกุล') continue;
         
         let position = String(row[2] || 'ลูกจ้างประจำ').trim();
-        let salary = parseFloat(String(row[3] || '0').replace(/,/g, '')) || 0;
-        let route = String(row[4] || '').trim();
-        let vehicle = String(row[5] || 'รถจักรยานยนต์').trim();
-        let signature = String(row[6] || '').trim() || name.split(' ')[0];
+        let duty = String(row[3] || 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ').trim();
+        let salary = parseFloat(String(row[4] || '0').replace(/,/g, '')) || 0;
+        let route = String(row[5] || '').trim();
+        let vehicle = String(row[6] || 'รถจักรยานยนต์').trim();
+        let signature = String(row[7] || '').trim() || name.split(' ')[0];
         
-        const record = { name, position, salary, route, vehicle, signature };
+        const record = { name, position, duty, salary, route, vehicle, signature };
         tempParsedPersonnelRecords.push(record);
         
         if (previewTableBody) {
@@ -4235,6 +4241,7 @@ function processUploadedPersonnelFile(file) {
           tr.innerHTML = `
             <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
             <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+            <td style="text-align: left; padding: 0.5rem 0.75rem;">${duty}</td>
             <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
             <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
@@ -4245,7 +4252,7 @@ function processUploadedPersonnelFile(file) {
       }
       
       if (tempParsedPersonnelRecords.length === 0) {
-        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
+        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
         if (submitBtn) submitBtn.disabled = true;
       } else {
         if (submitBtn) {
