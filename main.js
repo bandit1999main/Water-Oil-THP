@@ -4346,12 +4346,34 @@ function clearSelectedPersonnelImportFile() {
   if (fileSelector) fileSelector.value = '';
   if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
   if (dragDropZone) dragDropZone.classList.remove('hidden');
-  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
   }
   tempParsedPersonnelRecords.length = 0;
+}
+
+function parseRestDaysText(text) {
+  const cleanText = String(text || '').trim();
+  if (cleanText === 'เสาร์-อาทิตย์' || cleanText === 'เสาร์ - อาทิตย์' || cleanText === 'ส.-อา.' || cleanText === 'ส. - อา.') {
+    return [0, 6];
+  } else if (cleanText === 'วันอาทิตย์' || cleanText === 'อาทิตย์' || cleanText === 'อา.') {
+    return [0];
+  } else if (cleanText === 'วันเสาร์' || cleanText === 'เสาร์' || cleanText === 'ส.') {
+    return [6];
+  } else if (cleanText === 'วันจันทร์' || cleanText === 'จันทร์' || cleanText === 'จ.') {
+    return [1];
+  } else if (cleanText === 'วันอังคาร' || cleanText === 'อังคาร' || cleanText === 'อ.') {
+    return [2];
+  } else if (cleanText === 'วันพุธ' || cleanText === 'พุธ' || cleanText === 'พ.') {
+    return [3];
+  } else if (cleanText === 'วันพฤหัสบดี' || cleanText === 'พฤหัสบดี' || cleanText === 'พฤหัส' || cleanText === 'พฤ.') {
+    return [4];
+  } else if (cleanText === 'วันศุกร์' || cleanText === 'ศุกร์' || cleanText === 'ศ.') {
+    return [5];
+  }
+  return [];
 }
 
 async function downloadPersonnelTemplateXlsx() {
@@ -4368,6 +4390,7 @@ async function downloadPersonnelTemplateXlsx() {
     { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
     { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
     { header: 'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)', key: 'vehicle', width: 35 },
+    { header: 'วันหยุดประจำสัปดาห์', key: 'restDaysText', width: 20 },
     { header: 'ลงนามเริ่มต้น (ชื่อเรียก)', key: 'signature', width: 25 }
   ];
 
@@ -4381,6 +4404,7 @@ async function downloadPersonnelTemplateXlsx() {
     salary: 15000,
     route: '5',
     vehicle: 'รถจักรยานยนต์',
+    restDaysText: 'เสาร์-อาทิตย์',
     signature: 'สมศักดิ์'
   });
 
@@ -4393,6 +4417,7 @@ async function downloadPersonnelTemplateXlsx() {
     salary: 12000,
     route: '12',
     vehicle: 'รถยนต์',
+    restDaysText: 'วันอาทิตย์',
     signature: 'สมศรี'
   });
 
@@ -4401,6 +4426,7 @@ async function downloadPersonnelTemplateXlsx() {
   // Department (แผนก/กลุ่มงาน) - Column D (4)
   // Duty (หน้าที่) - Column E (5)
   // Vehicle Type (ประเภทพาหนะ) - Column H (8)
+  // Rest Days (วันหยุดประจำสัปดาห์) - Column I (9)
   for (let i = 2; i <= 500; i++) {
     worksheet.getCell(`C${i}`).dataValidation = {
       type: 'list',
@@ -4424,6 +4450,12 @@ async function downloadPersonnelTemplateXlsx() {
       type: 'list',
       allowBlank: true,
       formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
+    };
+
+    worksheet.getCell(`I${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"เสาร์-อาทิตย์,วันอาทิตย์,วันเสาร์,จันทร์,อังคาร,พุธ,พฤหัสบดี,ศุกร์,ไม่มี"']
     };
   }
 
@@ -4467,11 +4499,13 @@ function handlePersonnelPaste() {
       let salary = tokens[4] ? parseFloat(tokens[4].replace(/,/g, '')) || 0 : 0;
       let route = tokens[5] ? tokens[5].trim() : '';
       let vehicle = tokens[6] ? tokens[6].trim() : 'รถจักรยานยนต์';
-      let signature = tokens[7] ? tokens[7].trim() : name.split(' ')[0];
+      let restDaysText = tokens[7] ? tokens[7].trim() : 'ไม่มี';
+      let signature = tokens[8] ? tokens[8].trim() : name.split(' ')[0];
       
       if (name === "ชื่อ-นามสกุล" || name === "ชื่อ - นามสกุล" || name.length < 2) return;
       
-      const record = { name, position, department, duty, salary, route, vehicle, signature };
+      const restDays = parseRestDaysText(restDaysText);
+      const record = { name, position, department, duty, salary, route, vehicle, restDays, signature };
       tempParsedPersonnelRecords.push(record);
       
       const tr = document.createElement('tr');
@@ -4483,13 +4517,14 @@ function handlePersonnelPaste() {
         <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
+        <td style="padding: 0.5rem 0.75rem;">${restDaysText}</td>
         <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
       `;
       previewTableBody.appendChild(tr);
     });
     
     if (tempParsedPersonnelRecords.length === 0) {
-      previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+      previewTableBody.innerHTML = '<tr><td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
       if (submitBtn) submitBtn.disabled = true;
     } else {
       if (submitBtn) {
@@ -4539,9 +4574,11 @@ function processUploadedPersonnelFile(file) {
         let salary = parseFloat(String(row[5] || '0').replace(/,/g, '')) || 0;
         let route = String(row[6] || '').trim();
         let vehicle = String(row[7] || 'รถจักรยานยนต์').trim();
-        let signature = String(row[8] || '').trim() || name.split(' ')[0];
+        let restDaysText = String(row[8] || 'ไม่มี').trim();
+        let signature = String(row[9] || '').trim() || name.split(' ')[0];
         
-        const record = { name, position, department, duty, salary, route, vehicle, signature };
+        const restDays = parseRestDaysText(restDaysText);
+        const record = { name, position, department, duty, salary, route, vehicle, restDays, signature };
         tempParsedPersonnelRecords.push(record);
         
         if (previewTableBody) {
@@ -4554,6 +4591,7 @@ function processUploadedPersonnelFile(file) {
             <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
             <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
+            <td style="padding: 0.5rem 0.75rem;">${restDaysText}</td>
             <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
           `;
           previewTableBody.appendChild(tr);
@@ -4561,7 +4599,7 @@ function processUploadedPersonnelFile(file) {
       }
       
       if (tempParsedPersonnelRecords.length === 0) {
-        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
+        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
         if (submitBtn) submitBtn.disabled = true;
       } else {
         if (submitBtn) {

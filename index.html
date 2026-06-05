@@ -1287,7 +1287,7 @@
           <div id="personnelImportTextContent" class="tab-panel hidden">
             <div class="form-group">
               <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
-              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	ไขตู้/ขนส่ง	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	สมศรี"></textarea>
+              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, วันหยุดประจำ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	เสาร์-อาทิตย์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	ไขตู้/ขนส่ง	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	วันอาทิตย์	สมศรี"></textarea>
             </div>
           </div>
 
@@ -1296,19 +1296,20 @@
             <table class="modal-table" style="width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 18%;">ชื่อ - นามสกุล</th>
-                  <th style="width: 12%;">ตำแหน่ง</th>
-                  <th style="width: 12%;">แผนก/กลุ่มงาน</th>
-                  <th style="width: 18%;">หน้าที่</th>
-                  <th style="width: 10%;">เงินเดือน</th>
-                  <th style="width: 10%;">ด้านจ่ายหลัก</th>
+                  <th style="width: 16%;">ชื่อ - นามสกุล</th>
+                  <th style="width: 10%;">ตำแหน่ง</th>
+                  <th style="width: 10%;">แผนก/กลุ่มงาน</th>
+                  <th style="width: 16%;">หน้าที่</th>
+                  <th style="width: 8%;">เงินเดือน</th>
+                  <th style="width: 8%;">ด้านจ่ายหลัก</th>
                   <th style="width: 12%;">ประเภทพาหนะ</th>
+                  <th style="width: 12%;">วันหยุดประจำ</th>
                   <th style="width: 8%;">ลงนามเริ่มต้น</th>
                 </tr>
               </thead>
               <tbody id="personnelImportPreviewTableBody">
                 <tr>
-                  <td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+                  <td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
                 </tr>
               </tbody>
             </table>
