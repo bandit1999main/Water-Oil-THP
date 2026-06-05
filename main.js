@@ -28,6 +28,8 @@ import {
 let activeMode = 'fuel'; // 'fuel', 'water', or 'personnel'
 let waterEmployees = JSON.parse(localStorage.getItem('tp_water_employees')) || [];
 let personnel = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+let employeeSearchQuery = '';
+let personnelSearchQuery = '';
 
 const OFFICIAL_ROUTE_DATA = {
   "1": { hasCar: false, staffDist: 1300.00, staffLiters: 52.00, workerDist: 50.0, workerLiters: 2.00 },
@@ -548,6 +550,23 @@ document.addEventListener('DOMContentLoaded', () => {
   closeSigProfilesBtn.addEventListener('click', () => sigProfilesModal.classList.remove('active'));
   saveSigProfileBtn.addEventListener('click', handleSaveSigProfile);
 
+  const employeeSearchInput = document.getElementById('employeeSearchInput');
+  const personnelSearchInput = document.getElementById('personnelSearchInput');
+
+  if (employeeSearchInput) {
+    employeeSearchInput.addEventListener('input', (e) => {
+      employeeSearchQuery = e.target.value.toLowerCase().trim();
+      renderEmployeeTable();
+    });
+  }
+
+  if (personnelSearchInput) {
+    personnelSearchInput.addEventListener('input', (e) => {
+      personnelSearchQuery = e.target.value.toLowerCase().trim();
+      renderPersonnelTable();
+    });
+  }
+
   wireEditModal();
   wireRegistryEditModal();
 
@@ -988,8 +1007,30 @@ function renderPersonnelTable() {
   // Sort personnel by name in Thai alphabetical order (ก-ฮ)
   personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
+  // Filter based on search query
+  const filtered = [];
+  personnel.forEach((person, originalIdx) => {
+    const matches = !personnelSearchQuery || 
+      person.name.toLowerCase().includes(personnelSearchQuery) ||
+      person.position.toLowerCase().includes(personnelSearchQuery) ||
+      (person.duty && person.duty.toLowerCase().includes(personnelSearchQuery));
+    if (matches) {
+      filtered.push({ person, originalIdx });
+    }
+  });
+
   personnelTableBody.innerHTML = '';
-  personnel.forEach((person, index) => {
+  
+  if (filtered.length === 0) {
+    personnelTableBody.innerHTML = `
+      <tr>
+        <td colspan="9" class="no-data">ไม่พบข้อมูลที่ตรงกับการค้นหา</td>
+      </tr>
+    `;
+    return;
+  }
+
+  filtered.forEach(({ person, originalIdx }, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${index + 1}</td>
@@ -1001,8 +1042,8 @@ function renderPersonnelTable() {
       <td>${person.vehicle || '-'}</td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ddd; font-weight: 300;">${person.signature || person.name}</span></td>
       <td class="actions-col">
-        <button class="row-action-btn edit-person-btn" data-index="${index}" title="แก้ไข">✏️</button>
-        <button class="row-action-btn delete-person-btn" data-index="${index}" title="ลบ" style="color: var(--post-red);">🗑️</button>
+        <button class="row-action-btn edit-person-btn" data-index="${originalIdx}" title="แก้ไข">✏️</button>
+        <button class="row-action-btn delete-person-btn" data-index="${originalIdx}" title="ลบ" style="color: var(--post-red);">🗑️</button>
       </td>
     `;
     personnelTableBody.appendChild(tr);
@@ -1806,23 +1847,51 @@ function renderEmployeeTable() {
       return;
     }
 
-    employeeTableBody.innerHTML = '';
     let totalAllowance = 0;
     let totalTaxVal = 0;
     let totalNetVal = 0;
+    waterEmployees.forEach((item) => {
+      const allowance = item.workDays * 30;
+      const tax = calculateWaterTax(item.salary, allowance);
+      const net = allowance - tax;
+      totalAllowance += allowance;
+      totalTaxVal += tax;
+      totalNetVal += net;
+    });
 
-    waterEmployees.forEach((item, parentIndex) => {
+    const filtered = [];
+    waterEmployees.forEach((item, originalIdx) => {
+      const matches = !employeeSearchQuery ||
+        item.name.toLowerCase().includes(employeeSearchQuery) ||
+        item.position.toLowerCase().includes(employeeSearchQuery) ||
+        (item.duty && item.duty.toLowerCase().includes(employeeSearchQuery));
+      if (matches) {
+        filtered.push({ item, originalIdx });
+      }
+    });
+
+    employeeTableBody.innerHTML = '';
+    
+    if (filtered.length === 0) {
+      employeeTableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="no-data">ไม่พบข้อมูลที่ตรงกับการค้นหา</td>
+        </tr>
+      `;
+      sumFuelCostSpan.textContent = '0.00';
+      sumMaintenanceCostSpan.textContent = '0.00';
+      sumTotalCostSpan.textContent = '0.00';
+      return;
+    }
+
+    filtered.forEach(({ item, originalIdx }, index) => {
       const allowance = item.workDays * 30;
       const tax = calculateWaterTax(item.salary, allowance);
       const net = allowance - tax;
 
-      totalAllowance += allowance;
-      totalTaxVal += tax;
-      totalNetVal += net;
-
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${parentIndex + 1}</td>
+        <td>${index + 1}</td>
         <td style="font-weight: 700; color: var(--text-primary);">${item.name}</td>
         <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position} / ${item.duty || '-'}</span></td>
         <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
@@ -1837,8 +1906,8 @@ function renderEmployeeTable() {
         </td>
       `;
 
-      tr.querySelector('.edit-btn').addEventListener('click', () => editWaterEmployee(parentIndex));
-      tr.querySelector('.delete-btn').addEventListener('click', () => deleteWaterEmployee(parentIndex));
+      tr.querySelector('.edit-btn').addEventListener('click', () => editWaterEmployee(originalIdx));
+      tr.querySelector('.delete-btn').addEventListener('click', () => deleteWaterEmployee(originalIdx));
 
       employeeTableBody.appendChild(tr);
     });
@@ -1968,13 +2037,28 @@ function renderEmployeeTable() {
     employeeSubstituteTableBody.innerHTML = '';
   }
 
-  let regularCount = 0;
-  let substituteCount = 0;
+  let totalFuelCost = 0;
+  let totalMaintCost = 0;
+  let grandTotal = 0;
 
   flatRows.forEach((row) => {
     totalFuelCost += row.fuelCost;
     totalMaintCost += row.maintCost;
     grandTotal += row.sumTotal;
+  });
+
+  const filteredFlatRows = employeeSearchQuery
+    ? flatRows.filter(row => 
+        row.name.toLowerCase().includes(employeeSearchQuery) ||
+        row.position.toLowerCase().includes(employeeSearchQuery) ||
+        (row.item.duty && row.item.duty.toLowerCase().includes(employeeSearchQuery))
+      )
+    : flatRows;
+
+  let regularCount = 0;
+  let substituteCount = 0;
+
+  filteredFlatRows.forEach((row) => {
 
     const tr = document.createElement('tr');
     
