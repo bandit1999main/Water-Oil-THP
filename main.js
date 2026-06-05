@@ -4702,36 +4702,167 @@ function processUploadedPersonnelFile(file) {
 
 async function handleConfirmPersonnelImport() {
   if (tempParsedPersonnelRecords.length === 0) return;
-  
-  let addedCount = 0;
-  let skipCount = 0;
-  
+
+  const duplicates = [];
+  const nonDuplicates = [];
+
   tempParsedPersonnelRecords.forEach(record => {
-    const exists = personnel.some(p => p.name.trim().toLowerCase() === record.name.trim().toLowerCase());
-    if (!exists) {
-      personnel.push(record);
-      addedCount++;
+    const originalIdx = personnel.findIndex(p => p.name.trim().toLowerCase() === record.name.trim().toLowerCase());
+    if (originalIdx !== -1) {
+      duplicates.push({
+        newRecord: record,
+        oldRecord: personnel[originalIdx],
+        originalIdx: originalIdx
+      });
     } else {
-      skipCount++;
+      nonDuplicates.push(record);
     }
   });
-  
-  await savePersonnelList(personnel);
-  renderPersonnelTable();
-  updateEmployeeSelectDropdown();
-  
-  const modal = document.getElementById('personnelImportModal');
-  if (modal) modal.classList.remove('active');
-  
-  clearSelectedPersonnelImportFile();
-  const pastedText = document.getElementById('personnelImportPastedText');
-  if (pastedText) pastedText.value = '';
-  
-  let msg = `นำเข้าข้อมูลสำเร็จ ${addedCount} รายการ`;
-  if (skipCount > 0) {
-    msg += ` (ข้ามชื่อที่ซ้ำกัน ${skipCount} รายการ)`;
+
+  if (duplicates.length === 0) {
+    // Direct import
+    nonDuplicates.forEach(record => personnel.push(record));
+    await savePersonnelList(personnel);
+    renderPersonnelTable();
+    updateEmployeeSelectDropdown();
+    
+    const modal = document.getElementById('personnelImportModal');
+    if (modal) modal.classList.remove('active');
+    
+    clearSelectedPersonnelImportFile();
+    const pastedText = document.getElementById('personnelImportPastedText');
+    if (pastedText) pastedText.value = '';
+    
+    showToast(`นำเข้าข้อมูลสำเร็จ ${nonDuplicates.length} รายการ`, 'success');
+    return;
   }
-  showToast(msg, 'success');
+
+  // Open duplicates comparative modal
+  const dupModal = document.getElementById('personnelImportDuplicateModal');
+  const countSpan = document.getElementById('importDuplicateCount');
+  const listContainer = document.getElementById('importDuplicateListContainer');
+  const cancelBtn = document.getElementById('cancelPersonnelImportDuplicateBtn');
+  const closeBtn = document.getElementById('closePersonnelImportDuplicateModalBtn');
+  const confirmBtn = document.getElementById('confirmPersonnelImportDuplicateBtn');
+  const setAllNewBtn = document.getElementById('setAllImportNewBtn');
+  const setAllOldBtn = document.getElementById('setAllImportOldBtn');
+
+  countSpan.textContent = duplicates.length;
+  listContainer.innerHTML = '';
+
+  duplicates.forEach((dup, idx) => {
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-small);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    `;
+
+    const oldRest = dup.oldRecord.restDays || [];
+    const newRest = dup.newRecord.restDays || [];
+
+    card.innerHTML = `
+      <div style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.35rem;">
+        👤 ${dup.newRecord.name}
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.85rem;">
+        <!-- Left: Old Data -->
+        <div style="background: rgba(255,255,255,0.01); padding: 0.5rem; border-radius: 6px; border-left: 3px solid #71717a;">
+          <div style="font-weight: 700; color: #a1a1aa; margin-bottom: 0.25rem;">💾 ข้อมูลเดิมในระบบ</div>
+          <div>ตำแหน่ง: ${dup.oldRecord.position}</div>
+          <div>แผนก: ${dup.oldRecord.department || 'ทั่วไป'}</div>
+          <div>หน้าที่: ${dup.oldRecord.duty || '-'}</div>
+          <div>เงินเดือน: ${dup.oldRecord.salary ? dup.oldRecord.salary.toLocaleString() : '0.00'} ฿</div>
+          <div>ด้านจ่าย/พาหนะ: ${dup.oldRecord.route || '-'}/${dup.oldRecord.vehicle || '-'}</div>
+          <div style="font-size: 0.75rem; color: #a1a1aa;">วันหยุด: ${oldRest.length > 0 ? oldRest.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ') : 'ไม่มี'}</div>
+        </div>
+        <!-- Right: New Data -->
+        <div style="background: rgba(245, 158, 11, 0.02); padding: 0.5rem; border-radius: 6px; border-left: 3px solid var(--post-orange);">
+          <div style="font-weight: 700; color: var(--post-orange); margin-bottom: 0.25rem;">📥 ข้อมูลใหม่ที่จะนำเข้า</div>
+          <div>ตำแหน่ง: ${dup.newRecord.position}</div>
+          <div>แผนก: ${dup.newRecord.department || 'ทั่วไป'}</div>
+          <div>หน้าที่: ${dup.newRecord.duty || '-'}</div>
+          <div>เงินเดือน: ${dup.newRecord.salary ? dup.newRecord.salary.toLocaleString() : '0.00'} ฿</div>
+          <div>ด้านจ่าย/พาหนะ: ${dup.newRecord.route || '-'}/${dup.newRecord.vehicle || '-'}</div>
+          <div style="font-size: 0.75rem; color: var(--post-orange);">วันหยุด: ${newRest.length > 0 ? newRest.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ') : 'ไม่มี'}</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 1.5rem; justify-content: flex-end; padding-top: 0.25rem; font-size: 0.85rem;">
+        <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+          <input type="radio" name="choice-dup-${idx}" value="old" style="cursor: pointer;" /> ใช้ข้อมูลเดิม (เก่า)
+        </label>
+        <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+          <input type="radio" name="choice-dup-${idx}" value="new" value="new" checked style="cursor: pointer;" /> ใช้ข้อมูลใหม่ (นำเข้า)
+        </label>
+      </div>
+    `;
+
+    listContainer.appendChild(card);
+  });
+
+  // Wire Set All actions
+  setAllNewBtn.onclick = () => {
+    duplicates.forEach((_, idx) => {
+      const radio = document.querySelector(`input[name="choice-dup-${idx}"][value="new"]`);
+      if (radio) radio.checked = true;
+    });
+  };
+
+  setAllOldBtn.onclick = () => {
+    duplicates.forEach((_, idx) => {
+      const radio = document.querySelector(`input[name="choice-dup-${idx}"][value="old"]`);
+      if (radio) radio.checked = true;
+    });
+  };
+
+  // Wire Close Actions
+  const closeDupModal = () => dupModal.classList.remove('active');
+  cancelBtn.onclick = closeDupModal;
+  closeBtn.onclick = closeDupModal;
+
+  // Final confirmation logic
+  confirmBtn.onclick = async () => {
+    let overwritesCount = 0;
+    let keepCount = 0;
+
+    duplicates.forEach((dup, idx) => {
+      const selectedRadio = document.querySelector(`input[name="choice-dup-${idx}"]:checked`);
+      const val = selectedRadio ? selectedRadio.value : 'new';
+
+      if (val === 'new') {
+        // Overwrite
+        const existingId = personnel[dup.originalIdx]?.id;
+        if (existingId) dup.newRecord.id = existingId;
+        personnel[dup.originalIdx] = dup.newRecord;
+        overwritesCount++;
+      } else {
+        keepCount++;
+      }
+    });
+
+    // Add new ones
+    nonDuplicates.forEach(record => personnel.push(record));
+
+    await savePersonnelList(personnel);
+    renderPersonnelTable();
+    updateEmployeeSelectDropdown();
+
+    dupModal.classList.remove('active');
+    const mainModal = document.getElementById('personnelImportModal');
+    if (mainModal) mainModal.classList.remove('active');
+
+    clearSelectedPersonnelImportFile();
+    const pastedText = document.getElementById('personnelImportPastedText');
+    if (pastedText) pastedText.value = '';
+
+    showToast(`นำเข้าสำเร็จ! (รายใหม่: ${nonDuplicates.length}, เขียนทับ: ${overwritesCount}, ใช้ของเดิม: ${keepCount})`, 'success');
+  };
+
+  dupModal.classList.add('active');
 }
 
 
