@@ -2037,9 +2037,9 @@ function renderEmployeeTable() {
     employeeSubstituteTableBody.innerHTML = '';
   }
 
-  let totalFuelCost = 0;
-  let totalMaintCost = 0;
-  let grandTotal = 0;
+  totalFuelCost = 0;
+  totalMaintCost = 0;
+  grandTotal = 0;
 
   flatRows.forEach((row) => {
     totalFuelCost += row.fuelCost;
