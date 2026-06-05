@@ -998,23 +998,12 @@ async function handlePersonnelFormSubmit(e) {
     resetPersonnelBtn.classList.add('hidden');
   } else {
     // Check if name already exists
-    const duplicateIdx = personnel.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
-    if (duplicateIdx !== -1) {
-      showConfirm({
-        title: 'ตรวจพบรายชื่อซ้ำในระบบ',
-        message: `มีข้อมูลของ "${name}" อยู่ในระบบแล้ว คุณต้องการบันทึกการแก้ไขทับข้อมูลเดิมใช่หรือไม่?`,
-        onConfirm: async () => {
-          const existingId = personnel[duplicateIdx]?.id;
-          if (existingId) item.id = existingId;
-          personnel[duplicateIdx] = item;
-          
-          await savePersonnelList(personnel);
-          personnelForm.reset();
-          personDepartmentCustomGroup.classList.add('hidden');
-          renderPersonnelTable();
-          showToast('บันทึกทับข้อมูลบุคลากรสำเร็จ!', 'success');
-        }
-      });
+    const duplicates = personnel
+      .map((p, idx) => ({ ...p, originalIdx: idx }))
+      .filter(p => p.name.trim().toLowerCase() === name.toLowerCase());
+
+    if (duplicates.length > 0) {
+      openDuplicateResolutionModal(item, duplicates);
       return;
     }
     personnel.push(item);
@@ -1022,9 +1011,102 @@ async function handlePersonnelFormSubmit(e) {
 
   await savePersonnelList(personnel);
   personnelForm.reset();
+  document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
   personDepartmentCustomGroup.classList.add('hidden');
   renderPersonnelTable();
   showToast(editIndexVal !== '' ? 'อัปเดตข้อมูลบุคลากรสำเร็จ!' : 'ลงทะเบียนบุคลากรสำเร็จ!', 'success');
+}
+
+function openDuplicateResolutionModal(newItem, duplicates) {
+  const modal = document.getElementById('duplicateResolutionModal');
+  const targetNameSpan = document.getElementById('duplicateTargetName');
+  const listContainer = document.getElementById('duplicateRecordsList');
+  const forceAddBtn = document.getElementById('addNewPersonnelBtn');
+  const cancelBtn = document.getElementById('cancelDuplicateResolutionBtn');
+  const closeBtn = document.getElementById('closeDuplicateResolutionModalBtn');
+
+  targetNameSpan.textContent = newItem.name;
+  listContainer.innerHTML = '';
+
+  // Render all duplicate options
+  duplicates.forEach(dup => {
+    const card = document.createElement('div');
+    card.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-small);
+      gap: 1rem;
+      transition: all 0.2s ease;
+    `;
+    
+    // Details description
+    const details = `
+      <div style="flex: 1; min-width: 0; text-align: left;">
+        <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.25rem;">${dup.name}</div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; line-height: 1.35;">
+          <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: var(--post-orange); padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">${dup.position}</span>
+          <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #e11d48; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">${dup.department || 'ทั่วไป'}</span>
+          <span style="color: #ddd;">หน้าที่: ${dup.duty || '-'}</span>
+          ${dup.route ? `<span style="color: #ddd;">ด้านจ่ายที่: ${dup.route}</span>` : ''}
+        </div>
+      </div>
+    `;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary btn-small';
+    btn.style.cssText = `
+      flex-shrink: 0;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      background: var(--post-orange);
+      border-color: var(--post-orange);
+    `;
+    btn.innerHTML = '📥 บันทึกทับ';
+    btn.addEventListener('click', async () => {
+      // Overwrite at dup.originalIdx
+      const existingId = personnel[dup.originalIdx]?.id;
+      if (existingId) newItem.id = existingId;
+      personnel[dup.originalIdx] = newItem;
+
+      await savePersonnelList(personnel);
+      personnelForm.reset();
+      document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
+      personDepartmentCustomGroup.classList.add('hidden');
+      renderPersonnelTable();
+      modal.classList.remove('active');
+      showToast('บันทึกทับข้อมูลบุคลากรสำเร็จ!', 'success');
+    });
+
+    card.innerHTML = details;
+    card.appendChild(btn);
+    listContainer.appendChild(card);
+  });
+
+  // Re-wire force-add button using cloneNode to clear existing listeners
+  const newForceAddBtn = forceAddBtn.cloneNode(true);
+  forceAddBtn.parentNode.replaceChild(newForceAddBtn, forceAddBtn);
+  newForceAddBtn.addEventListener('click', async () => {
+    personnel.push(newItem);
+    await savePersonnelList(personnel);
+    personnelForm.reset();
+    document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
+    personDepartmentCustomGroup.classList.add('hidden');
+    renderPersonnelTable();
+    modal.classList.remove('active');
+    showToast('ลงทะเบียนบุคลากรใหม่สำเร็จ!', 'success');
+  });
+
+  // Wire close/cancel actions
+  const closeActions = () => modal.classList.remove('active');
+  cancelBtn.onclick = closeActions;
+  closeBtn.onclick = closeActions;
+
+  modal.classList.add('active');
 }
 
 function renderPersonnelTable() {
