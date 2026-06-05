@@ -168,6 +168,9 @@ const personRouteSelect = document.getElementById('personRoute');
 const personVehicleSelect = document.getElementById('personVehicle');
 const personSignatureInput = document.getElementById('personSignature');
 const resetPersonnelBtn = document.getElementById('resetPersonnelBtn');
+const personDepartmentSelect = document.getElementById('personDepartment');
+const personDepartmentCustomGroup = document.getElementById('personDepartmentCustomGroup');
+const personDepartmentCustomInput = document.getElementById('personDepartmentCustom');
 
 // Other Button Actions
 const loadDemoBtn = document.getElementById('loadDemoBtn');
@@ -341,6 +344,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   personnelForm.addEventListener('submit', handlePersonnelFormSubmit);
   resetPersonnelBtn.addEventListener('click', cancelPersonnelEdit);
+  personDepartmentSelect.addEventListener('change', () => {
+    if (personDepartmentSelect.value === 'custom') {
+      personDepartmentCustomGroup.classList.remove('hidden');
+    } else {
+      personDepartmentCustomGroup.classList.add('hidden');
+    }
+  });
   empNameSelect.addEventListener('change', handleEmpNameSelectChange);
   empNameSelect.addEventListener('input', handleEmpNameSelectChange);
 
@@ -955,20 +965,27 @@ async function handlePersonnelFormSubmit(e) {
   const name = personNameInput.value.trim();
   const position = personPositionSelect.value;
   const duty = personDutySelect.value;
+  let department = personDepartmentSelect.value;
+  if (department === 'custom') {
+    department = personDepartmentCustomInput.value.trim() || 'ทั่วไป';
+  }
   const salary = parseFloat(personSalaryInput.value) || 0;
   const route = personRouteSelect.value;
   const vehicle = personVehicleSelect.value;
   const signature = personSignatureInput.value.trim() || name;
+  const restDays = Array.from(document.querySelectorAll('input[name="personRestDays"]:checked')).map(cb => parseInt(cb.value));
   const editIndexVal = personnelEditIndexInput.value;
 
   const item = {
     name,
     position,
+    department,
     duty,
     salary,
     route,
     vehicle,
-    signature
+    signature,
+    restDays
   };
 
   if (editIndexVal !== '') {
@@ -981,8 +998,23 @@ async function handlePersonnelFormSubmit(e) {
     resetPersonnelBtn.classList.add('hidden');
   } else {
     // Check if name already exists
-    if (personnel.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-      showToast('มีรายชื่อบุคลากรรายนี้ในระบบอยู่แล้ว!', 'warning');
+    const duplicateIdx = personnel.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    if (duplicateIdx !== -1) {
+      showConfirm({
+        title: 'ตรวจพบรายชื่อซ้ำในระบบ',
+        message: `มีข้อมูลของ "${name}" อยู่ในระบบแล้ว คุณต้องการบันทึกการแก้ไขทับข้อมูลเดิมใช่หรือไม่?`,
+        onConfirm: async () => {
+          const existingId = personnel[duplicateIdx]?.id;
+          if (existingId) item.id = existingId;
+          personnel[duplicateIdx] = item;
+          
+          await savePersonnelList(personnel);
+          personnelForm.reset();
+          personDepartmentCustomGroup.classList.add('hidden');
+          renderPersonnelTable();
+          showToast('บันทึกทับข้อมูลบุคลากรสำเร็จ!', 'success');
+        }
+      });
       return;
     }
     personnel.push(item);
@@ -990,6 +1022,7 @@ async function handlePersonnelFormSubmit(e) {
 
   await savePersonnelList(personnel);
   personnelForm.reset();
+  personDepartmentCustomGroup.classList.add('hidden');
   renderPersonnelTable();
   showToast(editIndexVal !== '' ? 'อัปเดตข้อมูลบุคลากรสำเร็จ!' : 'ลงทะเบียนบุคลากรสำเร็จ!', 'success');
 }
@@ -998,7 +1031,7 @@ function renderPersonnelTable() {
   if (personnel.length === 0) {
     personnelTableBody.innerHTML = `
       <tr>
-        <td colspan="9" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+        <td colspan="10" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
       </tr>
     `;
     return;
@@ -1013,6 +1046,7 @@ function renderPersonnelTable() {
     const matches = !personnelSearchQuery || 
       person.name.toLowerCase().includes(personnelSearchQuery) ||
       person.position.toLowerCase().includes(personnelSearchQuery) ||
+      (person.department && person.department.toLowerCase().includes(personnelSearchQuery)) ||
       (person.duty && person.duty.toLowerCase().includes(personnelSearchQuery));
     if (matches) {
       filtered.push({ person, originalIdx });
@@ -1024,7 +1058,7 @@ function renderPersonnelTable() {
   if (filtered.length === 0) {
     personnelTableBody.innerHTML = `
       <tr>
-        <td colspan="9" class="no-data">ไม่พบข้อมูลที่ตรงกับการค้นหา</td>
+        <td colspan="10" class="no-data">ไม่พบข้อมูลที่ตรงกับการค้นหา</td>
       </tr>
     `;
     return;
@@ -1034,8 +1068,12 @@ function renderPersonnelTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${index + 1}</td>
-      <td style="font-weight: 700;">${person.name}</td>
+      <td style="font-weight: 700;">
+        ${person.name}
+        ${person.restDays && person.restDays.length > 0 ? `<div style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
+      </td>
       <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
+      <td><span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #e11d48; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.department || 'ทั่วไป'}</span></td>
       <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: var(--post-emerald); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.duty || '-'}</span></td>
       <td>${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
       <td>${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
@@ -1072,8 +1110,33 @@ function editPersonnel(index) {
   document.getElementById('modalRegistryEditIndex').value = index;
   document.getElementById('modalPersonName').value = person.name;
   document.getElementById('modalPersonPosition').value = person.position;
+  
+  // Set department fields
+  const deptSelect = document.getElementById('modalPersonDepartment');
+  const deptCustomGroup = document.getElementById('modalPersonDepartmentCustomGroup');
+  const deptCustomInput = document.getElementById('modalPersonDepartmentCustom');
+  const stdDepts = ['นำจ่าย', 'ไขตู้/ขนส่ง', 'รับฝาก', 'บริหาร/ธุรการ'];
+  const personDept = person.department || 'นำจ่าย';
+
+  if (stdDepts.includes(personDept)) {
+    deptSelect.value = personDept;
+    deptCustomGroup.classList.add('hidden');
+    deptCustomInput.value = '';
+  } else {
+    deptSelect.value = 'custom';
+    deptCustomGroup.classList.remove('hidden');
+    deptCustomInput.value = personDept;
+  }
+
   document.getElementById('modalPersonDuty').value = person.duty || '';
   document.getElementById('modalPersonSalary').value = person.salary || 0;
+  
+  // Set rest days checkboxes
+  const personRestDays = person.restDays || [];
+  document.querySelectorAll('input[name="modalPersonRestDays"]').forEach(cb => {
+    cb.checked = personRestDays.includes(parseInt(cb.value));
+  });
+
   document.getElementById('modalPersonRoute').value = person.route || '';
   document.getElementById('modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
   document.getElementById('modalPersonSignature').value = person.signature || '';
@@ -1100,6 +1163,7 @@ function deletePersonnel(index) {
 function cancelPersonnelEdit() {
   personnelEditIndexInput.value = '';
   personnelForm.reset();
+  personDepartmentCustomGroup.classList.add('hidden');
   document.getElementById('personnelFormTitle').textContent = 'ลงทะเบียนข้อมูลบุคลากร';
   document.getElementById('savePersonnelBtn').innerHTML = '📥 บันทึกบุคลากร';
   resetPersonnelBtn.classList.add('hidden');
@@ -1110,10 +1174,21 @@ function wireRegistryEditModal() {
   const form = document.getElementById('editRegistryPersonnelForm');
   const closeBtn = document.getElementById('closeRegistryEditModalBtn');
   const cancelBtn = document.getElementById('cancelRegistryEditModalBtn');
+  const deptSelect = document.getElementById('modalPersonDepartment');
+  const deptCustomGroup = document.getElementById('modalPersonDepartmentCustomGroup');
+  const deptCustomInput = document.getElementById('modalPersonDepartmentCustom');
 
   closeBtn.addEventListener('click', () => modal.classList.remove('active'));
   cancelBtn.addEventListener('click', () => modal.classList.remove('active'));
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+  deptSelect.addEventListener('change', () => {
+    if (deptSelect.value === 'custom') {
+      deptCustomGroup.classList.remove('hidden');
+    } else {
+      deptCustomGroup.classList.add('hidden');
+    }
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1121,20 +1196,29 @@ function wireRegistryEditModal() {
     
     const name = document.getElementById('modalPersonName').value.trim();
     const position = document.getElementById('modalPersonPosition').value;
+    
+    let department = deptSelect.value;
+    if (department === 'custom') {
+      department = deptCustomInput.value.trim() || 'ทั่วไป';
+    }
+
     const duty = document.getElementById('modalPersonDuty').value;
     const salary = parseFloat(document.getElementById('modalPersonSalary').value) || 0;
     const route = document.getElementById('modalPersonRoute').value;
     const vehicle = document.getElementById('modalPersonVehicle').value;
     const signature = document.getElementById('modalPersonSignature').value.trim() || name;
+    const restDays = Array.from(document.querySelectorAll('input[name="modalPersonRestDays"]:checked')).map(cb => parseInt(cb.value));
 
     const item = {
       name,
       position,
+      department,
       duty,
       salary,
       route,
       vehicle,
-      signature
+      signature,
+      restDays
     };
 
     showConfirm({
@@ -3771,15 +3855,33 @@ function downloadAttendanceTemplateXlsx() {
   headers.push("รวมมาทำงาน");
   ws_data.push(headers);
   
+  const selectedYearBE = parseInt(document.getElementById('globalYear').value) || 2569;
+  const selectedYearAD = selectedYearBE - 543;
+  const selectedMonthJS = parseInt(globalMonthSelect.value) - 1; // 0-indexed month
+
   uniqueEmployees.forEach((emp, index) => {
     const rowIdx = index + 1;
     const xlRow = index + 4; // Headers are at row 3 (1-based index 3), data starts at row 4
     
     const rowData = [rowIdx, emp.name];
     
-    // Pre-fill with '/' (present)
+    // Find employee rest days in the master personnel list
+    const registryPerson = personnel.find(p => p.name.trim().toLowerCase() === emp.name.trim().toLowerCase());
+    const restDays = registryPerson ? (registryPerson.restDays || []) : [];
+
+    // Pre-fill with '/' (present) or 'ย' (rest day)
     for (let d = 1; d <= 31; d++) {
-      rowData.push("/");
+      const date = new Date(selectedYearAD, selectedMonthJS, d);
+      if (date.getMonth() !== selectedMonthJS) {
+        rowData.push(""); // Out of bounds day for month
+      } else {
+        const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+        if (restDays.includes(dayOfWeek)) {
+          rowData.push("ย");
+        } else {
+          rowData.push("/");
+        }
+      }
     }
     
     // Add Excel COUNTIF formula to ONLY sum '/' characters as requested
@@ -4244,7 +4346,7 @@ function clearSelectedPersonnelImportFile() {
   if (fileSelector) fileSelector.value = '';
   if (selectedFileInfo) selectedFileInfo.classList.add('hidden');
   if (dragDropZone) dragDropZone.classList.remove('hidden');
-  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+  if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
@@ -4261,6 +4363,7 @@ async function downloadPersonnelTemplateXlsx() {
     { header: 'ลำดับ', key: 'id', width: 8 },
     { header: 'ชื่อ-นามสกุล', key: 'name', width: 25 },
     { header: 'ตำแหน่ง', key: 'position', width: 18 },
+    { header: 'แผนก/กลุ่มงาน', key: 'department', width: 18 },
     { header: 'หน้าที่', key: 'duty', width: 45 },
     { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
     { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
@@ -4273,6 +4376,7 @@ async function downloadPersonnelTemplateXlsx() {
     id: 1,
     name: 'นายสมศักดิ์ รักดี',
     position: 'ลูกจ้างประจำ',
+    department: 'นำจ่าย',
     duty: 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ',
     salary: 15000,
     route: '5',
@@ -4284,6 +4388,7 @@ async function downloadPersonnelTemplateXlsx() {
     id: 2,
     name: 'นางสาวสมศรี ทรงดี',
     position: 'ลูกจ้างเหมา',
+    department: 'ไขตู้/ขนส่ง',
     duty: 'เจ้าหน้าที่ไขตู้ไปรษณีย์',
     salary: 12000,
     route: '12',
@@ -4291,8 +4396,11 @@ async function downloadPersonnelTemplateXlsx() {
     signature: 'สมศรี'
   });
 
-  // Apply dropdown data validations to columns C, D, and G
+  // Apply dropdown data validations
   // Position (ตำแหน่ง) - Column C (3)
+  // Department (แผนก/กลุ่มงาน) - Column D (4)
+  // Duty (หน้าที่) - Column E (5)
+  // Vehicle Type (ประเภทพาหนะ) - Column H (8)
   for (let i = 2; i <= 500; i++) {
     worksheet.getCell(`C${i}`).dataValidation = {
       type: 'list',
@@ -4300,15 +4408,19 @@ async function downloadPersonnelTemplateXlsx() {
       formulae: ['"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"']
     };
 
-    // Duty (หน้าที่) - Column D (4)
     worksheet.getCell(`D${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"นำจ่าย,ไขตู้/ขนส่ง,รับฝาก,บริหาร/ธุรการ"']
+    };
+
+    worksheet.getCell(`E${i}`).dataValidation = {
       type: 'list',
       allowBlank: true,
       formulae: ['"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"']
     };
 
-    // Vehicle Type (ประเภทพาหนะ) - Column G (7)
-    worksheet.getCell(`G${i}`).dataValidation = {
+    worksheet.getCell(`H${i}`).dataValidation = {
       type: 'list',
       allowBlank: true,
       formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
@@ -4350,21 +4462,23 @@ function handlePersonnelPaste() {
       
       let name = tokens[0].trim();
       let position = tokens[1] ? tokens[1].trim() : 'ลูกจ้างประจำ';
-      let duty = tokens[2] ? tokens[2].trim() : 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ';
-      let salary = tokens[3] ? parseFloat(tokens[3].replace(/,/g, '')) || 0 : 0;
-      let route = tokens[4] ? tokens[4].trim() : '';
-      let vehicle = tokens[5] ? tokens[5].trim() : 'รถจักรยานยนต์';
-      let signature = tokens[6] ? tokens[6].trim() : name.split(' ')[0];
+      let department = tokens[2] ? tokens[2].trim() : 'นำจ่าย';
+      let duty = tokens[3] ? tokens[3].trim() : 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ';
+      let salary = tokens[4] ? parseFloat(tokens[4].replace(/,/g, '')) || 0 : 0;
+      let route = tokens[5] ? tokens[5].trim() : '';
+      let vehicle = tokens[6] ? tokens[6].trim() : 'รถจักรยานยนต์';
+      let signature = tokens[7] ? tokens[7].trim() : name.split(' ')[0];
       
       if (name === "ชื่อ-นามสกุล" || name === "ชื่อ - นามสกุล" || name.length < 2) return;
       
-      const record = { name, position, duty, salary, route, vehicle, signature };
+      const record = { name, position, department, duty, salary, route, vehicle, signature };
       tempParsedPersonnelRecords.push(record);
       
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
         <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+        <td style="text-align: left; padding: 0.5rem 0.75rem;">${department}</td>
         <td style="text-align: left; padding: 0.5rem 0.75rem;">${duty}</td>
         <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
@@ -4375,7 +4489,7 @@ function handlePersonnelPaste() {
     });
     
     if (tempParsedPersonnelRecords.length === 0) {
-      previewTableBody.innerHTML = '<tr><td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+      previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
       if (submitBtn) submitBtn.disabled = true;
     } else {
       if (submitBtn) {
@@ -4420,13 +4534,14 @@ function processUploadedPersonnelFile(file) {
         if (name.length < 2 || name === 'ชื่อ-นามสกุล' || name === 'ชื่อ - นามสกุล') continue;
         
         let position = String(row[2] || 'ลูกจ้างประจำ').trim();
-        let duty = String(row[3] || 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ').trim();
-        let salary = parseFloat(String(row[4] || '0').replace(/,/g, '')) || 0;
-        let route = String(row[5] || '').trim();
-        let vehicle = String(row[6] || 'รถจักรยานยนต์').trim();
-        let signature = String(row[7] || '').trim() || name.split(' ')[0];
+        let department = String(row[3] || 'นำจ่าย').trim();
+        let duty = String(row[4] || 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ').trim();
+        let salary = parseFloat(String(row[5] || '0').replace(/,/g, '')) || 0;
+        let route = String(row[6] || '').trim();
+        let vehicle = String(row[7] || 'รถจักรยานยนต์').trim();
+        let signature = String(row[8] || '').trim() || name.split(' ')[0];
         
-        const record = { name, position, duty, salary, route, vehicle, signature };
+        const record = { name, position, department, duty, salary, route, vehicle, signature };
         tempParsedPersonnelRecords.push(record);
         
         if (previewTableBody) {
@@ -4434,6 +4549,7 @@ function processUploadedPersonnelFile(file) {
           tr.innerHTML = `
             <td style="text-align: left; padding: 0.5rem 0.75rem;"><strong>${name}</strong></td>
             <td style="text-align: left; padding: 0.5rem 0.75rem;">${position}</td>
+            <td style="text-align: left; padding: 0.5rem 0.75rem;">${department}</td>
             <td style="text-align: left; padding: 0.5rem 0.75rem;">${duty}</td>
             <td style="padding: 0.5rem 0.75rem;">${salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
@@ -4445,7 +4561,7 @@ function processUploadedPersonnelFile(file) {
       }
       
       if (tempParsedPersonnelRecords.length === 0) {
-        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
+        if (previewTableBody) previewTableBody.innerHTML = '<tr><td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ไม่พบแถวข้อมูลในไฟล์นี้</td></tr>';
         if (submitBtn) submitBtn.disabled = true;
       } else {
         if (submitBtn) {

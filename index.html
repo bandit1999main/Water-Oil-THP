@@ -393,9 +393,26 @@
                 </div>
               </div>
 
-              <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
-                <input type="number" id="personSalary" class="form-input" value="0" />
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
+                  <input type="number" id="personSalary" class="form-input" value="0" />
+                </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label for="personDepartment">แผนก/กลุ่มงาน</label>
+                  <select id="personDepartment" class="form-select">
+                    <option value="นำจ่าย">นำจ่าย</option>
+                    <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
+                    <option value="รับฝาก">รับฝาก</option>
+                    <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
+                    <option value="custom">อื่นๆ (ระบุเอง)...</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group hidden" id="personDepartmentCustomGroup" style="margin-bottom: 1.25rem;">
+                <label for="personDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
+                <input type="text" id="personDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
               </div>
 
               <div class="form-row-2">
@@ -414,6 +431,33 @@
                     <option value="เรือยนต์">เรือยนต์</option>
                     <option value="รถยนต์">รถยนต์</option>
                   </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="0" style="cursor: pointer;" /> อา.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="1" style="cursor: pointer;" /> จ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="2" style="cursor: pointer;" /> อ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="3" style="cursor: pointer;" /> พ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="4" style="cursor: pointer;" /> พฤ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="5" style="cursor: pointer;" /> ศ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="6" style="cursor: pointer;" /> ส.
+                  </label>
                 </div>
               </div>
 
@@ -596,6 +640,7 @@
                     <th>ลำดับ</th>
                     <th>ชื่อ - นามสกุล</th>
                     <th>ตำแหน่ง</th>
+                    <th>แผนก/กลุ่มงาน</th>
                     <th>หน้าที่</th>
                     <th>เงินเดือน (บาท)</th>
                     <th>ด้านจ่ายหลัก</th>
@@ -606,7 +651,7 @@
                 </thead>
                 <tbody id="personnelTableBody">
                   <tr>
-                    <td colspan="9" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+                    <td colspan="10" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
                   </tr>
                 </tbody>
               </table>
@@ -1019,9 +1064,26 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="modalPersonSalary">เงินเดือน (บาท)</label>
-              <input type="number" id="modalPersonSalary" class="form-input" value="0" required />
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="modalPersonSalary">เงินเดือน (บาท)</label>
+                <input type="number" id="modalPersonSalary" class="form-input" value="0" required />
+              </div>
+              <div class="form-group">
+                <label for="modalPersonDepartment">แผนก/กลุ่มงาน</label>
+                <select id="modalPersonDepartment" class="form-select">
+                  <option value="นำจ่าย">นำจ่าย</option>
+                  <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
+                  <option value="รับฝาก">รับฝาก</option>
+                  <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
+                  <option value="custom">อื่นๆ (ระบุเอง)...</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group hidden" id="modalPersonDepartmentCustomGroup" style="margin-bottom: 1rem;">
+              <label for="modalPersonDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
+              <input type="text" id="modalPersonDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
             </div>
 
             <div class="form-row-2">
@@ -1040,6 +1102,33 @@
                   <option value="เรือยนต์">เรือยนต์</option>
                   <option value="รถยนต์">รถยนต์</option>
                 </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="0" style="cursor: pointer;" /> อา.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="1" style="cursor: pointer;" /> จ.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="2" style="cursor: pointer;" /> อ.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="3" style="cursor: pointer;" /> พ.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="4" style="cursor: pointer;" /> พฤ.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="5" style="cursor: pointer;" /> ศ.
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                  <input type="checkbox" name="modalPersonRestDays" value="6" style="cursor: pointer;" /> ส.
+                </label>
               </div>
             </div>
 
@@ -1198,7 +1287,7 @@
           <div id="personnelImportTextContent" class="tab-panel hidden">
             <div class="form-group">
               <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
-              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	สมศรี"></textarea>
+              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	ไขตู้/ขนส่ง	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	สมศรี"></textarea>
             </div>
           </div>
 
@@ -1207,18 +1296,19 @@
             <table class="modal-table" style="width: 100%;">
               <thead>
                 <tr>
-                  <th style="width: 20%;">ชื่อ - นามสกุล</th>
-                  <th style="width: 15%;">ตำแหน่ง</th>
-                  <th style="width: 20%;">หน้าที่</th>
-                  <th style="width: 12%;">เงินเดือน</th>
+                  <th style="width: 18%;">ชื่อ - นามสกุล</th>
+                  <th style="width: 12%;">ตำแหน่ง</th>
+                  <th style="width: 12%;">แผนก/กลุ่มงาน</th>
+                  <th style="width: 18%;">หน้าที่</th>
+                  <th style="width: 10%;">เงินเดือน</th>
                   <th style="width: 10%;">ด้านจ่ายหลัก</th>
-                  <th style="width: 13%;">ประเภทพาหนะ</th>
-                  <th style="width: 10%;">ลงนามเริ่มต้น</th>
+                  <th style="width: 12%;">ประเภทพาหนะ</th>
+                  <th style="width: 8%;">ลงนามเริ่มต้น</th>
                 </tr>
               </thead>
               <tbody id="personnelImportPreviewTableBody">
                 <tr>
-                  <td colspan="7" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+                  <td colspan="8" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
                 </tr>
               </tbody>
             </table>
