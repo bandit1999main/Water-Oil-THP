@@ -344,6 +344,19 @@ document.addEventListener('DOMContentLoaded', () => {
   
   personnelForm.addEventListener('submit', handlePersonnelFormSubmit);
   resetPersonnelBtn.addEventListener('click', cancelPersonnelEdit);
+
+  const checkDuplicatesBtn = document.getElementById('checkDuplicatesBtn');
+  if (checkDuplicatesBtn) {
+    checkDuplicatesBtn.addEventListener('click', scanForDuplicateNames);
+  }
+
+  const closeScanModalBtn = document.getElementById('closeDuplicateScanModalBtn');
+  const closeScanBtn = document.getElementById('closeDuplicateScanBtn');
+  const scanModal = document.getElementById('duplicateScanModal');
+  const closeScanActions = () => scanModal.classList.remove('active');
+  if (closeScanModalBtn) closeScanModalBtn.onclick = closeScanActions;
+  if (closeScanBtn) closeScanBtn.onclick = closeScanActions;
+  
   personDepartmentSelect.addEventListener('change', () => {
     if (personDepartmentSelect.value === 'custom') {
       personDepartmentCustomGroup.classList.remove('hidden');
@@ -1105,6 +1118,126 @@ function openDuplicateResolutionModal(newItem, duplicates) {
   const closeActions = () => modal.classList.remove('active');
   cancelBtn.onclick = closeActions;
   closeBtn.onclick = closeActions;
+
+  modal.classList.add('active');
+}
+
+function scanForDuplicateNames() {
+  const nameGroups = {};
+  personnel.forEach((p, idx) => {
+    const cleanName = p.name.trim().toLowerCase();
+    if (!nameGroups[cleanName]) nameGroups[cleanName] = [];
+    nameGroups[cleanName].push({ ...p, originalIdx: idx });
+  });
+
+  const duplicateGroups = Object.values(nameGroups).filter(g => g.length > 1);
+
+  if (duplicateGroups.length === 0) {
+    showToast('ไม่พบรายชื่อซ้ำในระบบ!', 'success');
+    return;
+  }
+
+  const modal = document.getElementById('duplicateScanModal');
+  const resultsContainer = document.getElementById('duplicateScanResultsList');
+  resultsContainer.innerHTML = '';
+
+  duplicateGroups.forEach(group => {
+    const groupContainer = document.createElement('div');
+    groupContainer.style.cssText = `
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-small);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    `;
+
+    const titleHtml = `
+      <div style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
+        <span>👤 ${group[0].name}</span>
+        <span style="font-size: 0.8rem; background: rgba(245, 158, 11, 0.15); color: var(--post-orange); padding: 0.15rem 0.5rem; border-radius: 20px;">พบซ้ำ ${group.length} รายการ</span>
+      </div>
+    `;
+
+    const listContainer = document.createElement('div');
+    listContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    `;
+
+    group.forEach(person => {
+      const row = document.createElement('div');
+      row.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 6px;
+        font-size: 0.85rem;
+        gap: 1rem;
+      `;
+
+      const restDaysText = person.restDays && person.restDays.length > 0
+        ? ` (หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')})`
+        : '';
+
+      row.innerHTML = `
+        <div style="flex: 1; min-width: 0; text-align: left; color: #bbb;">
+          <strong>${person.position}</strong> - แผนก: ${person.department || 'ทั่วไป'} | หน้าที่: ${person.duty || '-'} | เงินเดือน: ${person.salary ? person.salary.toLocaleString() : '0.00'} ฿${restDaysText}
+        </div>
+      `;
+
+      const btnGroup = document.createElement('div');
+      btnGroup.style.cssText = `
+        display: flex;
+        gap: 0.35rem;
+        flex-shrink: 0;
+      `;
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'row-action-btn';
+      editBtn.style.padding = '0.2rem 0.4rem';
+      editBtn.innerHTML = '✏️ แก้ไข';
+      editBtn.addEventListener('click', () => {
+        modal.classList.remove('active');
+        editPersonnel(person.originalIdx);
+      });
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'row-action-btn';
+      deleteBtn.style.cssText = 'padding: 0.2rem 0.4rem; color: var(--post-red);';
+      deleteBtn.innerHTML = '🗑️ ลบ';
+      deleteBtn.addEventListener('click', () => {
+        showConfirm({
+          title: 'ยืนยันการลบข้อมูลซ้ำ',
+          message: `คุณต้องการลบข้อมูลพนักงาน "${person.name}" (${person.position} - ${person.department}) ใช่หรือไม่?`,
+          onConfirm: async () => {
+            personnel.splice(person.originalIdx, 1);
+            await savePersonnelList(personnel);
+            renderPersonnelTable();
+            modal.classList.remove('active');
+            showToast('ลบข้อมูลเรียบร้อย!', 'success');
+            // Re-trigger scan to show updated state
+            scanForDuplicateNames();
+          }
+        });
+      });
+
+      btnGroup.appendChild(editBtn);
+      btnGroup.appendChild(deleteBtn);
+      row.appendChild(btnGroup);
+      listContainer.appendChild(row);
+    });
+
+    groupContainer.innerHTML = titleHtml;
+    groupContainer.appendChild(listContainer);
+    resultsContainer.appendChild(groupContainer);
+  });
 
   modal.classList.add('active');
 }

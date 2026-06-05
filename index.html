@@ -629,8 +629,11 @@
             </div>
 
             <!-- Search Bar for Personnel -->
-            <div class="search-bar-container" style="margin-top: 1rem; display: flex; gap: 0.5rem; max-width: 400px; padding: 0 1.5rem;">
-              <input type="text" id="personnelSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา..." style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem;" />
+            <div class="search-bar-container" style="margin-top: 1rem; display: flex; gap: 0.5rem; max-width: 650px; padding: 0 1.5rem; flex-wrap: wrap;">
+              <input type="text" id="personnelSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา..." style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem; flex: 1; min-width: 250px;" />
+              <button type="button" id="checkDuplicatesBtn" class="btn btn-secondary btn-small" style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.85rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; cursor: pointer;">
+                🔍 ตรวจสอบรายชื่อซ้ำในระบบ
+              </button>
             </div>
 
             <div class="table-container">
@@ -1291,6 +1294,27 @@
         <div class="modal-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
           <button type="button" id="cancelPersonnelImportDuplicateBtn" class="btn btn-secondary">ยกเลิก</button>
           <button type="button" id="confirmPersonnelImportDuplicateBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);">✔️ บันทึกและนำเข้า</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Database Duplicate Scan Results -->
+    <div id="duplicateScanModal" class="modal-overlay">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 700px; width: 95%;">
+        <div class="modal-header">
+          <h3>🔍 ผลการตรวจสอบรายชื่อซ้ำในระบบ</h3>
+          <button type="button" id="closeDuplicateScanModalBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem; max-height: 60vh; overflow-y: auto;">
+          <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.4;">
+            ระบบตรวจพบกลุ่มรายชื่อซ้ำกันในทำเนียบพนักงานดังนี้ กรุณาตรวจสอบและลบหรือแก้ไขตามต้องการ:
+          </p>
+          <div id="duplicateScanResultsList" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Duplicate name groups dynamically rendered here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="closeDuplicateScanBtn" class="btn btn-secondary">ปิดหน้าต่าง</button>
         </div>
       </div>
     </div>
