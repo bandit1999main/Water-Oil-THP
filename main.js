@@ -498,8 +498,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const signupScreen = document.getElementById('authSignupState');
   const pendingScreen = document.getElementById('authPendingState');
   const appContainer = document.getElementById('appContainer');
+  const authOverlay = document.getElementById('authOverlay');
+  const userProfileWidget = document.getElementById('userProfileWidget');
 
   function showLoadingState() {
+    if (authOverlay) authOverlay.classList.add('active');
+    if (userProfileWidget) userProfileWidget.classList.add('hidden');
     authLoadingScreen.classList.remove('hidden');
     loginScreen.classList.add('hidden');
     signupScreen.classList.add('hidden');
@@ -508,6 +512,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showLoginState() {
+    if (authOverlay) authOverlay.classList.add('active');
+    if (userProfileWidget) userProfileWidget.classList.add('hidden');
     authLoadingScreen.classList.add('hidden');
     loginScreen.classList.remove('hidden');
     signupScreen.classList.add('hidden');
@@ -516,6 +522,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showSignupState() {
+    if (authOverlay) authOverlay.classList.add('active');
+    if (userProfileWidget) userProfileWidget.classList.add('hidden');
     authLoadingScreen.classList.add('hidden');
     loginScreen.classList.add('hidden');
     signupScreen.classList.remove('hidden');
@@ -524,6 +532,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showPendingState(user) {
+    if (authOverlay) authOverlay.classList.add('active');
+    if (userProfileWidget) userProfileWidget.classList.add('hidden');
     authLoadingScreen.classList.add('hidden');
     loginScreen.classList.add('hidden');
     signupScreen.classList.add('hidden');
@@ -535,15 +545,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showApprovedState(user, profileData) {
+    if (authOverlay) authOverlay.classList.remove('active');
+    if (userProfileWidget) userProfileWidget.classList.remove('hidden');
     authLoadingScreen.classList.add('hidden');
     loginScreen.classList.add('hidden');
     signupScreen.classList.add('hidden');
     pendingScreen.classList.add('hidden');
     appContainer.classList.remove('hidden');
 
-    const headerUserPhoto = document.getElementById('headerUserPhoto');
-    const headerUserName = document.getElementById('headerUserName');
-    const headerUserRole = document.getElementById('headerUserRole');
+    const headerUserPhoto = document.getElementById('userAvatar');
+    const headerUserName = document.getElementById('userDisplayName');
+    const headerUserRole = document.getElementById('userRoleBadge');
 
     if (headerUserPhoto) headerUserPhoto.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
     if (headerUserName) headerUserName.textContent = user.displayName || 'พนักงานไปรษณีย์';
@@ -648,19 +660,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const switchSignupBtn = document.getElementById('switchSignupBtn');
-  if (switchSignupBtn) {
-    switchSignupBtn.addEventListener('click', showSignupState);
+  const switchSignupLink = document.getElementById('switchToSignupLink');
+  if (switchSignupLink) {
+    switchSignupLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSignupState();
+    });
   }
 
-  const switchLoginBtn = document.getElementById('switchLoginBtn');
-  if (switchLoginBtn) {
-    switchLoginBtn.addEventListener('click', showLoginState);
+  const switchLoginLink = document.getElementById('switchToLoginLink');
+  if (switchLoginLink) {
+    switchLoginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showLoginState();
+    });
   }
 
-  const signupSubmitBtn = document.getElementById('signupSubmitBtn');
-  if (signupSubmitBtn) {
-    signupSubmitBtn.addEventListener('click', async () => {
+  const googleSignupBtn = document.getElementById('googleSignupBtn');
+  if (googleSignupBtn) {
+    googleSignupBtn.addEventListener('click', async () => {
       showLoadingState();
       try {
         await loginWithGoogle();
@@ -675,6 +693,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
+      showLoadingState();
+      try {
+        await logoutUser();
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        showToast('เกิดข้อผิดพลาดในการออกจากระบบ', 'error');
+      }
+    });
+  }
+
+  const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
+  if (pendingLogoutBtn) {
+    pendingLogoutBtn.addEventListener('click', async () => {
       showLoadingState();
       try {
         await logoutUser();
