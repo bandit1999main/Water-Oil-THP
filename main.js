@@ -493,10 +493,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Firebase Auth Flow
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
-  const authLoadingScreen = document.getElementById('authLoadingScreen');
-  const loginScreen = document.getElementById('loginScreen');
-  const signupScreen = document.getElementById('signupScreen');
-  const pendingScreen = document.getElementById('pendingScreen');
+  const authLoadingScreen = document.getElementById('authLoadingState');
+  const loginScreen = document.getElementById('authLoginState');
+  const signupScreen = document.getElementById('authSignupState');
+  const pendingScreen = document.getElementById('authPendingState');
   const appContainer = document.getElementById('appContainer');
 
   function showLoadingState() {
