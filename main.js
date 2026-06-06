@@ -2909,15 +2909,13 @@ function printReport() {
     // Sort water employees by name (Thai alphabetical order ก-ฮ)
     waterEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
     
-    document.getElementById('printWaterMonthText').textContent = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
-    document.getElementById('printWaterYearText').textContent = globalYearSelect.value;
-    
-    const printWaterTableBody = document.getElementById('printWaterTableBody');
-    printWaterTableBody.innerHTML = '';
+    const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+    const yearText = globalYearSelect.value;
     
     let totalAllowanceVal = 0;
     let totalTaxVal = 0;
     let totalNetVal = 0;
+    let tableRowsHtml = '';
     
     waterEmployees.forEach((item, index) => {
       const allowance = item.workDays * 30;
@@ -2928,25 +2926,20 @@ function printReport() {
       totalTaxVal += tax;
       totalNetVal += net;
       
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${index + 1}</td>
-        <td><strong>${item.name}</strong></td>
-        <td>${item.position} / ${item.duty || '-'}</td>
-        <td>${item.workDays} วัน</td>
-        <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-        <td><span style="font-family: var(--font-title); font-style: italic; font-size: 9pt; color: #eee; font-weight: 300;">${item.signature}</span></td>
-        <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
+      tableRowsHtml += `
+        <tr>
+          <td>${index + 1}</td>
+          <td><strong>${item.name}</strong></td>
+          <td>${item.position} / ${item.duty || '-'}</td>
+          <td>${item.workDays} วัน</td>
+          <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #444; font-weight: 300;">${item.signature}</span></td>
+          <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
+        </tr>
       `;
-      printWaterTableBody.appendChild(tr);
     });
-    
-    document.getElementById('printWaterTotalCount').textContent = waterEmployees.length.toString();
-    document.getElementById('printWaterTotalCost').textContent = totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('printWaterTotalTax').textContent = totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('printWaterGrandTotal').textContent = totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
     // Signatures mapping for water print
     const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
@@ -2961,20 +2954,200 @@ function printReport() {
     const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
     const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
     
-    document.getElementById('printSigMakerTitleValWater').textContent = sigMakerTitleVal;
-    document.getElementById('printSigMakerNameValWater').textContent = sigMakerNameVal;
-    document.getElementById('printSigMakerPosValWater').textContent = sigMakerPosVal;
-    
-    document.getElementById('printSigCheckerTitleValWater').textContent = sigCheckerTitleVal;
-    document.getElementById('printSigCheckerNameValWater').textContent = sigCheckerNameVal;
-    document.getElementById('printSigCheckerPosValWater').textContent = sigCheckerPosVal;
-    
-    document.getElementById('printSigApproverTitleValWater').textContent = sigApproverTitleVal;
-    document.getElementById('printSigApproverNameValWater').textContent = sigApproverNameVal;
-    document.getElementById('printSigApproverPosValWater').textContent = sigApproverPosVal;
-    
-    // Give browser 300ms to render print layout before opening dialog
-    setTimeout(() => window.print(), 300);
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>พิมพ์รายงานค่าน้ำดื่ม_${monthText}_${yearText}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+          body {
+            background: white !important;
+            color: black !important;
+            font-family: 'Sarabun', sans-serif !important;
+            margin: 0 !important;
+            padding: 0.5cm !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 0.3cm;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 0.2rem !important;
+            padding-bottom: 0.15rem !important;
+            border-bottom: 2px double #000 !important;
+          }
+          .print-title-container h2 {
+            font-size: 10.5pt !important;
+            font-weight: bold;
+            margin: 0 0 0.15rem 0;
+          }
+          .print-title-container h3 {
+            font-size: 9pt !important;
+            font-weight: bold;
+            margin: 0 0 0.15rem 0;
+          }
+          .print-title-container p {
+            font-size: 8pt;
+            margin: 0 0 0.25rem 0;
+          }
+          .print-meta-info {
+            text-align: right;
+            font-size: 6.8pt !important;
+            color: #444;
+          }
+          .print-meta-info p {
+            margin: 0 0 0.05rem 0;
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+          }
+          .print-table th, 
+          .print-table td {
+            border: 1px solid black !important;
+            padding: 2.2px 2px !important;
+            font-size: 6.8pt !important;
+            line-height: 1.15 !important;
+            color: black !important;
+            background: transparent !important;
+          }
+          .print-table th {
+            font-weight: bold !important;
+            text-align: center !important;
+          }
+          .print-table td {
+            text-align: left;
+            height: 14px !important;
+            vertical-align: middle !important;
+          }
+          .print-table td:nth-child(2) {
+            font-size: 11pt !important;
+            font-weight: bold !important;
+          }
+          .print-table td:nth-child(1),
+          .print-table td:nth-child(4),
+          .print-table td:nth-child(5),
+          .print-table td:nth-child(6),
+          .print-table td:nth-child(7),
+          .print-table td:nth-child(8) {
+            text-align: center !important;
+          }
+          .print-summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.2rem !important;
+            margin-bottom: 0.2rem !important;
+          }
+          .summary-block {
+            width: 280px;
+            font-size: 7pt !important;
+          }
+          .summary-block p {
+            display: flex;
+            justify-content: space-between;
+            margin: 0 0 0.05rem 0;
+          }
+          .final-sum {
+            font-weight: bold;
+            border-top: 1px solid black;
+            border-bottom: 4px double #000;
+            padding: 2px 0;
+            margin-top: 2px;
+            font-size: 7.8pt !important;
+          }
+          .print-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.3rem !important;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            text-align: center;
+            width: 32%;
+            font-size: 7pt !important;
+            line-height: 1.3 !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-header">
+          <div class="print-title-container">
+            <h2>แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ</h2>
+            <h3>บริษัท ไปรษณีย์ไทย จำกัด</h3>
+            <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+          </div>
+          <div class="print-meta-info">
+            <p>เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
+            <p>เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
+            <p>หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
+          </div>
+        </div>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 4%">ลำดับ</th>
+              <th style="width: 19%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 18%">ปฏิบัติหน้าที่</th>
+              <th style="width: 7%">วันปฏิบัติงาน</th>
+              <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
+              <th style="width: 7%">ภาษี (ถ้ามี)</th>
+              <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
+              <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 10%">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <div class="print-summary-section">
+          <div class="summary-block">
+            <p>จำนวนรายชื่อผู้เบิกทั้งสิ้น: <strong>${waterEmployees.length}</strong> ราย</p>
+            <p>ค่าน้ำดื่มรวมทั้งสิ้น: <strong>${totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p>ภาษีหัก ณ ที่จ่ายรวมทั้งสิ้น: <strong>${totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p class="final-sum">ยอดเงินจ่ายสุทธิรวมทั้งสิ้น: <strong>${totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+          </div>
+        </div>
+
+        <div class="print-signatures">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+            setTimeout(function() { window.close(); }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
     return;
   }
 
@@ -3004,129 +3177,9 @@ function printReport() {
   const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
   const yearText = globalYearSelect.value;
 
-  // 1. Process and aggregate employees to flatRows
-  let flatRows = [];
-  employees.forEach((item) => {
-    if (item.formMode !== 'supervisor') {
-      const liters = calculateClaimLiters(item);
-      const fuelCost = liters * currentFuelPrice;
-      const maintCost = calculateMaintenanceCost(item);
-      const sumTotal = fuelCost + maintCost;
-
-      flatRows.push({
-        name: item.name,
-        position: item.position,
-        routeDesc: `ด้านจ่ายที่ ${item.route}`,
-        workDays: item.workDays,
-        liters: liters,
-        fuelCost: fuelCost,
-        maintCost: maintCost,
-        sumTotal: sumTotal,
-        signature: item.signature,
-        remarks: item.remarks
-      });
-    } else {
-      // It's a supervisor (ชนจ.)
-      // We aggregate ALL their missions into ONE row per supervisor
-      let totalLiters = 0;
-      let totalMaint = 0;
-      let totalDays = 0;
-      let missionRouteStrings = [];
-
-      // 1. Group 'ตรวจสอบการนำจ่าย'
-      const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
-      if (inspectMissions.length > 0) {
-        let rawInspectionLiters = 0;
-        let inspectDays = 0;
-        let inspectMaint = 0;
-        let routesUsed = [];
-
-        inspectMissions.forEach(m => {
-          const routeInfo = ROUTE_DATA[m.route];
-          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
-          rawInspectionLiters += dailyLiters * m.days;
-          inspectDays += m.days;
-          inspectMaint += calculateSingleMissionMaint(item, m);
-          routesUsed.push(m.route);
-        });
-
-        const liters = Math.ceil(rawInspectionLiters / 2);
-        totalLiters += liters;
-        totalMaint += inspectMaint;
-        totalDays += inspectDays;
-        missionRouteStrings.push(`ตรวจสอบการนำจ่าย (ด้าน ${routesUsed.join(', ')})`);
-      }
-
-      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน')
-      const otherMissions = item.missions.filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
-      otherMissions.forEach(m => {
-        const routeInfo = ROUTE_DATA[m.route];
-        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
-        const liters = dailyLiters * m.days;
-        const maint = calculateSingleMissionMaint(item, m);
-
-        totalLiters += liters;
-        totalMaint += maint;
-        totalDays += m.days;
-        missionRouteStrings.push(`${m.type} (ด้าน ${m.route}) ${m.days} วัน`);
-      });
-
-      const fuelCost = totalLiters * currentFuelPrice;
-      const sumTotal = fuelCost + totalMaint;
-
-      flatRows.push({
-        name: item.name,
-        position: item.position || 'หัวหน้าโซนนำจ่าย (ชนจ.)',
-        routeDesc: missionRouteStrings.join('<br>'),
-        workDays: totalDays,
-        liters: totalLiters,
-        fuelCost: fuelCost,
-        maintCost: totalMaint,
-        sumTotal: sumTotal,
-        signature: item.signature,
-        remarks: item.remarks
-      });
-    }
-  });
-
-  // 2. Classify rows into 3 groups
-  // Group A: พนักงาน + ลูกจ้างประจำ
-  // Group B: ลูกจ้างชั่วคราว + ลูกจ้างรายวัน + หัวหน้าโซนนำจ่าย (ชนจ.) (ถ้าไม่ได้กำหนดเป็นอื่นๆ)
-  // Group C: ลูกจ้างเหมา (รวมถึง คำว่า "เหมา")
-  
-  const isGroupA = (pos) => {
-    const p = (pos || '').toLowerCase();
-    return p.includes('พนักงาน') || p.includes('ลูกจ้างประจำ');
-  };
-
-  const isGroupC = (pos) => {
-    const p = (pos || '').toLowerCase();
-    return p.includes('เหมา');
-  };
-
-  let groupA = [];
-  let groupB = [];
-  let groupC = [];
-
-  flatRows.forEach(row => {
-    if (isGroupA(row.position)) {
-      groupA.push(row);
-    } else if (isGroupC(row.position)) {
-      groupC.push(row);
-    } else {
-      groupB.push(row);
-    }
-  });
-
-  const categories = [
-    { title: 'พนักงาน และ ลูกจ้างประจำ', list: groupA },
-    { title: 'ลูกจ้างชั่วคราว/รายวัน และ ชนจ.', list: groupB },
-    { title: 'ลูกจ้างเหมาบริการ/เหมาจ่าย', list: groupC }
-  ].filter(cat => cat.list.length > 0);
-
   // Categorize standard employees and supervisors separately
   let listStaffAndRegular = []; // Page 1: พนักงาน และ ลูกจ้างประจำ
-  let listDailyAndTemp = [];     // Page 2: ลูกจ้างรายวัน และ ลูกจ้าง (ลูกจ้างชั่วคราว/รายวันทั่วไป)
+  let listDailyAndTemp = [];     // Page 2: ลูกจ้างรายวัน และ ลูกจ้าง
   let listContractors = [];     // Page 3: ลูกจ้างเหมา
   let listSubstitutes = [];     // Page 4: วิ่งแทน
   let supervisors = [];         // Page 5+: หัวหน้าโซนนำจ่าย (ชนจ.)
@@ -3163,26 +3216,17 @@ function printReport() {
         } else if (posLower.includes('เหมา')) {
           listContractors.push(rowObj);
         } else {
-          // Daily and other temporary employees
           listDailyAndTemp.push(rowObj);
         }
       }
     }
   });
 
-  const printReportArea = document.getElementById('printReportArea');
-  printReportArea.innerHTML = '';
+  let pagesHtml = [];
 
-  // Function to render a standard flat table page
-  const renderStandardPage = (title, list, isLastPage) => {
-    if (list.length === 0) return;
-
-    const pageDiv = document.createElement('div');
-    pageDiv.className = 'print-page-section';
-    if (!isLastPage) {
-      pageDiv.style.pageBreakAfter = 'always';
-    }
-    pageDiv.style.marginBottom = '2cm';
+  // Function to render standard page HTML
+  const buildStandardPageHtml = (title, list) => {
+    if (list.length === 0) return '';
 
     let totalFuelCost = 0;
     let totalMaintCost = 0;
@@ -3204,105 +3248,83 @@ function printReport() {
           <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #eee; font-weight: 300;">${row.signature}</span></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 8.5pt; color: #444; font-weight: 300;">${row.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${row.remarks}</span></td>
         </tr>
       `;
     }).join('');
 
-    pageDiv.innerHTML = `
-      <div class="print-header">
-        <div class="print-title-container">
-          <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
-          <h3>บริษัท ไปรษณีย์ไทย จำกัด (${title})</h3>
-          <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+    return `
+      <div class="print-page-section">
+        <div class="print-header">
+          <div class="print-title-container">
+            <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
+            <h3>บริษัท ไปรษณีย์ไทย จำกัด (${title})</h3>
+            <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+          </div>
+          <div class="print-meta-info">
+            <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
+          </div>
         </div>
-        <div class="print-meta-info">
-          <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
-        </div>
-      </div>
 
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th style="width: 5%">ลำดับ</th>
-            <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
-            <th style="width: 12%">ตำแหน่ง / บทบาท</th>
-            <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
-            <th style="width: 8%">วันทำงาน</th>
-            <th style="width: 8%">น้ำมัน (ลิตร)</th>
-            <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
-            <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
-            <th style="width: 8%">รวมเงิน (บาท)</th>
-            <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
-            <th style="width: 10%">หมายเหตุ</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRowsHtml}
-        </tbody>
-      </table>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 5%">ลำดับ</th>
+              <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 12%">ตำแหน่ง / บทบาท</th>
+              <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
+              <th style="width: 8%">วันทำงาน</th>
+              <th style="width: 8%">น้ำมัน (ลิตร)</th>
+              <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
+              <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
+              <th style="width: 8%">รวมเงิน (บาท)</th>
+              <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 10%">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
 
-      <div class="print-summary-section">
-        <div class="summary-block">
-          <p>จำนวนรายชื่อผู้รับเงินกลุ่มนี้: <strong>${list.length}</strong> ราย</p>
-          <p>รวมค่าน้ำมันเชื้อเพลิงกลุ่มนี้: <strong>${totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p>รวมค่าบำรุงรักษากลุ่มนี้: <strong>${totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p class="final-sum">ยอดเงินเบิกจ่ายรวมทั้งสิ้น (กลุ่มนี้): <strong>${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+        <div class="print-summary-section">
+          <div class="summary-block">
+            <p>จำนวนรายชื่อผู้รับเงินกลุ่มนี้: <strong>${list.length}</strong> ราย</p>
+            <p>รวมค่าน้ำมันเชื้อเพลิงกลุ่มนี้: <strong>${totalFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p>รวมค่าบำรุงรักษากลุ่มนี้: <strong>${totalMaintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p class="final-sum">ยอดเงินเบิกจ่ายรวมทั้งสิ้น (กลุ่มนี้): <strong>${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+          </div>
         </div>
-      </div>
 
-      <div class="print-signatures">
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
-          <p>ตำแหน่ง ${sigMakerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
-          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
-          <p>ตำแหน่ง ${sigApproverPosVal}</p>
+        <div class="print-signatures">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
         </div>
       </div>
     `;
-    printReportArea.appendChild(pageDiv);
   };
 
-  // Render Page 1, Page 2, Page 3, Page 4 sequentially
-  const hasSubstitutes = listSubstitutes.length > 0;
-  const hasSupervisors = supervisors.length > 0;
-  
-  const showStaff = listStaffAndRegular.length > 0;
-  const showDaily = listDailyAndTemp.length > 0;
-  const showContract = listContractors.length > 0;
-  const showSub = listSubstitutes.length > 0;
+  if (listStaffAndRegular.length > 0) pagesHtml.push(buildStandardPageHtml('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular));
+  if (listDailyAndTemp.length > 0) pagesHtml.push(buildStandardPageHtml('ลูกจ้างรายวัน และ ลูกจ้าง', listDailyAndTemp));
+  if (listContractors.length > 0) pagesHtml.push(buildStandardPageHtml('ลูกจ้างเหมา', listContractors));
+  if (listSubstitutes.length > 0) pagesHtml.push(buildStandardPageHtml('วิ่งแทน', listSubstitutes));
 
-  const staffLast = !showDaily && !showContract && !showSub && !hasSupervisors;
-  const dailyLast = !showContract && !showSub && !hasSupervisors;
-  const contractLast = !showSub && !hasSupervisors;
-  const subLast = !hasSupervisors;
-
-  renderStandardPage('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular, staffLast);
-  renderStandardPage('ลูกจ้างรายวัน และ ลูกจ้าง', listDailyAndTemp, dailyLast);
-  renderStandardPage('ลูกจ้างเหมา', listContractors, contractLast);
-  renderStandardPage('วิ่งแทน', listSubstitutes, subLast);
-
-  // Render Page 4+ for individual Supervisors (ชนจ.)
-  supervisors.forEach((sv, svIdx) => {
-    const pageDiv = document.createElement('div');
-    pageDiv.className = 'print-page-section';
-    
-    const isLastSv = svIdx === supervisors.length - 1;
-    if (!isLastSv) {
-      pageDiv.style.pageBreakAfter = 'always';
-    }
-    pageDiv.style.marginBottom = '2cm';
-
+  // Render Page for individual Supervisors (ชนจ.)
+  supervisors.forEach((sv) => {
     let totalLiters = 0;
     let totalMaint = 0;
     let totalFuel = 0;
@@ -3350,7 +3372,7 @@ function printReport() {
           <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${inspectMaint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #eee; font-weight: 300;">${sv.signature}</span></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 8.5pt; color: #444; font-weight: 300;">${sv.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
         </tr>
       `);
@@ -3383,13 +3405,13 @@ function printReport() {
           <td>${fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${maint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td><strong>${rowSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: var(--font-title); font-style: italic; font-size: 8.5pt; color: #eee; font-weight: 300;">${sv.signature}</span></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 8.5pt; color: #444; font-weight: 300;">${sv.signature}</span></td>
           <td><span style="font-size: 7.5pt; color: #444;">${sv.remarks || ''}</span></td>
         </tr>
       `);
     });
 
-    // 3. Append the Total Bold Sum row at the bottom of the table
+    // Append the Total Bold Sum row
     subRowsHtml.push(`
       <tr style="background: rgba(0,0,0,0.03); font-weight: bold;">
         <td colspan="4" style="text-align: right !important;">รวมยอดทั้งหมดของ ${sv.name}:</td>
@@ -3402,72 +3424,216 @@ function printReport() {
       </tr>
     `);
 
-    pageDiv.innerHTML = `
-      <div class="print-header">
-        <div class="print-title-container">
-          <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
-          <h3>บริษัท ไปรษณีย์ไทย จำกัด (หัวหน้าโซนนำจ่าย - ชนจ. รายบุคคล)</h3>
-          <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+    pagesHtml.push(`
+      <div class="print-page-section">
+        <div class="print-header">
+          <div class="print-title-container">
+            <h2>ใบหลักฐานการเบิกจ่ายเงินค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
+            <h3>บริษัท ไปรษณีย์ไทย จำกัด (หัวหน้าโซนนำจ่าย - ชนจ. รายบุคคล)</h3>
+            <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+          </div>
+          <div class="print-meta-info">
+            <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
+          </div>
         </div>
-        <div class="print-meta-info">
-          <p>ราคาน้ำมันถัวเฉลี่ยอ้างอิง: <strong>${currentFuelPrice.toFixed(2)} บาท/ลิตร</strong></p>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 5%">ลำดับ</th>
+              <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 12%">ตำแหน่ง / บทบาท</th>
+              <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
+              <th style="width: 8%">วันทำงาน</th>
+              <th style="width: 8%">น้ำมัน (ลิตร)</th>
+              <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
+              <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
+              <th style="width: 8%">รวมเงิน (บาท)</th>
+              <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 10%">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${subRowsHtml.join('')}
+          </tbody>
+        </table>
+
+        <div class="print-summary-section">
+          <div class="summary-block">
+            <p>จำนวนงานภารกิจย่อย: <strong>${rowIdx - 1}</strong> รายการ</p>
+            <p>รวมค่าน้ำมันของบุคคลนี้: <strong>${totalFuel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p>รวมค่าบำรุงรักษาของบุคคลนี้: <strong>${totalMaint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p class="final-sum">ยอดรวมสุทธิบุคคลนี้: <strong>${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+          </div>
+        </div>
+
+        <div class="print-signatures">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
         </div>
       </div>
-
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th style="width: 5%">ลำดับ</th>
-            <th style="width: 20%">ชื่อ - นามสกุลผู้รับเงิน</th>
-            <th style="width: 12%">ตำแหน่ง / บทบาท</th>
-            <th style="width: 15%">รายละเอียดภารกิจ / ด้านจ่าย</th>
-            <th style="width: 8%">วันทำงาน</th>
-            <th style="width: 8%">น้ำมัน (ลิตร)</th>
-            <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
-            <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
-            <th style="width: 8%">รวมเงิน (บาท)</th>
-            <th style="width: 10%">ลายมือชื่อผู้รับเงิน</th>
-            <th style="width: 10%">หมายเหตุ</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${subRowsHtml.join('')}
-        </tbody>
-      </table>
-
-      <div class="print-summary-section">
-        <div class="summary-block">
-          <p>จำนวนงานภารกิจย่อย: <strong>${rowIdx - 1}</strong> รายการ</p>
-          <p>รวมค่าน้ำมันของบุคคลนี้: <strong>${totalFuel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p>รวมค่าบำรุงรักษาของบุคคลนี้: <strong>${totalMaint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p class="final-sum">ยอดรวมสุทธิบุคคลนี้: <strong>${sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-        </div>
-      </div>
-
-      <div class="print-signatures">
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
-          <p>ตำแหน่ง ${sigMakerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
-          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
-          <p>ตำแหน่ง ${sigApproverPosVal}</p>
-        </div>
-      </div>
-    `;
-
-    printReportArea.appendChild(pageDiv);
+    `);
   });
 
-  // Give browser 300ms to render print layout before opening dialog
-  setTimeout(() => window.print(), 300);
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>พิมพ์ใบเบิกค่าน้ำมัน_${monthText}_${yearText}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.5cm !important;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 0.3cm;
+        }
+        .print-page-section {
+          page-break-after: always;
+          margin-bottom: 2cm;
+        }
+        .print-page-section:last-child {
+          page-break-after: avoid;
+          margin-bottom: 0;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 0.8rem;
+          border-bottom: 3px double #000;
+          padding-bottom: 0.4rem;
+        }
+        .print-title-container h2 {
+          font-size: 13pt;
+          font-weight: bold;
+          margin: 0 0 0.15rem 0;
+        }
+        .print-title-container h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin: 0 0 0.15rem 0;
+        }
+        .print-title-container p {
+          font-size: 9pt;
+          margin: 0 0 0.25rem 0;
+        }
+        .print-meta-info {
+          text-align: right;
+          font-size: 8pt;
+          color: #444;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 1rem;
+          table-layout: fixed;
+        }
+        .print-table th, 
+        .print-table td {
+          border: 1px solid black !important;
+          padding: 3px 2px !important;
+          font-size: 6.5pt !important;
+          color: black !important;
+          background: transparent !important;
+          white-space: normal !important;
+          word-break: break-word !important;
+        }
+        .print-table th {
+          font-weight: bold !important;
+          text-align: center !important;
+          padding: 4px 2px !important;
+        }
+        .print-table td {
+          text-align: left;
+          height: 30px !important;
+          vertical-align: middle !important;
+        }
+        .print-table td:nth-child(2) {
+          font-size: 11pt !important;
+          font-weight: bold !important;
+        }
+        .print-table td:nth-child(1),
+        .print-table td:nth-child(4),
+        .print-table td:nth-child(5),
+        .print-table td:nth-child(6),
+        .print-table td:nth-child(7),
+        .print-table td:nth-child(8),
+        .print-table td:nth-child(9),
+        .print-table td:nth-child(10) {
+          text-align: center !important;
+        }
+        .print-summary-section {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 1.5rem;
+        }
+        .summary-block {
+          width: 280px;
+          font-size: 9pt;
+          line-height: 1.5;
+        }
+        .summary-block p {
+          display: flex;
+          justify-content: space-between;
+          margin: 0 0 0.2rem 0;
+        }
+        .final-sum {
+          font-weight: bold;
+          border-top: 1px solid black;
+          border-bottom: 4px double #000;
+          padding: 2px 0;
+          margin-top: 2px;
+          font-size: 10pt;
+        }
+        .print-signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 2rem;
+          page-break-inside: avoid;
+        }
+        .sig-box {
+          text-align: center;
+          width: 32%;
+          font-size: 8.5pt;
+          line-height: 1.6;
+        }
+      </style>
+    </head>
+    <body>
+      ${pagesHtml.join('')}
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function printSupervisorPlan(parentIndex) {
@@ -3491,9 +3657,6 @@ function printSupervisorPlan(parentIndex) {
   const postmasterName = document.getElementById('sigMakerName').value.trim() || 'นายนิพล ทรัพย์หมื่นแสน';
   const postmasterPos = document.getElementById('sigMakerPos').value.trim() || 'หัวหน้าทำการไปรษณีย์มาบตาพุด';
 
-  const printSupervisorPlanArea = document.getElementById('printSupervisorPlanArea');
-  printSupervisorPlanArea.innerHTML = '';
-
   let tableRowsHtml = [];
   let totalInspectDist = 0;
   let totalLiters = 0;
@@ -3503,12 +3666,9 @@ function printSupervisorPlan(parentIndex) {
     const dailyDist = routeInfo ? routeInfo.workerDist : 0;
     const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
 
-    // A supervisor mission can have multiple dates, e.g. "1, 8, 17, 23, 29"
-    // Let's split by comma and render one row per date!
     const dateArray = m.dates.split(',').map(d => d.trim()).filter(d => d.length > 0);
     
     dateArray.forEach(dt => {
-      // 1 day of inspection
       const halfDist = dailyDist / 2;
       const liters = dailyLiters / 2;
       
@@ -3529,83 +3689,168 @@ function printSupervisorPlan(parentIndex) {
 
   const numRoutes = inspectMissions.length;
 
-  // Render the structure matching the image exactly!
-  printSupervisorPlanArea.innerHTML = `
-    <div class="print-plan-attachment">เอกสารแนบ 1</div>
-    <div class="print-plan-title">แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</div>
-    
-    <div class="print-plan-paragraph">
-      <strong>(1) เรียน หน.ปณ. ${postOfficeName}</strong>
-    </div>
-    
-    <div class="print-plan-paragraph">
-      ข้าพเจ้า <strong>${item.name}</strong> ตำแหน่ง <strong>${item.position || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOfficeName}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป. (นจ. 1)/951 ลว. 22 กันยายน 2560 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${numRoutes}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
-    </div>
-
-    <table class="print-plan-table">
-      <thead>
-        <tr>
-          <th>ด้านจ่ายในความรับผิดชอบ</th>
-          <th>ว./ด./ป. ที่ออกตรวจสอบ</th>
-          <th>ระยะทาง (กม./วัน)</th>
-          <th>ระยะทางออกตรวจสอบการนำจ่าย<br>(ครึ่งหนึ่งของระยะทางด้านจ่าย) (กม./วัน)</th>
-          <th>น้ำมันเชื้อเพลิงที่ใช้ (ลิตร/วัน)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tableRowsHtml.join('')}
-        <tr style="font-weight: bold; background: #f2f2f2;">
-          <td colspan="3" style="text-align: right !important;">รวม</td>
-          <td>${totalInspectDist.toFixed(2)}</td>
-          <td>${totalLiters.toFixed(2)}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="print-plan-paragraph" style="margin-top: 1.5rem;">
-      จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
-    </div>
-
-    <div class="print-plan-signatures">
-      <div class="print-plan-sig-row">
-        <div class="print-plan-sig-box">
-          <p>..........................................................</p>
-          <p><strong>(${item.name})</strong></p>
-          <p>ตำแหน่ง ${item.position || 'หัวหน้าโซนนำจ่าย'}</p>
-          <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="print-plan-approval-section">
-      <p><strong>(2) ความเห็นของหัวหน้าทำการไปรษณีย์</strong></p>
-      <p style="margin-left: 1.5cm;">
-        ( &nbsp; ) อนุมัติ<br>
-        ( &nbsp; ) อื่นๆ ............................................................................................................
-      </p>
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>แผนตรวจสอบการนำจ่าย_${item.name}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.8cm !important;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 0.5cm;
+        }
+        .print-plan-attachment {
+          text-align: right;
+          font-size: 10pt;
+          font-weight: normal;
+          color: black;
+        }
+        .print-plan-title {
+          text-align: center;
+          font-size: 14pt;
+          font-weight: bold;
+          text-decoration: underline;
+          margin: 1rem 0 1.5rem 0;
+          color: black;
+        }
+        .print-plan-paragraph {
+          text-indent: 1.5cm;
+          font-size: 11pt;
+          line-height: 1.6;
+          text-align: justify;
+          margin: 0 0 1.5rem 0;
+          color: black;
+        }
+        .print-plan-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 1.5rem;
+        }
+        .print-plan-table th, .print-plan-table td {
+          border: 1px solid black !important;
+          padding: 6px 8px !important;
+          font-size: 10pt !important;
+          text-align: center !important;
+          color: black !important;
+        }
+        .print-plan-table th {
+          font-weight: bold !important;
+          background: #f2f2f2 !important;
+        }
+        .print-plan-signatures {
+          margin-top: 2rem;
+          font-size: 10.5pt;
+          line-height: 1.8;
+          color: black;
+        }
+        .print-plan-sig-row {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 2rem;
+        }
+        .print-plan-sig-box {
+          text-align: center;
+          width: 350px;
+          color: black;
+        }
+        .print-plan-approval-section {
+          margin-top: 3rem;
+          font-size: 10.5pt;
+          line-height: 1.8;
+          border-top: 1px dashed black;
+          padding-top: 1.5rem;
+          color: black;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-plan-attachment">เอกสารแนบ 1</div>
+      <div class="print-plan-title">แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</div>
       
-      <div class="print-plan-sig-row" style="margin-top: 1.5rem;">
-        <div class="print-plan-sig-box">
-          <p>..........................................................</p>
-          <p><strong>(${postmasterName})</strong></p>
-          <p>ตำแหน่ง ${postmasterPos}</p>
-          <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
+      <div class="print-plan-paragraph">
+        <strong>(1) เรียน หน.ปณ. ${postOfficeName}</strong>
+      </div>
+      
+      <div class="print-plan-paragraph">
+        ข้าพเจ้า <strong>${item.name}</strong> ตำแหน่ง <strong>${item.position || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOfficeName}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป. (นจ. 1)/951 ลว. 22 กันยายน 2560 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${numRoutes}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
+      </div>
+
+      <table class="print-plan-table">
+        <thead>
+          <tr>
+            <th>ด้านจ่ายในความรับผิดชอบ</th>
+            <th>ว./ด./ป. ที่ออกตรวจสอบ</th>
+            <th>ระยะทาง (กม./วัน)</th>
+            <th>ระยะทางออกตรวจสอบการนำจ่าย<br>(ครึ่งหนึ่งของระยะทางด้านจ่าย) (กม./วัน)</th>
+            <th>น้ำมันเชื้อเพลิงที่ใช้ (ลิตร/วัน)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml.join('')}
+          <tr style="font-weight: bold; background: #f2f2f2;">
+            <td colspan="3" style="text-align: right !important;">รวม</td>
+            <td>${totalInspectDist.toFixed(2)}</td>
+            <td>${totalLiters.toFixed(2)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="print-plan-paragraph" style="margin-top: 1.5rem;">
+        จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
+      </div>
+
+      <div class="print-plan-signatures">
+        <div class="print-plan-sig-row">
+          <div class="print-plan-sig-box">
+            <p>..........................................................</p>
+            <p><strong>(${item.name})</strong></p>
+            <p>ตำแหน่ง ${item.position || 'หัวหน้าโซนนำจ่าย'}</p>
+            <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
+          </div>
         </div>
       </div>
-    </div>
-  `;
 
-  // Store the active mode before printing
-  const originalMode = document.documentElement.getAttribute('data-mode');
+      <div class="print-plan-approval-section">
+        <p><strong>(2) ความเห็นของหัวหน้าทำการไปรษณีย์</strong></p>
+        <p style="margin-left: 1.5cm;">
+          ( &nbsp; ) อนุมัติ<br>
+          ( &nbsp; ) อื่นๆ ............................................................................................................
+        </p>
+        
+        <div class="print-plan-sig-row" style="margin-top: 1.5rem;">
+          <div class="print-plan-sig-box">
+            <p>..........................................................</p>
+            <p><strong>(${postmasterName})</strong></p>
+            <p>ตำแหน่ง ${postmasterPos}</p>
+            <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
+          </div>
+        </div>
+      </div>
 
-  // Change attribute to trigger correct stylesheet display
-  document.documentElement.setAttribute('data-mode', 'supervisor-plan');
-
-  setTimeout(() => {
-    window.print();
-    // Restore mode
-    document.documentElement.setAttribute('data-mode', originalMode);
-  }, 300);
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 /* --- SAVED TEMPLATES / BATCH MANAGER LOGIC --- */
