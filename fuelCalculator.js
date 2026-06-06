@@ -1060,9 +1060,87 @@ export function printFuelReport() {
   let listSubstitutes = [];
   let supervisors = [];
 
+  const ROUTE_DATA = getRouteData();
   employees.forEach((item) => {
     if (item.formMode === 'supervisor') {
       supervisors.push(item);
+
+      // 1. Group 'ตรวจสอบการนำจ่าย' into a single row
+      const inspectMissions = (item.missions || []).filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+      if (inspectMissions.length > 0) {
+        let rawInspectionLiters = 0;
+        let inspectDays = 0;
+        let inspectMaint = 0;
+
+        inspectMissions.forEach(m => {
+          const routeInfo = ROUTE_DATA[m.route];
+          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+          rawInspectionLiters += dailyLiters * m.days;
+          inspectDays += m.days;
+          inspectMaint += calculateSingleMissionMaint(item, m);
+        });
+
+        const liters = Math.ceil(rawInspectionLiters / 2);
+        const fuelCost = liters * currentFuelPrice;
+        const sumTotal = fuelCost + inspectMaint;
+
+        const rowObj = {
+          name: item.name,
+          position: item.position,
+          duty: item.duty || '-',
+          routeDesc: `ตรวจสอบการนำจ่าย`,
+          workDays: inspectDays,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: inspectMaint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks || ''
+        };
+
+        const posLower = (item.position || '').toLowerCase();
+        if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
+          listStaffAndRegular.push(rowObj);
+        } else if (posLower.includes('เหมา')) {
+          listContractors.push(rowObj);
+        } else {
+          listDailyAndTemp.push(rowObj);
+        }
+      }
+
+      // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
+      const otherMissions = (item.missions || []).filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+      otherMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        const liters = dailyLiters * m.days;
+        const fuelCost = liters * currentFuelPrice;
+        const maint = calculateSingleMissionMaint(item, m);
+        const sumTotal = fuelCost + maint;
+
+        const rowObj = {
+          name: item.name,
+          position: item.position,
+          duty: item.duty || '-',
+          routeDesc: `${m.type} (ด้าน ${m.route})`,
+          workDays: m.days,
+          liters: liters,
+          fuelCost: fuelCost,
+          maintCost: maint,
+          sumTotal: sumTotal,
+          signature: item.signature,
+          remarks: item.remarks || ''
+        };
+
+        const posLower = (item.position || '').toLowerCase();
+        if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
+          listStaffAndRegular.push(rowObj);
+        } else if (posLower.includes('เหมา')) {
+          listContractors.push(rowObj);
+        } else {
+          listDailyAndTemp.push(rowObj);
+        }
+      });
     } else {
       const liters = calculateClaimLiters(item);
       const fuelCost = liters * currentFuelPrice;
@@ -1080,7 +1158,7 @@ export function printFuelReport() {
         maintCost: maintCost,
         sumTotal: sumTotal,
         signature: item.signature,
-        remarks: item.remarks
+        remarks: item.remarks || ''
       };
 
       if (item.isSubstitute) {
@@ -1203,7 +1281,6 @@ export function printFuelReport() {
 
   // Supervisors (ชนจ.) Pages
   const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
-  const ROUTE_DATA = getRouteData();
   supervisors.forEach((sup) => {
     let missionsRowsHtml = sup.missions.map((m, idx) => {
       return `
