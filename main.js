@@ -1328,11 +1328,13 @@ async function handleUserRoleChange(e) {
   const targetUser = appUsersList.find(u => u.uid === uid);
   if (!targetUser) return;
 
-  showConfirmModal(
-    '🔄 ยืนยันเปลี่ยนสิทธิ์ผู้ใช้งาน',
-    `คุณต้องการเปลี่ยนสิทธิ์ของ "${targetUser.displayName}" เป็น ${newRole === 'admin' ? 'Admin' : 'User (Read-Only)'} ใช่หรือไม่?`,
-    '🔄',
-    async () => {
+  showConfirm({
+    title: '🔄 ยืนยันเปลี่ยนสิทธิ์ผู้ใช้งาน',
+    message: `คุณต้องการเปลี่ยนสิทธิ์ของ "${targetUser.displayName}" เป็น ${newRole === 'admin' ? 'Admin' : 'User (Read-Only)'} ใช่หรือไม่?`,
+    icon: '🔄',
+    okText: 'ยืนยันเปลี่ยนสิทธิ์',
+    okClass: 'btn-primary',
+    onConfirm: async () => {
       showToast('กำลังปรับปรุงสิทธิ์...', 'info');
       const success = await saveUserRole(uid, { role: newRole });
       if (success) {
@@ -1341,10 +1343,8 @@ async function handleUserRoleChange(e) {
       } else {
         showToast('ไม่สามารถอัปเดตสิทธิ์ได้', 'error');
       }
-    },
-    'btn-primary',
-    'ยืนยันเปลี่ยนสิทธิ์'
-  );
+    }
+  });
 }
 
 async function handleUserDeleteClick(e) {
@@ -1352,11 +1352,13 @@ async function handleUserDeleteClick(e) {
   const targetUser = appUsersList.find(u => u.uid === uid);
   if (!targetUser) return;
 
-  showConfirmModal(
-    '🗑️ ลบข้อมูลบัญชีผู้ใช้งาน',
-    `คุณต้องการลบข้อมูลบัญชีของ "${targetUser.displayName}" ออกจากระบบดูแลความปลอดภัยใช่หรือไม่? (การลบนี้จะตัดสิทธิ์เข้าถึงชั่วคราวจนกว่าจะล็อกอินใหม่)`,
-    '🗑️',
-    async () => {
+  showConfirm({
+    title: '🗑️ ลบข้อมูลบัญชีผู้ใช้งาน',
+    message: `คุณต้องการลบข้อมูลบัญชีของ "${targetUser.displayName}" ออกจากระบบใช่หรือไม่? (จะตัดสิทธิ์เข้าถึงชั่วคราวจนกว่าจะล็อกอินใหม่)`,
+    icon: '🗑️',
+    okText: 'ยืนยันการลบ',
+    okClass: 'btn-danger',
+    onConfirm: async () => {
       showToast('กำลังลบข้อมูลบัญชี...', 'info');
       const success = await deleteUserMetadata(uid);
       if (success) {
@@ -1365,10 +1367,8 @@ async function handleUserDeleteClick(e) {
       } else {
         showToast('ไม่สามารถลบข้อมูลบัญชีได้', 'error');
       }
-    },
-    'btn-danger',
-    'ยืนยันการลบ'
-  );
+    }
+  });
 }
 
 async function handleUserApproveClick(e) {
@@ -1376,11 +1376,13 @@ async function handleUserApproveClick(e) {
   const targetUser = appUsersList.find(u => u.uid === uid);
   if (!targetUser) return;
 
-  showConfirmModal(
-    '✅ อนุมัติผู้ใช้งาน',
-    `คุณต้องการอนุมัติให้ "${targetUser.displayName || targetUser.email}" เข้าใช้งานระบบใช่หรือไม่?`,
-    '✅',
-    async () => {
+  showConfirm({
+    title: '✅ อนุมัติผู้ใช้งาน',
+    message: `คุณต้องการอนุมัติให้ "${targetUser.displayName || targetUser.email}" เข้าใช้งานระบบใช่หรือไม่?`,
+    icon: '✅',
+    okText: 'ยืนยันการอนุมัติ',
+    okClass: 'btn-primary',
+    onConfirm: async () => {
       showToast('กำลังอนุมัติ...', 'info');
       const success = await saveUserRole(uid, { approved: true });
       if (success) {
@@ -1389,10 +1391,8 @@ async function handleUserApproveClick(e) {
       } else {
         showToast('ไม่สามารถอนุมัติได้', 'error');
       }
-    },
-    'btn-primary',
-    'ยืนยันการอนุมัติ'
-  );
+    }
+  });
 }
 
 async function handleUserRejectClick(e) {
@@ -1400,11 +1400,13 @@ async function handleUserRejectClick(e) {
   const targetUser = appUsersList.find(u => u.uid === uid);
   if (!targetUser) return;
 
-  showConfirmModal(
-    '🚫 ยกเลิกการอนุมัติ',
-    `คุณต้องการยกเลิกการอนุมัติของ "${targetUser.displayName || targetUser.email}" ออกจากระบบใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าใช้งานได้จนกว่าจะได้รับการอนุมัติอีกครั้ง`,
-    '🚫',
-    async () => {
+  showConfirm({
+    title: '🚫 ยกเลิกการอนุมัติ',
+    message: `คุณต้องการยกเลิกการอนุมัติของ "${targetUser.displayName || targetUser.email}" ใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าใช้งานได้จนกว่าจะได้รับการอนุมัติอีกครั้ง`,
+    icon: '🚫',
+    okText: 'ยืนยันการยกเลิก',
+    okClass: 'btn-danger',
+    onConfirm: async () => {
       showToast('กำลังยกเลิกการอนุมัติ...', 'info');
       const success = await saveUserRole(uid, { approved: false });
       if (success) {
@@ -1413,11 +1415,10 @@ async function handleUserRejectClick(e) {
       } else {
         showToast('ไม่สามารถยกเลิกการอนุมัติได้', 'error');
       }
-    },
-    'btn-danger',
-    'ยืนยันการยกเลิก'
-  );
+    }
+  });
 }
+
 /* --- PERSONNEL REGISTRY CONTROLLERS --- */
 
 function updateEmployeeSelectDropdown() {
