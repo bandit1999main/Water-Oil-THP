@@ -1361,3 +1361,18 @@ tr:hover td {
   opacity: 0.8;
   text-decoration: underline !important;
 }
+
+/* --- PERFORMANCE OPTIMIZATIONS (HARDWARE ACCELERATION & LAYOUT RENDERING) --- */
+.modal-overlay {
+  will-change: opacity;
+}
+
+.modal-content, .glass-modal, .animate-slide-in {
+  will-change: transform, opacity;
+}
+
+/* Off-screen rendering optimizations for long tables and dashboard panels */
+.dashboard-grid, .table-responsive, #personnelTableCard, #mainTableCard, #adminTableCard {
+  content-visibility: auto;
+  contain-intrinsic-size: 100px 500px;
+}
