@@ -55,6 +55,7 @@ function debounce(func, delay = 150) {
 
 // Global Mode State
 let activeMode = 'fuel'; // 'fuel', 'water', or 'personnel'
+let cloudSyncStarted = false;
 let waterEmployees = JSON.parse(localStorage.getItem('tp_water_employees')) || [];
 let personnel = JSON.parse(localStorage.getItem('tp_personnel')) || [];
 let employeeSearchQuery = '';
@@ -727,6 +728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     userProfileWidget.classList.add('hidden');
     enableWriteActions(false);
     if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+    cloudSyncStarted = false; // รีเซ็ตสถานะ sync เมื่อออกจากระบบ
   }
 
   function showPendingState(user) {
@@ -764,6 +766,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       userRoleBadge.style.color = 'var(--text-secondary)';
       enableWriteActions(false);
       if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+    }
+
+    // เริ่มการ Sync Cloud ข้อมูลเฉพาะเมื่อได้รับการอนุมัติและเข้าใช้งานระบบได้แล้วเท่านั้น
+    if (!cloudSyncStarted) {
+      cloudSyncStarted = true;
+      initCloudSync();
     }
   }
 
@@ -859,10 +867,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireEditModal();
   wireRegistryEditModal();
 
-  // Render Table & Initial Cloud Sync
+  // Render Table (Initial offline load)
   renderEmployeeTable();
   updateEmployeeSelectDropdown();
-  initCloudSync();
+  // initCloudSync will be called only after user is authenticated & approved
 });
 
 /* --- CLOUD SYNC INITIALIZER --- */
