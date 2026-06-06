@@ -1,6 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   doc, 
   getDoc,
@@ -37,10 +40,15 @@ let useFirebase = false;
 // Initialize Firebase
 try {
   const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  // เปิดใช้งานแคชระดับเครื่องแบบ Persistent Local Cache (สนับสนุนการทำงานออฟไลน์)
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
   auth = getAuth(app);
   useFirebase = true;
-  console.log("🔥 Firebase initialized successfully! Connected to Thailand Post Oil Cloud Firestore & Auth.");
+  console.log("🔥 Firebase & Offline Persistence initialized successfully! Connected to Thailand Post Oil Cloud.");
 } catch (error) {
   console.error("⚠️ Failed to initialize Firebase. Falling back to local storage.", error);
   useFirebase = false;
