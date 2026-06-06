@@ -276,6 +276,33 @@ function showConfirm({ title = 'ยืนยัน', message = '', icon = '⚠�
 window.showToast = showToast;
 window.showConfirm = showConfirm;
 
+function openAvgCalcModal() {
+  const avgCalcModal = document.getElementById('avgCalcModal');
+  if (avgCalcModal) {
+    avgCalcModal.classList.add('active');
+    import('./fuelCalculator.js').then(m => {
+      m.renderPeriodTable();
+      
+      const addPeriodBtn = document.getElementById('addPeriodBtn');
+      if (addPeriodBtn) {
+        addPeriodBtn.onclick = m.addPricePeriod;
+      }
+      const applyAvgPriceBtn = document.getElementById('applyAvgPriceBtn');
+      if (applyAvgPriceBtn) {
+        applyAvgPriceBtn.onclick = m.applyAvgPriceToGlobal;
+      }
+      const cancelAvgBtn = document.getElementById('cancelAvgBtn');
+      if (cancelAvgBtn) {
+        cancelAvgBtn.onclick = () => avgCalcModal.classList.remove('active');
+      }
+      const closeAvgModalBtn = document.getElementById('closeAvgModalBtn');
+      if (closeAvgModalBtn) {
+        closeAvgModalBtn.onclick = () => avgCalcModal.classList.remove('active');
+      }
+    });
+  }
+}
+
 /* --- INITIALIZATION --- */
 function setupCalculatorDOMReferencesAndEvents() {
   globalFuelPriceInput = document.getElementById('globalFuelPrice');
@@ -674,12 +701,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function enableWriteActions(enable) {
-    const inputs = employeeForm.querySelectorAll('input, select, textarea, button');
-    inputs.forEach(el => {
-      if (el.id !== 'globalFuelPrice' && el.id !== 'globalMonth' && el.id !== 'globalYear' && el.id !== 'globalPostOfficeName') {
-        el.disabled = !enable;
-      }
-    });
+    const empForm = document.getElementById('employeeForm');
+    if (empForm) {
+      const inputs = empForm.querySelectorAll('input, select, textarea, button');
+      inputs.forEach(el => {
+        if (el.id !== 'globalFuelPrice' && el.id !== 'globalMonth' && el.id !== 'globalYear' && el.id !== 'globalPostOfficeName') {
+          el.disabled = !enable;
+        }
+      });
+    }
 
     const personnelFormInputs = document.querySelectorAll('#personnelCard input, #personnelCard select, #personnelCard button');
     personnelFormInputs.forEach(el => el.disabled = !enable);
@@ -688,13 +718,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     configInputs.forEach(el => el.disabled = !enable);
 
     const importBtns = [
-      importExcelAttendanceBtn,
+      document.getElementById('importExcelAttendanceBtn'),
       document.getElementById('importPersonnelBtn'),
-      saveTemplateBtn,
-      deleteTemplateBtn,
+      document.getElementById('saveTemplateBtn'),
+      document.getElementById('deleteTemplateBtn'),
       document.getElementById('openRouteEditorBtn'),
       document.getElementById('manageSigProfilesBtn'),
-      toggleSigEditBtn,
+      document.getElementById('toggleSigEditBtn'),
       document.getElementById('saveSigProfileBtn')
     ];
     importBtns.forEach(btn => {
