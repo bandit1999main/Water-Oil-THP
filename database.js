@@ -3,6 +3,7 @@ import {
   getFirestore, 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   setDoc, 
   deleteDoc, 
@@ -611,17 +612,41 @@ export async function registerUserMetadata(user) {
   if (!isCloudConnected() || !user) return;
   try {
     const docRef = doc(db, "app_users", user.uid);
-    // Write if doesn't exist, using merge to preserve existing role
-    await setDoc(docRef, {
-      uid: user.uid,
-      displayName: user.displayName || '',
-      email: user.email || '',
-      photoURL: user.photoURL || '',
-      lastLogin: Date.now()
-    }, { merge: true });
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      const isMainAdmin = user.email === 'bandit1999main@gmail.com';
+      await setDoc(docRef, {
+        uid: user.uid,
+        displayName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        lastLogin: Date.now(),
+        role: isMainAdmin ? 'admin' : 'user',
+        approved: isMainAdmin ? true : false
+      });
+      console.log(`🆕 Registered new user: ${user.email} (Approved: ${isMainAdmin})`);
+    } else {
+      await setDoc(docRef, {
+        lastLogin: Date.now()
+      }, { merge: true });
+    }
   } catch (error) {
     console.error("❌ Failed to register user metadata on Firestore:", error);
   }
+}
+
+// Real-time listener for current user's profile to dynamically unlock UI when approved
+export function listenToUserProfile(uid, callback) {
+  if (!isCloudConnected() || !uid) return null;
+  return onSnapshot(doc(db, "app_users", uid), (docSnap) => {
+    if (docSnap.exists()) {
+      callback(docSnap.data());
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error("Firestore listenToUserProfile failed:", error);
+  });
 }
 
 export function listenToUsers(callback) {

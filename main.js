@@ -37,7 +37,8 @@ import {
   saveUserRole,
   deleteUserMetadata,
   registerUserMetadata,
-  listenToUsers
+  listenToUsers,
+  listenToUserProfile
 } from './database.js';
 
 // Helper Debounce Function for Performance Optimization
@@ -674,45 +675,114 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const modeAdminBtn = document.getElementById('modeAdminBtn');
+  const authLoginState = document.getElementById('authLoginState');
+  const authPendingState = document.getElementById('authPendingState');
+  const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
+  const pendingUserEmail = document.getElementById('pendingUserEmail');
+
+  // Pending Logout button
+  if (pendingLogoutBtn) {
+    pendingLogoutBtn.addEventListener('click', async () => {
+      await logoutUser();
+    });
+  }
+
+  // Track live user profile subscription to unsubscribe when needed
+  let unsubUserProfile = null;
+
+  function showLoginState() {
+    authOverlay.classList.add('active');
+    if (authLoginState) authLoginState.classList.remove('hidden');
+    if (authPendingState) authPendingState.classList.add('hidden');
+    userProfileWidget.classList.add('hidden');
+    enableWriteActions(false);
+    if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+  }
+
+  function showPendingState(user) {
+    authOverlay.classList.add('active');
+    if (authLoginState) authLoginState.classList.add('hidden');
+    if (authPendingState) authPendingState.classList.remove('hidden');
+    if (pendingUserEmail) pendingUserEmail.textContent = user.email || '-';
+    userProfileWidget.classList.remove('hidden');
+    userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+    userDisplayName.textContent = user.displayName || user.email;
+    userRoleBadge.textContent = '⏳ รอการอนุมัติ';
+    userRoleBadge.style.color = 'var(--post-orange)';
+    enableWriteActions(false);
+    if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+  }
+
+  function showApprovedState(user, profileData) {
+    authOverlay.classList.remove('active');
+    if (authLoginState) authLoginState.classList.remove('hidden');
+    if (authPendingState) authPendingState.classList.add('hidden');
+    userProfileWidget.classList.remove('hidden');
+    userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+    userDisplayName.textContent = user.displayName || user.email;
+
+    const isAdmin = checkIsAdmin(user) || profileData?.role === 'admin';
+    if (isAdmin) {
+      userRoleBadge.textContent = 'Admin';
+      userRoleBadge.style.color = 'var(--post-emerald)';
+      enableWriteActions(true);
+      if (modeAdminBtn) modeAdminBtn.classList.remove('hidden');
+    } else {
+      userRoleBadge.textContent = 'User (Read-Only)';
+      userRoleBadge.style.color = 'var(--text-secondary)';
+      enableWriteActions(false);
+      if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+    }
+  }
 
   // Observe Authentication status changes
   listenToAuthState(async (user) => {
+    // Unsubscribe old profile listener if any
+    if (unsubUserProfile) {
+      unsubUserProfile();
+      unsubUserProfile = null;
+    }
+
     if (user) {
-      // Logged In state
-      authOverlay.classList.remove('active');
       userProfileWidget.classList.remove('hidden');
       userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
       userDisplayName.textContent = user.displayName || user.email;
-      
-      // Auto-register user logs in app_users database collection
+
+      // Register/update user metadata in Firestore (only writes if new user)
       await registerUserMetadata(user);
 
-      const isAdmin = checkIsAdmin(user);
-      if (isAdmin) {
-        userRoleBadge.textContent = 'Admin';
-        userRoleBadge.style.color = 'var(--post-emerald)';
+      const isMainAdmin = checkIsAdmin(user);
+
+      // Main admin bypasses approval check
+      if (isMainAdmin) {
+        showApprovedState(user, { role: 'admin' });
         showToast(`ยินดีต้อนรับแอดมิน ${user.displayName || ''}!`, 'success');
-        enableWriteActions(true);
-        if (modeAdminBtn) {
-          modeAdminBtn.classList.remove('hidden'); // Show admin mode tab for administrators
-        }
-      } else {
-        userRoleBadge.textContent = 'User (Read-Only)';
-        userRoleBadge.style.color = 'var(--text-secondary)';
-        showToast(`ยินดีต้อนรับ ${user.displayName || ''}! คุณมีสิทธิ์อ่านข้อมูลเท่านั้น`, 'info');
-        enableWriteActions(false);
-        if (modeAdminBtn) {
-          modeAdminBtn.classList.add('hidden'); // Hide admin tab for normal users
-        }
+        return;
       }
+
+      // For all other users, listen to their profile in real-time
+      // so approval changes by admin take effect immediately
+      unsubUserProfile = listenToUserProfile(user.uid, (profileData) => {
+        if (!profileData) {
+          // Profile not yet created (race condition) — show pending
+          showPendingState(user);
+          return;
+        }
+
+        if (profileData.approved === true) {
+          const wasJustApproved = authOverlay.classList.contains('active');
+          showApprovedState(user, profileData);
+          if (wasJustApproved) {
+            showToast(`✅ ได้รับการอนุมัติแล้ว! ยินดีต้อนรับ ${user.displayName || ''}`, 'success');
+          }
+        } else {
+          showPendingState(user);
+        }
+      });
+
     } else {
       // Logged Out state
-      authOverlay.classList.add('active');
-      userProfileWidget.classList.add('hidden');
-      enableWriteActions(false);
-      if (modeAdminBtn) {
-        modeAdminBtn.classList.add('hidden');
-      }
+      showLoginState();
     }
   });
 
@@ -1181,6 +1251,13 @@ async function renderAdminUsersTable() {
     // Check role display
     const isAdminRole = user.role === 'admin' || isMainAdmin;
 
+    const isApproved = user.approved === true || isMainAdmin;
+    const approvedBadge = isMainAdmin
+      ? `<span style="color: var(--post-emerald); font-weight: 600;">✅ Admin</span>`
+      : isApproved
+        ? `<span style="color: var(--post-emerald);">✅ อนุมัติแล้ว</span>`
+        : `<span style="color: var(--post-orange);">⏳ รออนุมัติ</span>`;
+
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td style="text-align: center;">
@@ -1188,6 +1265,7 @@ async function renderAdminUsersTable() {
       </td>
       <td><strong>${user.displayName || 'พนักงานไปรษณีย์'}</strong></td>
       <td>${user.email || '-'}</td>
+      <td>${approvedBadge}</td>
       <td>
         <select class="form-select user-role-select" data-uid="${user.uid}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" ${isMainAdmin ? 'disabled' : ''}>
           <option value="user" ${!isAdminRole ? 'selected' : ''}>User (Read-Only)</option>
@@ -1195,11 +1273,12 @@ async function renderAdminUsersTable() {
         </select>
       </td>
       <td>
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-          <span>${lastLoginText}</span>
-          ${isMainAdmin ? '' : `
-            <button class="row-action-btn delete-user-btn" data-uid="${user.uid}" style="color: var(--post-red); cursor: pointer;" title="ลบข้อมูลการเข้าใช้งาน">🗑️</button>
-          `}
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+          ${isMainAdmin ? '' : isApproved
+            ? `<button class="row-action-btn reject-user-btn" data-uid="${user.uid}" title="ยกเลิกการอนุมัติ" style="color: var(--post-orange);">🚫</button>`
+            : `<button class="row-action-btn approve-user-btn" data-uid="${user.uid}" title="อนุมัติผู้ใช้" style="color: var(--post-emerald);">✅</button>`
+          }
+          ${isMainAdmin ? '' : `<button class="row-action-btn delete-user-btn" data-uid="${user.uid}" style="color: var(--post-red); cursor: pointer;" title="ลบข้อมูลการเข้าใช้งาน">🗑️</button>`}
         </div>
       </td>
     `;
@@ -1209,6 +1288,14 @@ async function renderAdminUsersTable() {
   // Bind events dynamically
   tbody.querySelectorAll('.user-role-select').forEach(select => {
     select.addEventListener('change', handleUserRoleChange);
+  });
+
+  tbody.querySelectorAll('.approve-user-btn').forEach(btn => {
+    btn.addEventListener('click', handleUserApproveClick);
+  });
+
+  tbody.querySelectorAll('.reject-user-btn').forEach(btn => {
+    btn.addEventListener('click', handleUserRejectClick);
   });
 
   tbody.querySelectorAll('.delete-user-btn').forEach(btn => {
@@ -1265,7 +1352,53 @@ async function handleUserDeleteClick(e) {
   );
 }
 
+async function handleUserApproveClick(e) {
+  const uid = e.currentTarget.getAttribute('data-uid');
+  const targetUser = appUsersList.find(u => u.uid === uid);
+  if (!targetUser) return;
 
+  showConfirmModal(
+    '✅ อนุมัติผู้ใช้งาน',
+    `คุณต้องการอนุมัติให้ "${targetUser.displayName || targetUser.email}" เข้าใช้งานระบบใช่หรือไม่?`,
+    '✅',
+    async () => {
+      showToast('กำลังอนุมัติ...', 'info');
+      const success = await saveUserRole(uid, { approved: true });
+      if (success) {
+        showToast(`✅ อนุมัติ ${targetUser.displayName || ''} เรียบร้อยแล้ว!`, 'success');
+        renderAdminUsersTable();
+      } else {
+        showToast('ไม่สามารถอนุมัติได้', 'error');
+      }
+    },
+    'btn-primary',
+    'ยืนยันการอนุมัติ'
+  );
+}
+
+async function handleUserRejectClick(e) {
+  const uid = e.currentTarget.getAttribute('data-uid');
+  const targetUser = appUsersList.find(u => u.uid === uid);
+  if (!targetUser) return;
+
+  showConfirmModal(
+    '🚫 ยกเลิกการอนุมัติ',
+    `คุณต้องการยกเลิกการอนุมัติของ "${targetUser.displayName || targetUser.email}" ออกจากระบบใช่หรือไม่? ผู้ใช้จะไม่สามารถเข้าใช้งานได้จนกว่าจะได้รับการอนุมัติอีกครั้ง`,
+    '🚫',
+    async () => {
+      showToast('กำลังยกเลิกการอนุมัติ...', 'info');
+      const success = await saveUserRole(uid, { approved: false });
+      if (success) {
+        showToast(`🚫 ยกเลิกการอนุมัติ ${targetUser.displayName || ''} แล้ว`, 'success');
+        renderAdminUsersTable();
+      } else {
+        showToast('ไม่สามารถยกเลิกการอนุมัติได้', 'error');
+      }
+    },
+    'btn-danger',
+    'ยืนยันการยกเลิก'
+  );
+}
 /* --- PERSONNEL REGISTRY CONTROLLERS --- */
 
 function updateEmployeeSelectDropdown() {

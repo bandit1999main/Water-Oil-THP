@@ -78,24 +78,51 @@
     <!-- Glassmorphic Login Overlay Modal -->
     <div id="authOverlay" class="modal-overlay active" style="z-index: 2000; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
       <div class="modal-content glass-modal animate-slide-in" style="max-width: 420px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2.5rem 2rem; border-radius: var(--radius-normal); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);">
-        <div style="background: linear-gradient(135deg, var(--post-orange), var(--post-red)); color: white; width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(251, 80, 18, 0.3); margin-bottom: 1.5rem;">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
-        </div>
-        <h2 style="font-family: var(--font-title); font-size: 1.45rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(to right, var(--text-primary), var(--post-orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ลงชื่อเข้าใช้งานระบบ</h2>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">กรุณาลงชื่อเข้าใช้งานด้วยบัญชี Google เพื่อใช้งานระบบคำนวณค่าน้ำมันและค่าน้ำดื่ม ปณ.</p>
         
-        <button id="googleLoginBtn" class="btn btn-primary btn-full" style="padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; border-radius: var(--radius-small); font-size: 1rem; width: 100%;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-          </svg>
-          ลงชื่อเข้าใช้ด้วย Google
-        </button>
+        <!-- State 1: Login Form -->
+        <div id="authLoginState" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+          <div style="background: linear-gradient(135deg, var(--post-orange), var(--post-red)); color: white; width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(251, 80, 18, 0.3); margin-bottom: 1.5rem;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 style="font-family: var(--font-title); font-size: 1.45rem; font-weight: 800; margin-bottom: 0.5rem; background: linear-gradient(to right, var(--text-primary), var(--post-orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ลงชื่อเข้าใช้งานระบบ</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">กรุณาลงชื่อเข้าใช้งานด้วยบัญชี Google เพื่อใช้งานระบบคำนวณค่าน้ำมันและค่าน้ำดื่ม ปณ.</p>
+          
+          <button id="googleLoginBtn" class="btn btn-primary btn-full" style="padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; border-radius: var(--radius-small); font-size: 1rem; width: 100%;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+            </svg>
+            ลงชื่อเข้าใช้ด้วย Google
+          </button>
+        </div>
+
+        <!-- State 2: Approval Pending Form -->
+        <div id="authPendingState" class="hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+          <div style="background: linear-gradient(135deg, var(--post-orange), #ffd000); color: white; width: 64px; height: 64px; border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(251, 80, 18, 0.2); margin-bottom: 1.5rem;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+              <circle cx="12" cy="16" r="1"></circle>
+            </svg>
+          </div>
+          <h2 style="font-family: var(--font-title); font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--post-orange);">⏳ อยู่ระหว่างรอการอนุมัติ</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">
+            บัญชีของคุณเข้าสู่ระบบแล้ว แต่ยังไม่ได้รับการอนุมัติให้เข้าใช้งานระบบคำนวณเบิกจ่าย<br>
+            <strong style="color: var(--text-primary);">กรุณาติดต่อผู้ดูแลระบบ (bandit1999main@gmail.com) เพื่อทำการเปิดสิทธิ์</strong>
+          </p>
+          <div style="font-size: 0.75rem; background: rgba(0,0,0,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.5rem 0.75rem; width: 100%; margin-bottom: 1.5rem; text-align: left; word-break: break-all;">
+            อีเมล: <span id="pendingUserEmail" style="font-weight: 700; color: var(--text-primary);">-</span>
+          </div>
+          <button id="pendingLogoutBtn" class="btn btn-secondary btn-full" style="padding: 0.75rem 1.5rem; width: 100%; font-weight: 700;">
+            🚪 ออกจากระบบ / เปลี่ยนบัญชี
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -720,12 +747,14 @@
               <table id="adminUsersTable">
                 <thead>
                   <tr>
-                    <th style="width: 8%;">ลำดับ</th>
-                    <th style="width: 12%;">โปรไฟล์</th>
-                    <th style="width: 20%;">ชื่อผู้ใช้งาน</th>
-                    <th style="width: 25%;">อีเมล</th>
-                    <th style="width: 15%;">บทบาทหน้าที่</th>
-                    <th style="width: 20%;">เข้าสู่ระบบล่าสุด</th>
+                    <th style="width: 6%;">ลำดับ</th>
+                    <th style="width: 8%;">โปรไฟล์</th>
+                    <th style="width: 18%;">ชื่อผู้ใช้งาน</th>
+                    <th style="width: 22%;">อีเมล</th>
+                    <th style="width: 12%;">สถานะ</th>
+                    <th style="width: 18%;">บทบาทหน้าที่</th>
+                    <th style="width: 16%;">การดำเนินการ</th>
+
                   </tr>
                 </thead>
                 <tbody id="adminUsersTableBody">
