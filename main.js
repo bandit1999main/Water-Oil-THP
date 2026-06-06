@@ -1,4 +1,11 @@
-import * as XLSX from 'xlsx-js-style';
+// Helper for dynamic lazy loading of XLSX library (xlsx-js-style) to optimize bundle size
+let xlsxCache = null;
+async function getXLSX() {
+  if (!xlsxCache) {
+    xlsxCache = await import('xlsx-js-style');
+  }
+  return xlsxCache;
+}
 import { 
   isCloudConnected,
   fetchEmployees,
@@ -4198,7 +4205,8 @@ async function handleConfirmImport() {
   showToast(`นำเข้าวันทำงานสำเร็จ! (ค่าน้ำมัน: ${updatedFuelCount} ราย, ค่าน้ำดื่ม: ${updatedWaterCount} ราย)`, 'success');
 }
 
-function downloadAttendanceTemplateXlsx() {
+async function downloadAttendanceTemplateXlsx() {
+  const XLSX = await getXLSX();
   const nameSet = new Set();
   const uniqueEmployees = [];
   
@@ -4523,8 +4531,9 @@ function processUploadedFile(file) {
   dragDropZone.classList.add('hidden');
   
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
+      const XLSX = await getXLSX();
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       
@@ -4935,8 +4944,9 @@ function processUploadedPersonnelFile(file) {
   if (dragDropZone) dragDropZone.classList.add('hidden');
   
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
+      const XLSX = await getXLSX();
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       
