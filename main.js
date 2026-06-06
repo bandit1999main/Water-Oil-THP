@@ -875,29 +875,38 @@ async function initCloudSync() {
 
       // Load initial config setting details
       const globalSettings = await fetchGlobalSettings();
-      if (globalSettings.fuelPrice) {
+      if (globalSettings.fuelPrice && globalFuelPriceInput) {
         globalFuelPriceInput.value = globalSettings.fuelPrice.value;
       }
-      if (globalSettings.fuelMonth) {
+      if (globalSettings.fuelMonth && globalMonthSelect) {
         globalMonthSelect.value = globalSettings.fuelMonth.value;
       }
-      if (globalSettings.fuelYear) {
+      if (globalSettings.fuelYear && globalYearSelect) {
         globalYearSelect.value = globalSettings.fuelYear.value;
       }
-      if (globalSettings.postOfficeName) {
+      if (globalSettings.postOfficeName && globalPostOfficeNameInput) {
         globalPostOfficeNameInput.value = globalSettings.postOfficeName.value;
       }
       if (globalSettings.signatories) {
         const sigs = globalSettings.signatories;
-        document.getElementById('sigMakerTitle').value = sigs.makerTitle || '';
-        document.getElementById('sigMakerName').value = sigs.makerName || '';
-        document.getElementById('sigMakerPos').value = sigs.makerPos || '';
-        document.getElementById('sigCheckerTitle').value = sigs.checkerTitle || '';
-        document.getElementById('sigCheckerName').value = sigs.checkerName || '';
-        document.getElementById('sigCheckerPos').value = sigs.checkerPos || '';
-        document.getElementById('sigApproverTitle').value = sigs.approverTitle || '';
-        document.getElementById('sigApproverName').value = sigs.approverName || '';
-        document.getElementById('sigApproverPos').value = sigs.approverPos || '';
+        const makerTitle = document.getElementById('sigMakerTitle');
+        if (makerTitle) makerTitle.value = sigs.makerTitle || '';
+        const makerName = document.getElementById('sigMakerName');
+        if (makerName) makerName.value = sigs.makerName || '';
+        const makerPos = document.getElementById('sigMakerPos');
+        if (makerPos) makerPos.value = sigs.makerPos || '';
+        const checkerTitle = document.getElementById('sigCheckerTitle');
+        if (checkerTitle) checkerTitle.value = sigs.checkerTitle || '';
+        const checkerName = document.getElementById('sigCheckerName');
+        if (checkerName) checkerName.value = sigs.checkerName || '';
+        const checkerPos = document.getElementById('sigCheckerPos');
+        if (checkerPos) checkerPos.value = sigs.checkerPos || '';
+        const approverTitle = document.getElementById('sigApproverTitle');
+        if (approverTitle) approverTitle.value = sigs.approverTitle || '';
+        const approverName = document.getElementById('sigApproverName');
+        if (approverName) approverName.value = sigs.approverName || '';
+        const approverPos = document.getElementById('sigApproverPos');
+        if (approverPos) approverPos.value = sigs.approverPos || '';
       }
 
       await fetchSavedTemplates();
@@ -936,38 +945,47 @@ async function initCloudSync() {
 
       listenToGlobalSettings((updatedSettings) => {
         if (activeMode === 'fuel') {
-          if (updatedSettings.fuelPrice && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
+          if (updatedSettings.fuelPrice && globalFuelPriceInput && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
             globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
             import('./fuelCalculator.js').then(m => m.renderFuelTable());
           }
-          if (updatedSettings.fuelMonth && globalMonthSelect.value !== String(updatedSettings.fuelMonth.value)) {
+          if (updatedSettings.fuelMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.fuelMonth.value)) {
             globalMonthSelect.value = updatedSettings.fuelMonth.value;
           }
-          if (updatedSettings.fuelYear && globalYearSelect.value !== String(updatedSettings.fuelYear.value)) {
+          if (updatedSettings.fuelYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.fuelYear.value)) {
             globalYearSelect.value = updatedSettings.fuelYear.value;
           }
         } else if (activeMode === 'water') {
-          if (updatedSettings.waterMonth && globalMonthSelect.value !== String(updatedSettings.waterMonth.value)) {
+          if (updatedSettings.waterMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.waterMonth.value)) {
             globalMonthSelect.value = updatedSettings.waterMonth.value;
           }
-          if (updatedSettings.waterYear && globalYearSelect.value !== String(updatedSettings.waterYear.value)) {
+          if (updatedSettings.waterYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.waterYear.value)) {
             globalYearSelect.value = updatedSettings.waterYear.value;
           }
         }
-        if (updatedSettings.postOfficeName && globalPostOfficeNameInput.value !== String(updatedSettings.postOfficeName.value)) {
+        if (updatedSettings.postOfficeName && globalPostOfficeNameInput && globalPostOfficeNameInput.value !== String(updatedSettings.postOfficeName.value)) {
           globalPostOfficeNameInput.value = updatedSettings.postOfficeName.value;
         }
         if (updatedSettings.signatories) {
           const sigs = updatedSettings.signatories;
-          document.getElementById('sigMakerTitle').value = sigs.makerTitle || '';
-          document.getElementById('sigMakerName').value = sigs.makerName || '';
-          document.getElementById('sigMakerPos').value = sigs.makerPos || '';
-          document.getElementById('sigCheckerTitle').value = sigs.checkerTitle || '';
-          document.getElementById('sigCheckerName').value = sigs.checkerName || '';
-          document.getElementById('sigCheckerPos').value = sigs.checkerPos || '';
-          document.getElementById('sigApproverTitle').value = sigs.approverTitle || '';
-          document.getElementById('sigApproverName').value = sigs.approverName || '';
-          document.getElementById('sigApproverPos').value = sigs.approverPos || '';
+          const makerTitle = document.getElementById('sigMakerTitle');
+          if (makerTitle) makerTitle.value = sigs.makerTitle || '';
+          const makerName = document.getElementById('sigMakerName');
+          if (makerName) makerName.value = sigs.makerName || '';
+          const makerPos = document.getElementById('sigMakerPos');
+          if (makerPos) makerPos.value = sigs.makerPos || '';
+          const checkerTitle = document.getElementById('sigCheckerTitle');
+          if (checkerTitle) checkerTitle.value = sigs.checkerTitle || '';
+          const checkerName = document.getElementById('sigCheckerName');
+          if (checkerName) checkerName.value = sigs.checkerName || '';
+          const checkerPos = document.getElementById('sigCheckerPos');
+          if (checkerPos) checkerPos.value = sigs.checkerPos || '';
+          const approverTitle = document.getElementById('sigApproverTitle');
+          if (approverTitle) approverTitle.value = sigs.approverTitle || '';
+          const approverName = document.getElementById('sigApproverName');
+          if (approverName) approverName.value = sigs.approverName || '';
+          const approverPos = document.getElementById('sigApproverPos');
+          if (approverPos) approverPos.value = sigs.approverPos || '';
         }
       });
     } else {
