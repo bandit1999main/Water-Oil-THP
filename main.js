@@ -3503,15 +3503,15 @@ function printReport() {
           color: black !important;
           font-family: 'Sarabun', sans-serif !important;
           margin: 0 !important;
-          padding: 0.5cm !important;
+          padding: 0.2cm 0.5cm !important;
         }
         @page {
           size: A4 landscape;
-          margin: 0.3cm;
+          margin: 0.5cm;
         }
         .print-page-section {
           page-break-after: always;
-          margin-bottom: 2cm;
+          margin-bottom: 0;
         }
         .print-page-section:last-child {
           page-break-after: avoid;
@@ -3519,9 +3519,9 @@ function printReport() {
         }
         .print-header {
           text-align: center;
-          margin-bottom: 0.8rem;
+          margin-bottom: 0.4rem;
           border-bottom: 3px double #000;
-          padding-bottom: 0.4rem;
+          padding-bottom: 0.2rem;
         }
         .print-title-container h2 {
           font-size: 13pt;
@@ -3545,7 +3545,7 @@ function printReport() {
         .print-table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 1rem;
+          margin-bottom: 0.5rem;
           table-layout: fixed;
         }
         .print-table th, 
@@ -3585,17 +3585,17 @@ function printReport() {
         .print-summary-section {
           display: flex;
           justify-content: flex-end;
-          margin-bottom: 1.5rem;
+          margin-bottom: 0.5rem;
         }
         .summary-block {
           width: 280px;
           font-size: 9pt;
-          line-height: 1.5;
+          line-height: 1.4;
         }
         .summary-block p {
           display: flex;
           justify-content: space-between;
-          margin: 0 0 0.2rem 0;
+          margin: 0 0 0.15rem 0;
         }
         .final-sum {
           font-weight: bold;
@@ -3608,14 +3608,14 @@ function printReport() {
         .print-signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 2rem;
+          margin-top: 1rem;
           page-break-inside: avoid;
         }
         .sig-box {
           text-align: center;
           width: 32%;
           font-size: 8.5pt;
-          line-height: 1.6;
+          line-height: 1.5;
         }
       </style>
     </head>
@@ -3627,7 +3627,6 @@ function printReport() {
           window.onafterprint = function() {
             window.close();
           };
-          setTimeout(function() { window.close(); }, 500);
         };
       </script>
     </body>
