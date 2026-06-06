@@ -137,6 +137,7 @@ const resetBtn = document.getElementById('resetBtn');
 // Tabs
 const tabStandard = document.getElementById('tabStandard');
 const tabSupervisor = document.getElementById('tabSupervisor');
+const globalConfigsCard = document.getElementById('globalConfigsCard');
 
 // Supervisor Mission inputs
 const supervisorMissionSection = document.getElementById('supervisorMissionSection');
@@ -902,6 +903,7 @@ async function switchAppMode(mode) {
     document.querySelector('.metrics-grid').classList.add('hidden');
     personnelCard.classList.add('hidden');
     personnelTableCard.classList.add('hidden');
+    globalConfigsCard.classList.add('hidden'); // Hide for Admin
     
     document.getElementById('adminTableCard').classList.remove('hidden');
     
@@ -925,6 +927,7 @@ async function switchAppMode(mode) {
     mainTableCard.classList.add('hidden');
     document.querySelector('.metrics-grid').classList.add('hidden');
     document.getElementById('adminTableCard').classList.add('hidden');
+    globalConfigsCard.classList.add('hidden'); // Hide for Personnel
     
     personnelCard.classList.remove('hidden');
     personnelTableCard.classList.remove('hidden');
@@ -957,6 +960,7 @@ async function switchAppMode(mode) {
     calculationFormCard.classList.remove('hidden');
     mainTableCard.classList.remove('hidden');
     document.querySelector('.metrics-grid').classList.remove('hidden');
+    globalConfigsCard.classList.remove('hidden'); // Show for Fuel / Water calculations
     
     personnelCard.classList.add('hidden');
     personnelTableCard.classList.add('hidden');
