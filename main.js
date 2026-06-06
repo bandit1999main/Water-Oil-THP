@@ -112,6 +112,7 @@ function initRouteData() {
 
 let ROUTE_DATA = JSON.parse(localStorage.getItem('tp_route_data')) || initRouteData();
 let appUsersList = [];
+let cachedGlobalSettings = null;
 let tempParsedRecords = [];
 
 // DOM Elements
@@ -864,6 +865,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireEditModal();
 });
 
+function applyGlobalSettingsToDOM() {
+  if (!cachedGlobalSettings) return;
+  const globalSettings = cachedGlobalSettings;
+
+  if (activeMode === 'fuel') {
+    if (globalSettings.fuelPrice && globalFuelPriceInput) {
+      globalFuelPriceInput.value = globalSettings.fuelPrice.value !== undefined ? globalSettings.fuelPrice.value : (globalSettings.fuelPrice || '');
+    }
+    if (globalSettings.fuelMonth && globalMonthSelect) {
+      globalMonthSelect.value = globalSettings.fuelMonth.value !== undefined ? globalSettings.fuelMonth.value : (globalSettings.fuelMonth || '');
+    }
+    if (globalSettings.fuelYear && globalYearSelect) {
+      globalYearSelect.value = globalSettings.fuelYear.value !== undefined ? globalSettings.fuelYear.value : (globalSettings.fuelYear || '');
+    }
+  } else if (activeMode === 'water') {
+    if (globalSettings.waterMonth && globalMonthSelect) {
+      globalMonthSelect.value = globalSettings.waterMonth.value !== undefined ? globalSettings.waterMonth.value : (globalSettings.waterMonth || '');
+    }
+    if (globalSettings.waterYear && globalYearSelect) {
+      globalYearSelect.value = globalSettings.waterYear.value !== undefined ? globalSettings.waterYear.value : (globalSettings.waterYear || '');
+    }
+  }
+
+  if (globalSettings.postOfficeName && globalPostOfficeNameInput) {
+    globalPostOfficeNameInput.value = globalSettings.postOfficeName.value !== undefined ? globalSettings.postOfficeName.value : (globalSettings.postOfficeName || '');
+  }
+
+  if (globalSettings.signatories) {
+    const sigs = globalSettings.signatories.value !== undefined ? globalSettings.signatories.value : globalSettings.signatories;
+    if (sigs) {
+      const makerTitle = document.getElementById('sigMakerTitle');
+      if (makerTitle) makerTitle.value = sigs.makerTitle || '';
+      const makerName = document.getElementById('sigMakerName');
+      if (makerName) makerName.value = sigs.makerName || '';
+      const makerPos = document.getElementById('sigMakerPos');
+      if (makerPos) makerPos.value = sigs.makerPos || '';
+      const checkerTitle = document.getElementById('sigCheckerTitle');
+      if (checkerTitle) checkerTitle.value = sigs.checkerTitle || '';
+      const checkerName = document.getElementById('sigCheckerName');
+      if (checkerName) checkerName.value = sigs.checkerName || '';
+      const checkerPos = document.getElementById('sigCheckerPos');
+      if (checkerPos) checkerPos.value = sigs.checkerPos || '';
+      const approverTitle = document.getElementById('sigApproverTitle');
+      if (approverTitle) approverTitle.value = sigs.approverTitle || '';
+      const approverName = document.getElementById('sigApproverName');
+      if (approverName) approverName.value = sigs.approverName || '';
+      const approverPos = document.getElementById('sigApproverPos');
+      if (approverPos) approverPos.value = sigs.approverPos || '';
+    }
+  }
+}
+
 async function initCloudSync() {
   const badge = document.getElementById('dbStatusBadge');
   if (!badge) return;
@@ -874,40 +927,8 @@ async function initCloudSync() {
       badge.querySelector('.status-text').textContent = '⚡ เชื่อมต่อคลาวด์';
 
       // Load initial config setting details
-      const globalSettings = await fetchGlobalSettings();
-      if (globalSettings.fuelPrice && globalFuelPriceInput) {
-        globalFuelPriceInput.value = globalSettings.fuelPrice.value;
-      }
-      if (globalSettings.fuelMonth && globalMonthSelect) {
-        globalMonthSelect.value = globalSettings.fuelMonth.value;
-      }
-      if (globalSettings.fuelYear && globalYearSelect) {
-        globalYearSelect.value = globalSettings.fuelYear.value;
-      }
-      if (globalSettings.postOfficeName && globalPostOfficeNameInput) {
-        globalPostOfficeNameInput.value = globalSettings.postOfficeName.value;
-      }
-      if (globalSettings.signatories) {
-        const sigs = globalSettings.signatories;
-        const makerTitle = document.getElementById('sigMakerTitle');
-        if (makerTitle) makerTitle.value = sigs.makerTitle || '';
-        const makerName = document.getElementById('sigMakerName');
-        if (makerName) makerName.value = sigs.makerName || '';
-        const makerPos = document.getElementById('sigMakerPos');
-        if (makerPos) makerPos.value = sigs.makerPos || '';
-        const checkerTitle = document.getElementById('sigCheckerTitle');
-        if (checkerTitle) checkerTitle.value = sigs.checkerTitle || '';
-        const checkerName = document.getElementById('sigCheckerName');
-        if (checkerName) checkerName.value = sigs.checkerName || '';
-        const checkerPos = document.getElementById('sigCheckerPos');
-        if (checkerPos) checkerPos.value = sigs.checkerPos || '';
-        const approverTitle = document.getElementById('sigApproverTitle');
-        if (approverTitle) approverTitle.value = sigs.approverTitle || '';
-        const approverName = document.getElementById('sigApproverName');
-        if (approverName) approverName.value = sigs.approverName || '';
-        const approverPos = document.getElementById('sigApproverPos');
-        if (approverPos) approverPos.value = sigs.approverPos || '';
-      }
+      cachedGlobalSettings = await fetchGlobalSettings();
+      applyGlobalSettingsToDOM();
 
       await fetchSavedTemplates();
       updateAllRouteDropdownTexts();
@@ -1233,20 +1254,14 @@ async function switchAppMode(mode) {
         } else {
           waterEmployees = await fetchWaterEmployees();
         }
-        const settings = await fetchGlobalSettings();
-        if (mode === 'fuel') {
-          if (settings.fuelPrice && globalFuelPriceInput) globalFuelPriceInput.value = settings.fuelPrice;
-          if (settings.month && globalMonthSelect) globalMonthSelect.value = settings.month;
-          if (settings.year && globalYearSelect) globalYearSelect.value = settings.year;
-          if (settings.postOfficeName && globalPostOfficeNameInput) globalPostOfficeNameInput.value = settings.postOfficeName;
-        } else {
-          if (settings.month && globalMonthSelect) globalMonthSelect.value = settings.month;
-          if (settings.year && globalYearSelect) globalYearSelect.value = settings.year;
-          if (settings.postOfficeName && globalPostOfficeNameInput) globalPostOfficeNameInput.value = settings.postOfficeName;
-        }
+        cachedGlobalSettings = await fetchGlobalSettings();
+        applyGlobalSettingsToDOM();
       } catch (err) {
         console.error("Cloud fetch failed on mode switch:", err);
       }
+    } else {
+      cachedGlobalSettings = await fetchGlobalSettings();
+      applyGlobalSettingsToDOM();
     }
     
     renderEmployeeTable();
