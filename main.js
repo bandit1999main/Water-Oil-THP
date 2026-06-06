@@ -907,6 +907,11 @@ function toggleTheme() {
 async function switchAppMode(mode) {
   activeMode = mode;
   document.documentElement.setAttribute('data-mode', mode);
+
+  const welcomeHeroBanner = document.getElementById('welcomeHeroBanner');
+  if (welcomeHeroBanner) {
+    welcomeHeroBanner.src = `./${mode}_banner.png`;
+  }
   
   const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
   const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
