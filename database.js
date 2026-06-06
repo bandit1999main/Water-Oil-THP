@@ -14,6 +14,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
@@ -61,10 +63,21 @@ export async function loginWithGoogle() {
   if (!auth) return null;
   const provider = new GoogleAuthProvider();
   try {
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
+    // ใช้ signInWithRedirect แทน Popup เพื่อป้องกันการโดนบล็อกบนเบราว์เซอร์มือถือ
+    await signInWithRedirect(auth, provider);
   } catch (error) {
-    console.error("❌ Google sign-in failed:", error);
+    console.error("❌ Google redirect sign-in failed:", error);
+    throw error;
+  }
+}
+
+export async function getGoogleRedirectResult() {
+  if (!auth) return null;
+  try {
+    const result = await getRedirectResult(auth);
+    return result ? result.user : null;
+  } catch (error) {
+    console.error("❌ getRedirectResult failed:", error);
     throw error;
   }
 }

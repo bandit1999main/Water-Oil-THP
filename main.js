@@ -31,6 +31,7 @@ import {
   listenToPersonnel,
   listenToAuthState,
   loginWithGoogle,
+  getGoogleRedirectResult,
   logoutUser,
   checkIsAdmin,
   fetchUsersList,
@@ -694,6 +695,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const modeAdminBtn = document.getElementById('modeAdminBtn');
+  const authLoadingState = document.getElementById('authLoadingState');
   const authLoginState = document.getElementById('authLoginState');
   const authPendingState = document.getElementById('authPendingState');
   const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
@@ -709,8 +711,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Track live user profile subscription to unsubscribe when needed
   let unsubUserProfile = null;
 
+  function showLoadingState() {
+    authOverlay.classList.add('active');
+    if (authLoadingState) authLoadingState.classList.remove('hidden');
+    if (authLoginState) authLoginState.classList.add('hidden');
+    if (authPendingState) authPendingState.classList.add('hidden');
+    userProfileWidget.classList.add('hidden');
+  }
+
   function showLoginState() {
     authOverlay.classList.add('active');
+    if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.remove('hidden');
     if (authPendingState) authPendingState.classList.add('hidden');
     userProfileWidget.classList.add('hidden');
@@ -720,6 +731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showPendingState(user) {
     authOverlay.classList.add('active');
+    if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.add('hidden');
     if (authPendingState) authPendingState.classList.remove('hidden');
     if (pendingUserEmail) pendingUserEmail.textContent = user.email || '-';
@@ -734,6 +746,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function showApprovedState(user, profileData) {
     authOverlay.classList.remove('active');
+    if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.remove('hidden');
     if (authPendingState) authPendingState.classList.add('hidden');
     userProfileWidget.classList.remove('hidden');
@@ -753,6 +766,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
     }
   }
+
+  // Show loading state initially on page load to prevent layout shift (pre-login screen flash)
+  showLoadingState();
+
+  // Process redirect sign-in result on page load
+  getGoogleRedirectResult().then(async (user) => {
+    if (user) {
+      console.log("✅ Redirect sign-in successful:", user.email);
+      await registerUserMetadata(user);
+    }
+  }).catch((err) => {
+    console.error("❌ Redirect sign-in failed:", err);
+    showToast("การลงชื่อเข้าใช้งานล้มเหลว: " + (err.message || err.code), "error");
+    showLoginState();
+  });
 
   // Observe Authentication status changes
   listenToAuthState(async (user) => {
@@ -789,7 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (profileData.approved === true) {
-          const wasJustApproved = authOverlay.classList.contains('active');
+          const wasJustApproved = authOverlay.classList.contains('active') && !authLoadingState.classList.contains('hidden');
           showApprovedState(user, profileData);
           if (wasJustApproved) {
             showToast(`✅ ได้รับการอนุมัติแล้ว! ยินดีต้อนรับ ${user.displayName || ''}`, 'success');

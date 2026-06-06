@@ -1304,3 +1304,51 @@ tr:hover td {
   from { opacity: 1; transform: translateX(0) scale(1); }
   to   { opacity: 0; transform: translateX(120%) scale(0.88); }
 }
+
+/* --- THP LOGIN & LOADER STYLES --- */
+.thp-loader-ring {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border: 4px solid var(--border-glass);
+  border-top-color: var(--post-orange);
+  border-radius: 50%;
+  animation: thpSpin 1.2s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+  z-index: 1;
+}
+
+@keyframes thpSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.thp-pulse-icon {
+  animation: thpPulse 2s ease-in-out infinite;
+}
+
+@keyframes thpPulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+.thp-logo-glow {
+  animation: thpLogoGlow 3s ease-in-out infinite;
+}
+
+@keyframes thpLogoGlow {
+  0%, 100% { box-shadow: 0 10px 30px rgba(251, 80, 18, 0.4); }
+  50% { box-shadow: 0 10px 35px rgba(251, 80, 18, 0.7), 0 0 15px rgba(251, 80, 18, 0.3); }
+}
+
+.thp-btn-login {
+  transition: all var(--transition-normal);
+}
+
+.thp-btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 80, 18, 0.35) !important;
+}
+
+.thp-btn-login:active {
+  transform: translateY(0);
+}
