@@ -24,6 +24,17 @@ import {
   listenToPersonnel
 } from './database.js';
 
+// Helper Debounce Function for Performance Optimization
+function debounce(func, delay = 150) {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func.apply(this, args);
+    }, delay);
+  };
+}
+
 // Global Mode State
 let activeMode = 'fuel'; // 'fuel', 'water', or 'personnel'
 let waterEmployees = JSON.parse(localStorage.getItem('tp_water_employees')) || [];
@@ -584,17 +595,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const personnelSearchInput = document.getElementById('personnelSearchInput');
 
   if (employeeSearchInput) {
-    employeeSearchInput.addEventListener('input', (e) => {
+    employeeSearchInput.addEventListener('input', debounce((e) => {
       employeeSearchQuery = e.target.value.toLowerCase().trim();
       renderEmployeeTable();
-    });
+    }, 150));
   }
 
   if (personnelSearchInput) {
-    personnelSearchInput.addEventListener('input', (e) => {
+    personnelSearchInput.addEventListener('input', debounce((e) => {
       personnelSearchQuery = e.target.value.toLowerCase().trim();
       renderPersonnelTable();
-    });
+    }, 150));
   }
 
   wireEditModal();

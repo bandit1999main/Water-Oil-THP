@@ -266,6 +266,7 @@ body {
   padding: 1.1rem;
   box-shadow: 0 8px 32px var(--shadow-glass);
   transition: transform var(--transition-normal), box-shadow var(--transition-normal), background var(--transition-normal);
+  will-change: transform, box-shadow;
 }
 
 .glass-card:hover {
@@ -584,6 +585,8 @@ body {
   overflow-x: auto;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
 }
 
 table {
