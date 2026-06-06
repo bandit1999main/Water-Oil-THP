@@ -1533,6 +1533,7 @@ function wireEditModal() {
 
 /* --- SAVED TEMPLATES / BATCH MANAGER LOGIC --- */
 function updateTemplateSelectDropdown() {
+  if (!templateSelect) return;
   const savedTemplates = JSON.parse(localStorage.getItem('tp_saved_templates')) || {};
   templateSelect.innerHTML = '<option value="" disabled selected>-- เลือกรายชื่อที่บันทึกไว้ --</option>';
   
@@ -1656,6 +1657,7 @@ async function saveSingleRouteSettings() {
 }
 
 function updateAllRouteDropdownTexts() {
+  if (!deliveryRouteSelect || !missionRouteSelect) return;
   const currentVal1 = deliveryRouteSelect.value;
   const currentVal2 = missionRouteSelect.value;
   deliveryRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
