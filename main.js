@@ -115,104 +115,90 @@ let appUsersList = [];
 let tempParsedRecords = [];
 
 // DOM Elements
-const globalFuelPriceInput = document.getElementById('globalFuelPrice');
-const globalMonthSelect = document.getElementById('globalMonth');
-const globalYearSelect = document.getElementById('globalYear');
-const globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
-const deliveryRouteSelect = document.getElementById('deliveryRoute');
-const empPositionSelect = document.getElementById('empPosition');
-const empDutySelect = document.getElementById('empDuty');
-const vehicleTypeSelect = document.getElementById('vehicleType');
-const claimMethodSelect = document.getElementById('claimMethod');
-const claimMethodGroup = document.getElementById('claimMethodGroup');
-const workDaysInput = document.getElementById('workDays');
-const workDaysRow = document.getElementById('workDaysRow');
-const daysNotWorkedInput = document.getElementById('daysNotWorked');
-const daysNotWorkedGroup = document.getElementById('daysNotWorkedGroup');
-const employeeForm = document.getElementById('employeeForm');
-const employeeTableBody = document.getElementById('employeeTableBody');
-const routeStatsPreview = document.getElementById('routeStatsPreview');
-const formModeInput = document.getElementById('formMode');
-const saveBtn = document.getElementById('saveBtn');
-const resetBtn = document.getElementById('resetBtn');
+// DOM Elements
+let globalFuelPriceInput = null;
+let globalMonthSelect = null;
+let globalYearSelect = null;
+let globalPostOfficeNameInput = null;
+let deliveryRouteSelect = null;
+let empPositionSelect = null;
+let empDutySelect = null;
+let vehicleTypeSelect = null;
+let claimMethodSelect = null;
+let claimMethodGroup = null;
+let workDaysInput = null;
+let workDaysRow = null;
+let daysNotWorkedInput = null;
+let daysNotWorkedGroup = null;
+let employeeForm = null;
+let employeeTableBody = null;
+let routeStatsPreview = null;
+let formModeInput = null;
+let saveBtn = null;
+let resetBtn = null;
 
-const tabStandard = document.getElementById('tabStandard');
-const tabSupervisor = document.getElementById('tabSupervisor');
-const globalConfigsCard = document.getElementById('globalConfigsCard');
+let tabStandard = null;
+let tabSupervisor = null;
+let globalConfigsCard = null;
 
-const supervisorMissionSection = document.getElementById('supervisorMissionSection');
-const missionRouteSelect = document.getElementById('missionRoute');
-const addMissionBtn = document.getElementById('addMissionBtn');
+let supervisorMissionSection = null;
+let missionRouteSelect = null;
+let addMissionBtn = null;
 
-const sumFuelCostSpan = document.getElementById('sumFuelCost');
-const sumMaintenanceCostSpan = document.getElementById('sumMaintenanceCost');
-const sumTotalCostSpan = document.getElementById('sumTotalCost');
+let sumFuelCostSpan = null;
+let sumMaintenanceCostSpan = null;
+let sumTotalCostSpan = null;
 
-const modeFuelBtn = document.getElementById('modeFuelBtn');
-const modeWaterBtn = document.getElementById('modeWaterBtn');
-const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-const modeAdminBtn = document.getElementById('modeAdminBtn');
-const salaryGroup = document.getElementById('salaryGroup');
-const empSalaryInput = document.getElementById('empSalary');
-const empNameSelect = document.getElementById('empNameSelect');
+let salaryGroup = null;
+let empSalaryInput = null;
+let empNameSelect = null;
 
-const personnelCard = document.getElementById('personnelCard');
-const personnelTableCard = document.getElementById('personnelTableCard');
-const resetPersonnelBtn = document.getElementById('resetPersonnelBtn');
-const personDepartmentSelect = document.getElementById('personDepartment');
-const personDepartmentCustomGroup = document.getElementById('personDepartmentCustomGroup');
-const personDepartmentCustomInput = document.getElementById('personDepartmentCustom');
+let exportCsvBtn = null;
+let printReportBtn = null;
+let clearAllBtn = null;
 
-const exportCsvBtn = document.getElementById('exportCsvBtn');
-const printReportBtn = document.getElementById('printReportBtn');
-const clearAllBtn = document.getElementById('clearAllBtn');
-const themeToggleBtn = document.getElementById('themeToggleBtn');
-const sunIcon = document.getElementById('sunIcon');
-const moonIcon = document.getElementById('moonIcon');
+let importExcelAttendanceBtn = null;
+let attendanceImportModal = null;
+let closeImportModalBtn = null;
+let cancelImportBtn = null;
+let submitImportBtn = null;
+let importPastedText = null;
+let importPreviewTableBody = null;
+let downloadAttendanceTemplateBtn = null;
+let tabImportFile = null;
+let tabImportText = null;
+let importFileContent = null;
+let importTextContent = null;
+let dragDropZone = null;
+let attendanceFileSelector = null;
+let selectedFileInfo = null;
+let fileNameLabel = null;
+let clearSelectedFileBtn = null;
 
-const importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
-const attendanceImportModal = document.getElementById('attendanceImportModal');
-const closeImportModalBtn = document.getElementById('closeImportModalBtn');
-const cancelImportBtn = document.getElementById('cancelImportBtn');
-const submitImportBtn = document.getElementById('submitImportBtn');
-const importPastedText = document.getElementById('importPastedText');
-const importPreviewTableBody = document.getElementById('importPreviewTableBody');
-const downloadAttendanceTemplateBtn = document.getElementById('downloadAttendanceTemplateBtn');
-const tabImportFile = document.getElementById('tabImportFile');
-const tabImportText = document.getElementById('tabImportText');
-const importFileContent = document.getElementById('importFileContent');
-const importTextContent = document.getElementById('importTextContent');
-const dragDropZone = document.getElementById('dragDropZone');
-const attendanceFileSelector = document.getElementById('attendanceFileSelector');
-const selectedFileInfo = document.getElementById('selectedFileInfo');
-const fileNameLabel = document.getElementById('fileNameLabel');
-const clearSelectedFileBtn = document.getElementById('clearSelectedFileBtn');
+let templateNameInput = null;
+let saveTemplateBtn = null;
+let templateSelect = null;
+let loadTemplateBtn = null;
+let deleteTemplateBtn = null;
 
-const templateNameInput = document.getElementById('templateNameInput');
-const saveTemplateBtn = document.getElementById('saveTemplateBtn');
-const templateSelect = document.getElementById('templateSelect');
-const loadTemplateBtn = document.getElementById('loadTemplateBtn');
-const deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
+let routeEditorModal = null;
+let openRouteEditorBtn = null;
+let closeRouteEditorModalBtn = null;
+let closeRouteEditorBtn = null;
+let editRouteSelect = null;
+let routeDistDayInput = null;
+let routeFuelDayInput = null;
+let routeDistMonthInput = null;
+let routeFuelMonthInput = null;
+let routeHasCarSelect = null;
+let saveSingleRouteBtn = null;
+let resetAllRoutesBtn = null;
+let routeEditorTableBody = null;
+let toggleSigEditBtn = null;
 
-const routeEditorModal = document.getElementById('routeEditorModal');
-const openRouteEditorBtn = document.getElementById('openRouteEditorBtn');
-const closeRouteEditorModalBtn = document.getElementById('closeRouteEditorModalBtn');
-const closeRouteEditorBtn = document.getElementById('closeRouteEditorBtn');
-const editRouteSelect = document.getElementById('editRouteSelect');
-const routeDistDayInput = document.getElementById('routeDistDay');
-const routeFuelDayInput = document.getElementById('routeFuelDay');
-const routeDistMonthInput = document.getElementById('routeDistMonth');
-const routeFuelMonthInput = document.getElementById('routeFuelMonth');
-const routeHasCarSelect = document.getElementById('routeHasCar');
-const saveSingleRouteBtn = document.getElementById('saveSingleRouteBtn');
-const resetAllRoutesBtn = document.getElementById('resetAllRoutesBtn');
-const routeEditorTableBody = document.getElementById('routeEditorTableBody');
-const toggleSigEditBtn = document.getElementById('toggleSigEditBtn');
-
-const calculationFormCard = document.getElementById('calculationFormCard');
-const mainTableCard = document.getElementById('mainTableCard');
-const globalPostOfficeName = document.getElementById('globalPostOfficeName');
-
+let calculationFormCard = null;
+let mainTableCard = null;
+let globalPostOfficeName = null;
 // Setup Reactive Bindings on window for decoupled modules
 Object.defineProperty(window, 'personnel', {
   get: () => personnel,
@@ -291,49 +277,116 @@ window.showToast = showToast;
 window.showConfirm = showConfirm;
 
 /* --- INITIALIZATION --- */
-document.addEventListener('DOMContentLoaded', async () => {
-  // Populate Route Dropdowns
-  Object.keys(ROUTE_DATA).forEach(route => {
-    const opt1 = document.createElement('option');
-    opt1.value = route;
-    opt1.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-    deliveryRouteSelect.appendChild(opt1);
+function setupCalculatorDOMReferencesAndEvents() {
+  globalFuelPriceInput = document.getElementById('globalFuelPrice');
+  globalMonthSelect = document.getElementById('globalMonth');
+  globalYearSelect = document.getElementById('globalYear');
+  globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
+  deliveryRouteSelect = document.getElementById('deliveryRoute');
+  empPositionSelect = document.getElementById('empPosition');
+  empDutySelect = document.getElementById('empDuty');
+  vehicleTypeSelect = document.getElementById('vehicleType');
+  claimMethodSelect = document.getElementById('claimMethod');
+  claimMethodGroup = document.getElementById('claimMethodGroup');
+  workDaysInput = document.getElementById('workDays');
+  workDaysRow = document.getElementById('workDaysRow');
+  daysNotWorkedInput = document.getElementById('daysNotWorked');
+  daysNotWorkedGroup = document.getElementById('daysNotWorkedGroup');
+  employeeForm = document.getElementById('employeeForm');
+  employeeTableBody = document.getElementById('employeeTableBody');
+  routeStatsPreview = document.getElementById('routeStatsPreview');
+  formModeInput = document.getElementById('formMode');
+  saveBtn = document.getElementById('saveBtn');
+  resetBtn = document.getElementById('resetBtn');
 
-    const opt2 = document.createElement('option');
-    opt2.value = route;
-    opt2.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-    missionRouteSelect.appendChild(opt2);
+  tabStandard = document.getElementById('tabStandard');
+  tabSupervisor = document.getElementById('tabSupervisor');
+  globalConfigsCard = document.getElementById('globalConfigsCard');
 
-    const opt3 = document.createElement('option');
-    opt3.value = route;
-    opt3.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-    const pRoute = document.getElementById('personRoute');
-    if (pRoute) pRoute.appendChild(opt3);
+  supervisorMissionSection = document.getElementById('supervisorMissionSection');
+  missionRouteSelect = document.getElementById('missionRoute');
+  addMissionBtn = document.getElementById('addMissionBtn');
 
-    const opt4 = document.createElement('option');
-    opt4.value = route;
-    opt4.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-    const mpRoute = document.getElementById('modalPersonRoute');
-    if (mpRoute) mpRoute.appendChild(opt4);
-  });
+  sumFuelCostSpan = document.getElementById('sumFuelCost');
+  sumMaintenanceCostSpan = document.getElementById('sumMaintenanceCost');
+  sumTotalCostSpan = document.getElementById('sumTotalCost');
 
-  // Load Saved Theme
-  if (localStorage.getItem('tp_theme') === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    sunIcon.classList.add('hidden');
-    moonIcon.classList.remove('hidden');
+  salaryGroup = document.getElementById('salaryGroup');
+  empSalaryInput = document.getElementById('empSalary');
+  empNameSelect = document.getElementById('empNameSelect');
+
+  exportCsvBtn = document.getElementById('exportCsvBtn');
+  printReportBtn = document.getElementById('printReportBtn');
+  clearAllBtn = document.getElementById('clearAllBtn');
+
+  importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
+  attendanceImportModal = document.getElementById('attendanceImportModal');
+  closeImportModalBtn = document.getElementById('closeImportModalBtn');
+  cancelImportBtn = document.getElementById('cancelImportBtn');
+  submitImportBtn = document.getElementById('submitImportBtn');
+  importPastedText = document.getElementById('importPastedText');
+  importPreviewTableBody = document.getElementById('importPreviewTableBody');
+  downloadAttendanceTemplateBtn = document.getElementById('downloadAttendanceTemplateBtn');
+  tabImportFile = document.getElementById('tabImportFile');
+  tabImportText = document.getElementById('tabImportText');
+  importFileContent = document.getElementById('importFileContent');
+  importTextContent = document.getElementById('importTextContent');
+  dragDropZone = document.getElementById('dragDropZone');
+  attendanceFileSelector = document.getElementById('attendanceFileSelector');
+  selectedFileInfo = document.getElementById('selectedFileInfo');
+  fileNameLabel = document.getElementById('fileNameLabel');
+  clearSelectedFileBtn = document.getElementById('clearSelectedFileBtn');
+
+  templateNameInput = document.getElementById('templateNameInput');
+  saveTemplateBtn = document.getElementById('saveTemplateBtn');
+  templateSelect = document.getElementById('templateSelect');
+  loadTemplateBtn = document.getElementById('loadTemplateBtn');
+  deleteTemplateBtn = document.getElementById('deleteTemplateBtn');
+
+  routeEditorModal = document.getElementById('routeEditorModal');
+  openRouteEditorBtn = document.getElementById('openRouteEditorBtn');
+  closeRouteEditorModalBtn = document.getElementById('closeRouteEditorModalBtn');
+  closeRouteEditorBtn = document.getElementById('closeRouteEditorBtn');
+  editRouteSelect = document.getElementById('editRouteSelect');
+  routeDistDayInput = document.getElementById('routeDistDay');
+  routeFuelDayInput = document.getElementById('routeFuelDay');
+  routeDistMonthInput = document.getElementById('routeDistMonth');
+  routeFuelMonthInput = document.getElementById('routeFuelMonth');
+  routeHasCarSelect = document.getElementById('routeHasCar');
+  saveSingleRouteBtn = document.getElementById('saveSingleRouteBtn');
+  resetAllRoutesBtn = document.getElementById('resetAllRoutesBtn');
+  routeEditorTableBody = document.getElementById('routeEditorTableBody');
+  toggleSigEditBtn = document.getElementById('toggleSigEditBtn');
+
+  calculationFormCard = document.getElementById('calculationFormCard');
+  mainTableCard = document.getElementById('mainTableCard');
+  globalPostOfficeName = document.getElementById('globalPostOfficeName');
+
+  // Populate Dropdowns for Calculator
+  if (deliveryRouteSelect && missionRouteSelect) {
+    deliveryRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
+    missionRouteSelect.innerHTML = '';
+    editRouteSelect.innerHTML = '';
+    
+    Object.keys(ROUTE_DATA).forEach(route => {
+      const opt1 = document.createElement('option');
+      opt1.value = route;
+      opt1.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      deliveryRouteSelect.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = route;
+      opt2.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      missionRouteSelect.appendChild(opt2);
+
+      const opt3 = document.createElement('option');
+      opt3.value = route;
+      opt3.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      editRouteSelect.appendChild(opt3);
+    });
   }
 
-  // Bind Core Navigation & Switch Events
-  themeToggleBtn.addEventListener('click', toggleTheme);
-  modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
-  modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
-  modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
-  if (document.getElementById('modeAdminBtn')) {
-    document.getElementById('modeAdminBtn').addEventListener('click', () => switchAppMode('admin'));
-  }
-
-  // Delegate Calculator Events
+  // Bind Event Listeners
   deliveryRouteSelect.addEventListener('change', () => {
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.handleRouteSelect());
@@ -368,8 +421,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   resetBtn.addEventListener('click', cancelEdit);
   
-  // Real-time searches with Debounce
-  const employeeSearchInput = document.getElementById('employeeSearch');
+  const employeeSearchInput = document.getElementById('employeeSearchInput');
   if (employeeSearchInput) {
     employeeSearchInput.addEventListener('input', debounce((e) => {
       employeeSearchQuery = e.target.value.toLowerCase().trim();
@@ -377,27 +429,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 150));
   }
 
-  const personnelSearchInput = document.getElementById('personnelSearch');
-  if (personnelSearchInput) {
-    personnelSearchInput.addEventListener('input', debounce((e) => {
-      personnelSearchQuery = e.target.value.toLowerCase().trim();
-      if (window.renderPersonnelTable) window.renderPersonnelTable();
-    }, 150));
-  }
-
   empNameSelect.addEventListener('change', handleEmpNameSelectChange);
   empNameSelect.addEventListener('input', handleEmpNameSelectChange);
 
-  // Tab Events
   tabStandard.addEventListener('click', () => switchFormMode('standard'));
   tabSupervisor.addEventListener('click', () => switchFormMode('supervisor'));
 
-  // Supervisor Mission Events
   addMissionBtn.addEventListener('click', () => {
     import('./fuelCalculator.js').then(m => m.addSupervisorMission());
   });
 
-  // Export, Print and Clear delegated handlers
   exportCsvBtn.addEventListener('click', () => {
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.exportFuelCsv());
@@ -420,12 +461,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Templates Manager Events
   saveTemplateBtn.addEventListener('click', saveCurrentListAsTemplate);
   loadTemplateBtn.addEventListener('click', loadSelectedTemplate);
   deleteTemplateBtn.addEventListener('click', deleteSelectedTemplate);
 
-  // Route Editor Events
   openRouteEditorBtn.addEventListener('click', openRouteEditor);
   if (closeRouteEditorModalBtn) closeRouteEditorModalBtn.addEventListener('click', () => routeEditorModal.classList.remove('active'));
   if (closeRouteEditorBtn) closeRouteEditorBtn.addEventListener('click', () => routeEditorModal.classList.remove('active'));
@@ -433,9 +472,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   saveSingleRouteBtn.addEventListener('click', saveSingleRouteSettings);
   resetAllRoutesBtn.addEventListener('click', resetRouteDataDefaults);
 
-  // Signatories & Signatory Profiles Events
   toggleSigEditBtn.addEventListener('click', toggleSignatoryInputsLock);
-  const manageSigProfilesBtn = document.getElementById('manageSigProfilesBtn');
+  const manageSigProfilesBtn = document.getElementById('openSigProfilesBtn');
   if (manageSigProfilesBtn) manageSigProfilesBtn.addEventListener('click', openSigProfiles);
   const saveSigProfileBtn = document.getElementById('saveSigProfileBtn');
   if (saveSigProfileBtn) saveSigProfileBtn.addEventListener('click', handleSaveSigProfile);
@@ -445,7 +483,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (closeSigProfilesModalBtn) closeSigProfilesModalBtn.addEventListener('click', () => sigProfilesModal.classList.remove('active'));
   if (closeSigProfilesBtn) closeSigProfilesBtn.addEventListener('click', () => sigProfilesModal.classList.remove('active'));
 
-  // Attendance Import Events
   importExcelAttendanceBtn.addEventListener('click', openAttendanceImportModal);
   closeImportModalBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
   cancelImportBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
@@ -490,6 +527,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   if (clearSelectedFileBtn) clearSelectedFileBtn.addEventListener('click', clearSelectedImportFile);
 
+  const openAvgCalcBtn = document.getElementById('openAvgCalcBtn');
+  if (openAvgCalcBtn) {
+    openAvgCalcBtn.addEventListener('click', openAvgCalcModal);
+  }
+}
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load Saved Theme
+  if (localStorage.getItem('tp_theme') === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    if (sunIcon) sunIcon.classList.add('hidden');
+    if (moonIcon) moonIcon.classList.remove('hidden');
+  }
+
+  // Bind Core Navigation & Switch Events
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const modeFuelBtn = document.getElementById('modeFuelBtn');
+  const modeWaterBtn = document.getElementById('modeWaterBtn');
+  const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+  if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+  if (modeFuelBtn) modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
+  if (modeWaterBtn) modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
+  if (modePersonnelBtn) modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
+  if (document.getElementById('modeAdminBtn')) {
+    document.getElementById('modeAdminBtn').addEventListener('click', () => switchAppMode('admin'));
+  }
   // Firebase Auth Flow
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -913,179 +977,204 @@ async function switchAppMode(mode) {
     welcomeHeroBanner.src = `./${mode}_banner.png`;
   }
   
-  const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
-  const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
-  const welcomeHeadingP = document.querySelector('.welcome-heading p');
-  const sumFuelCostLabel = document.querySelector('.metric-card.bg-orange-glow h3');
-  const sumMaintCostLabel = document.querySelector('.metric-card.bg-blue-glow h3');
-  const sumTotalCostLabel = document.querySelector('.metric-card.bg-emerald-glow h3');
-  const tableTitle = document.querySelector('#mainTableCard .table-header-flex h3');
-  
-  // Toggle Visibility
   if (mode === 'admin') {
-    calculationFormCard.classList.add('hidden');
-    mainTableCard.classList.add('hidden');
-    document.querySelector('.metrics-grid').classList.add('hidden');
-    personnelCard.classList.add('hidden');
-    personnelTableCard.classList.add('hidden');
-    globalConfigsCard.classList.add('hidden');
-    document.getElementById('adminTableCard').classList.remove('hidden');
+    const { getAdminPanelTemplate } = await import('./adminPanel.js');
+    document.getElementById('activeDashboardView').innerHTML = getAdminPanelTemplate();
+
+    const modeAdminBtn = document.getElementById('modeAdminBtn');
+    const modeFuelBtn = document.getElementById('modeFuelBtn');
+    const modeWaterBtn = document.getElementById('modeWaterBtn');
+    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
     
-    modeAdminBtn.style.background = 'var(--post-orange)';
-    modeAdminBtn.style.color = 'white';
-    modeFuelBtn.style.background = 'transparent';
-    modeFuelBtn.style.color = 'var(--text-secondary)';
-    modeWaterBtn.style.background = 'transparent';
-    modeWaterBtn.style.color = 'var(--text-secondary)';
-    modePersonnelBtn.style.background = 'transparent';
-    modePersonnelBtn.style.color = 'var(--text-secondary)';
+    if (modeAdminBtn) { modeAdminBtn.style.background = 'var(--post-orange)'; modeAdminBtn.style.color = 'white'; }
+    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
+    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
+    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
     
+    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+    const welcomeHeadingP = document.querySelector('.welcome-heading p');
     if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Admin Control Room v1.0';
     if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ส่วนการจัดการและดูแลสิทธิ์ผู้ใช้งานระบบคลาวด์';
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'กำหนดสิทธิ์ แก้ไขข้อมูลพนักงาน และควบคุมการเข้าถึงระบบจากฐานข้อมูลกลาง';
     
-    import('./adminPanel.js').then(({ renderAdminUsersTable }) => {
-      renderAdminUsersTable();
-    });
+    const { renderAdminUsersTable } = await import('./adminPanel.js');
+    renderAdminUsersTable();
   } else if (mode === 'personnel') {
-    calculationFormCard.classList.add('hidden');
-    mainTableCard.classList.add('hidden');
-    document.querySelector('.metrics-grid').classList.add('hidden');
-    document.getElementById('adminTableCard').classList.add('hidden');
-    globalConfigsCard.classList.add('hidden');
+    const { getPersonnelTemplate, initPersonnelManager } = await import('./personnelManager.js');
+    document.getElementById('activeDashboardView').innerHTML = getPersonnelTemplate();
+
+    const modeAdminBtn = document.getElementById('modeAdminBtn');
+    const modeFuelBtn = document.getElementById('modeFuelBtn');
+    const modeWaterBtn = document.getElementById('modeWaterBtn');
+    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
     
-    personnelCard.classList.remove('hidden');
-    personnelTableCard.classList.remove('hidden');
+    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'var(--post-orange)'; modePersonnelBtn.style.color = 'white'; }
+    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
+    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
+    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
     
-    modePersonnelBtn.style.background = 'var(--post-orange)';
-    modePersonnelBtn.style.color = 'white';
-    modeFuelBtn.style.background = 'transparent';
-    modeFuelBtn.style.color = 'var(--text-secondary)';
-    modeWaterBtn.style.background = 'transparent';
-    modeWaterBtn.style.color = 'var(--text-secondary)';
-    modeAdminBtn.style.background = 'transparent';
-    modeAdminBtn.style.color = 'var(--text-secondary)';
-    
+    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+    const welcomeHeadingP = document.querySelector('.welcome-heading p');
     if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Personnel Registry v1.0';
     if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบจัดการข้อมูลบุคลากรประจำที่ทำการ / ปณ.';
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
     
-    import('./personnelManager.js').then(({ initPersonnelManager }) => {
-      initPersonnelManager();
-    });
+    initPersonnelManager();
   } else {
-    calculationFormCard.classList.remove('hidden');
-    mainTableCard.classList.remove('hidden');
-    document.querySelector('.metrics-grid').classList.remove('hidden');
-    globalConfigsCard.classList.remove('hidden');
-    
-    personnelCard.classList.add('hidden');
-    personnelTableCard.classList.add('hidden');
-    document.getElementById('adminTableCard').classList.add('hidden');
-    
-    modePersonnelBtn.style.background = 'transparent';
-    modePersonnelBtn.style.color = 'var(--text-secondary)';
-    modeAdminBtn.style.background = 'transparent';
-    modeAdminBtn.style.color = 'var(--text-secondary)';
+    if (!document.getElementById('globalConfigsCard')) {
+      const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
+      document.getElementById('activeDashboardView').innerHTML = getCalculatorsTemplate();
+      setupCalculatorDOMReferencesAndEvents();
+    }
+
+    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+    const welcomeHeadingP = document.querySelector('.welcome-heading p');
+    const sumFuelCostLabel = document.querySelector('.metric-card.bg-orange-glow h3');
+    const sumMaintCostLabel = document.querySelector('.metric-card.bg-blue-glow h3');
+    const sumTotalCostLabel = document.querySelector('.metric-card.bg-emerald-glow h3');
+    const tableTitle = document.querySelector('#mainTableCard .table-header-flex h3');
+
+    const modeAdminBtn = document.getElementById('modeAdminBtn');
+    const modeFuelBtn = document.getElementById('modeFuelBtn');
+    const modeWaterBtn = document.getElementById('modeWaterBtn');
+    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+
+    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
+    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
     
     updateEmployeeSelectDropdown();
     
     if (mode === 'fuel') {
-      modeFuelBtn.style.background = 'var(--post-orange)';
-      modeFuelBtn.style.color = 'white';
-      modeWaterBtn.style.background = 'transparent';
-      modeWaterBtn.style.color = 'var(--text-secondary)';
+      if (modeFuelBtn) { modeFuelBtn.style.background = 'var(--post-orange)'; modeFuelBtn.style.color = 'white'; }
+      if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
       
       if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Fuel Engine v2.5';
       if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.';
       if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว';
       
-      document.querySelector('.auth-tabs').style.display = 'flex';
-      document.getElementById('positionRouteRow').classList.remove('hidden');
-      document.getElementById('deliveryRouteGroup').classList.remove('hidden');
-      document.getElementById('claimMethodGroup').classList.remove('hidden');
-      document.getElementById('workDaysRow').classList.remove('hidden');
-      document.getElementById('daysNotWorkedGroup').classList.remove('hidden');
-      salaryGroup.classList.add('hidden');
-      deliveryRouteSelect.setAttribute('required', 'true');
+      const authTabs = document.querySelector('.auth-tabs');
+      if (authTabs) authTabs.style.display = 'flex';
       
-      empPositionSelect.innerHTML = `
-        <option value="หน.ปณ.">หน.ปณ.</option>
-        <option value="พนักงาน">พนักงาน</option>
-        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-        <option value="ลูกจ้าง">ลูกจ้าง</option>
-        <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-      `;
+      const posRouteRow = document.getElementById('positionRouteRow');
+      if (posRouteRow) posRouteRow.classList.remove('hidden');
+      
+      const deliveryRouteGroup = document.getElementById('deliveryRouteGroup');
+      if (deliveryRouteGroup) deliveryRouteGroup.classList.remove('hidden');
+      
+      const claimMethodGroup = document.getElementById('claimMethodGroup');
+      if (claimMethodGroup) claimMethodGroup.classList.remove('hidden');
+      
+      const workDaysRow = document.getElementById('workDaysRow');
+      if (workDaysRow) workDaysRow.classList.remove('hidden');
+      
+      const daysNotWorkedGroup = document.getElementById('daysNotWorkedGroup');
+      if (daysNotWorkedGroup) daysNotWorkedGroup.classList.remove('hidden');
+      
+      if (salaryGroup) salaryGroup.classList.add('hidden');
+      if (deliveryRouteSelect) deliveryRouteSelect.setAttribute('required', 'true');
+      
+      if (empPositionSelect) {
+        empPositionSelect.innerHTML = `
+          <option value="หน.ปณ.">หน.ปณ.</option>
+          <option value="พนักงาน">พนักงาน</option>
+          <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+          <option value="ลูกจ้าง">ลูกจ้าง</option>
+          <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+        `;
+      }
       
       if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำมันเชื้อเพลิงรวม';
       if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ค่าบำรุงรักษารวม';
       if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
       
       if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.';
-      document.querySelector('#employeeTable thead').innerHTML = `
-        <tr>
-          <th>ลำดับ</th>
-          <th>ชื่อ - นามสกุล</th>
-          <th>ตำแหน่ง/บทบาท</th>
-          <th>รายละเอียด/ด้านจ่าย</th>
-          <th>ปริมาณน้ำมัน (ลิตร)</th>
-          <th>ค่าน้ำมัน (บาท)</th>
-          <th>ค่าบำรุงรักษา (บาท)</th>
-          <th>รวมเบิกจ่าย (บาท)</th>
-          <th>ลงนามผู้รับ</th>
-          <th class="actions-col">จัดการ</th>
-        </tr>
-      `;
-      saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
+      
+      const empTableHead = document.querySelector('#employeeTable thead');
+      if (empTableHead) {
+        empTableHead.innerHTML = `
+          <tr>
+            <th>ลำดับ</th>
+            <th>ชื่อ - นามสกุล</th>
+            <th>ตำแหน่ง/บทบาท</th>
+            <th>รายละเอียด/ด้านจ่าย</th>
+            <th>ปริมาณน้ำมัน (ลิตร)</th>
+            <th>ค่าน้ำมัน (บาท)</th>
+            <th>ค่าบำรุงรักษา (บาท)</th>
+            <th>รวมเบิกจ่าย (บาท)</th>
+            <th>ลงนามผู้รับ</th>
+            <th class="actions-col">จัดการ</th>
+          </tr>
+        `;
+      }
+      if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
     } else {
-      modeWaterBtn.style.background = 'var(--post-orange)';
-      modeWaterBtn.style.color = 'white';
-      modeFuelBtn.style.background = 'transparent';
-      modeFuelBtn.style.color = 'var(--text-secondary)';
+      if (modeWaterBtn) { modeWaterBtn.style.background = 'var(--post-orange)'; modeWaterBtn.style.color = 'white'; }
+      if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
       
       if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Drinking Water Engine v1.0';
       if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำดื่มเจ้าหน้าที่ปฏิบัติงานภายนอกที่ทำการ';
       if (welcomeHeadingP) welcomeHeadingP.textContent = 'คำนวณค่าน้ำดื่มพร้อมหักภาษี ณ ที่จ่ายตามเกณฑ์เงินเดือน 25,833 บาท ตามระเบียบใหม่ล่าสุด';
       
-      document.querySelector('.auth-tabs').style.display = 'none';
-      document.getElementById('positionRouteRow').classList.remove('hidden');
-      document.getElementById('deliveryRouteGroup').classList.add('hidden');
-      document.getElementById('claimMethodGroup').classList.add('hidden');
-      document.getElementById('workDaysRow').classList.remove('hidden');
-      document.getElementById('daysNotWorkedGroup').classList.add('hidden');
-      supervisorMissionSection.classList.add('hidden');
-      routeStatsPreview.classList.add('hidden');
-      salaryGroup.classList.remove('hidden');
-      deliveryRouteSelect.removeAttribute('required');
+      const authTabs = document.querySelector('.auth-tabs');
+      if (authTabs) authTabs.style.display = 'none';
       
-      empPositionSelect.innerHTML = `
-        <option value="หน.ปณ.">หน.ปณ.</option>
-        <option value="พนักงาน">พนักงาน</option>
-        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-        <option value="ลูกจ้าง">ลูกจ้าง</option>
-        <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-      `;
+      const posRouteRow = document.getElementById('positionRouteRow');
+      if (posRouteRow) posRouteRow.classList.remove('hidden');
+      
+      const deliveryRouteGroup = document.getElementById('deliveryRouteGroup');
+      if (deliveryRouteGroup) deliveryRouteGroup.classList.add('hidden');
+      
+      const claimMethodGroup = document.getElementById('claimMethodGroup');
+      if (claimMethodGroup) claimMethodGroup.classList.add('hidden');
+      
+      const workDaysRow = document.getElementById('workDaysRow');
+      if (workDaysRow) workDaysRow.classList.remove('hidden');
+      
+      const daysNotWorkedGroup = document.getElementById('daysNotWorkedGroup');
+      if (daysNotWorkedGroup) daysNotWorkedGroup.classList.add('hidden');
+      
+      if (supervisorMissionSection) supervisorMissionSection.classList.add('hidden');
+      if (routeStatsPreview) routeStatsPreview.classList.add('hidden');
+      if (salaryGroup) salaryGroup.classList.remove('hidden');
+      if (deliveryRouteSelect) deliveryRouteSelect.removeAttribute('required');
+      
+      if (empPositionSelect) {
+        empPositionSelect.innerHTML = `
+          <option value="หน.ปณ.">หน.ปณ.</option>
+          <option value="พนักงาน">พนักงาน</option>
+          <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+          <option value="ลูกจ้าง">ลูกจ้าง</option>
+          <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+        `;
+      }
       
       if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำดื่มก่อนหักภาษีรวม';
       if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ภาษีหัก ณ ที่จ่ายรวม';
       if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
       
       if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกค่าน้ำดื่มประจำที่ทำการ ปณ.';
-      document.querySelector('#employeeTable thead').innerHTML = `
-        <tr>
-          <th>ลำดับ</th>
-          <th>ชื่อ - นามสกุล</th>
-          <th>ปฏิบัติหน้าที่</th>
-          <th>เงินเดือน (บาท)</th>
-          <th>วันทำงาน (วัน)</th>
-          <th>รวมค่าน้ำดื่ม (บาท)</th>
-          <th>ภาษี (บาท)</th>
-          <th>ยอดสุทธิคงเหลือ (บาท)</th>
-          <th>ลงนามผู้รับ</th>
-          <th class="actions-col">จัดการ</th>
-        </tr>
-      `;
-      saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+      
+      const empTableHead = document.querySelector('#employeeTable thead');
+      if (empTableHead) {
+        empTableHead.innerHTML = `
+          <tr>
+            <th>ลำดับ</th>
+            <th>ชื่อ - นามสกุล</th>
+            <th>ปฏิบัติหน้าที่</th>
+            <th>เงินเดือน (บาท)</th>
+            <th>วันทำงาน (วัน)</th>
+            <th>รวมค่าน้ำดื่ม (บาท)</th>
+            <th>ภาษี (บาท)</th>
+            <th>ยอดสุทธิคงเหลือ (บาท)</th>
+            <th>ลงนามผู้รับ</th>
+            <th class="actions-col">จัดการ</th>
+          </tr>
+        `;
+      }
+      if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
     }
     
     cancelEdit();
@@ -1098,28 +1187,23 @@ async function switchAppMode(mode) {
         }
         const settings = await fetchGlobalSettings();
         if (mode === 'fuel') {
-          if (settings.fuelMonth) globalMonthSelect.value = settings.fuelMonth.value;
-          if (settings.fuelYear) globalYearSelect.value = settings.fuelYear.value;
-          if (settings.fuelPrice) globalFuelPriceInput.value = settings.fuelPrice.value;
-          document.querySelector('label[for="globalFuelPrice"]').classList.remove('hidden');
-          globalFuelPriceInput.classList.remove('hidden');
-          document.getElementById('openAvgCalcBtn').classList.remove('hidden');
-        } else if (mode === 'water') {
-          if (settings.waterMonth) globalMonthSelect.value = settings.waterMonth.value;
-          if (settings.waterYear) globalYearSelect.value = settings.waterYear.value;
-          document.querySelector('label[for="globalFuelPrice"]').classList.add('hidden');
-          globalFuelPriceInput.classList.add('hidden');
-          document.getElementById('openAvgCalcBtn').classList.add('hidden');
+          if (settings.fuelPrice && globalFuelPriceInput) globalFuelPriceInput.value = settings.fuelPrice;
+          if (settings.month && globalMonthSelect) globalMonthSelect.value = settings.month;
+          if (settings.year && globalYearSelect) globalYearSelect.value = settings.year;
+          if (settings.postOfficeName && globalPostOfficeNameInput) globalPostOfficeNameInput.value = settings.postOfficeName;
+        } else {
+          if (settings.month && globalMonthSelect) globalMonthSelect.value = settings.month;
+          if (settings.year && globalYearSelect) globalYearSelect.value = settings.year;
+          if (settings.postOfficeName && globalPostOfficeNameInput) globalPostOfficeNameInput.value = settings.postOfficeName;
         }
       } catch (err) {
-        console.error("Error loading mode data/settings:", err);
+        console.error("Cloud fetch failed on mode switch:", err);
       }
     }
+    
     renderEmployeeTable();
-    updateTemplateSelectDropdown();
   }
 }
-
 function updateEmployeeSelectDropdown() {
   const datalist = document.getElementById('personnelDatalist');
   if (!datalist) return;

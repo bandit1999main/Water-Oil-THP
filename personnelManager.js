@@ -1372,3 +1372,270 @@ export async function clearAllPersonnel() {
     }
   });
 }
+
+
+export function getPersonnelTemplate() {
+  return `<div class="dashboard-grid animate-fade-in">
+  <div class="panel-column">
+          <div id="personnelCard" class="glass-card">
+            <div class="card-header">
+              <span class="card-icon">👥</span>
+              <h3 id="personnelFormTitle">ลงทะเบียนข้อมูลบุคลากร</h3>
+            </div>
+            
+            <form id="personnelForm">
+              <input type="hidden" id="personnelEditIndex" value="" />
+              
+              <div class="form-group">
+                <label for="personName">ชื่อ - นามสกุล</label>
+                <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personPosition">ตำแหน่ง</label>
+                  <select id="personPosition" class="form-select">
+                    <option value="หน.ปณ.">หน.ปณ.</option>
+                    <option value="พนักงาน">พนักงาน</option>
+                    <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                    <option value="ลูกจ้าง">ลูกจ้าง</option>
+                    <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="personDuty">หน้าที่</label>
+                  <select id="personDuty" class="form-select">
+                    <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                    <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                    <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                    <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                    <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
+                  <input type="number" id="personSalary" class="form-input" value="0" />
+                </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <label for="personDepartment">แผนก/กลุ่มงาน</label>
+                  <select id="personDepartment" class="form-select">
+                    <option value="นำจ่าย">นำจ่าย</option>
+                    <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
+                    <option value="รับฝาก">รับฝาก</option>
+                    <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
+                    <option value="custom">อื่นๆ (ระบุเอง)...</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group hidden" id="personDepartmentCustomGroup" style="margin-bottom: 1.25rem;">
+                <label for="personDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
+                <input type="text" id="personDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="personRoute">ด้านจ่ายหลัก</label>
+                  <select id="personRoute" class="form-select">
+                    <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
+                    <!-- Dynamically filled in JS -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="personVehicle">ประเภทพาหนะหลัก</label>
+                  <select id="personVehicle" class="form-select">
+                    <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                    <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
+                    <option value="เรือยนต์">เรือยนต์</option>
+                    <option value="รถยนต์">รถยนต์</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="0" style="cursor: pointer;" /> อา.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="1" style="cursor: pointer;" /> จ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="2" style="cursor: pointer;" /> อ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="3" style="cursor: pointer;" /> พ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="4" style="cursor: pointer;" /> พฤ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="5" style="cursor: pointer;" /> ศ.
+                  </label>
+                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                    <input type="checkbox" name="personRestDays" value="6" style="cursor: pointer;" /> ส.
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="personSignature">ลงนามรับเงินเริ่มต้น</label>
+                <input type="text" id="personSignature" class="form-input" placeholder="ว่างไว้ใช้ชื่อตนเอง" />
+              </div>
+
+              <div class="button-group" style="margin-top: 1rem;">
+                <button type="submit" id="savePersonnelBtn" class="btn btn-primary btn-full">
+                  📥 บันทึกบุคลากร
+                </button>
+                <button type="button" id="resetPersonnelBtn" class="btn btn-secondary hidden">
+                  ยกเลิก
+                </button>
+              </div>
+            </form>
+          </div>
+
+  </div>
+  <div class="panel-column">
+          <div id="personnelTableCard" class="glass-card full-width">
+            <div class="card-header table-header-flex">
+              <div class="header-left">
+                <span class="card-icon">👥</span>
+                <h3>ทำเนียบข้อมูลบุคลากรทั้งหมด</h3>
+              </div>
+              <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" id="importPersonnelBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
+                  📥 นำเข้าบุคลากรจาก Excel / CSV
+                </button>
+                <button type="button" id="exportPersonnelCsvBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">
+                  📤 ส่งออกข้อมูล CSV
+                </button>
+                <button type="button" id="printPersonnelReportBtn" class="btn btn-primary btn-small" style="background: var(--post-orange); color: white; border: none; font-weight: 600;">
+                  🖨️ พิมพ์ทำเนียบ
+                </button>
+                <button type="button" id="clearAllPersonnelBtn" class="btn btn-danger btn-small" style="border: 1px solid var(--post-red); color: var(--post-red); background: rgba(239, 68, 68, 0.05);">
+                  ⚠️ ล้างข้อมูลทะเบียน
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Bar for Personnel -->
+            <div class="search-bar-container" style="margin-top: 1rem; display: flex; gap: 0.5rem; max-width: 650px; padding: 0 1.5rem; flex-wrap: wrap;">
+              <input type="text" id="personnelSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา..." style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem; flex: 1; min-width: 250px;" />
+              <button type="button" id="checkDuplicatesBtn" class="btn btn-secondary btn-small" style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.85rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; cursor: pointer;">
+                🔍 ตรวจสอบรายชื่อซ้ำในระบบ
+              </button>
+            </div>
+
+            <div class="table-container">
+              <table id="personnelTable">
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th>
+                    <th>ชื่อ - นามสกุล</th>
+                    <th>ตำแหน่ง</th>
+                    <th>แผนก/กลุ่มงาน</th>
+                    <th>หน้าที่</th>
+                    <th>เงินเดือน (บาท)</th>
+                    <th>ด้านจ่ายหลัก</th>
+                    <th>ประเภทพาหนะ</th>
+                    <th>ลงนามเริ่มต้น</th>
+                    <th class="actions-col">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="personnelTableBody">
+                  <tr>
+                    <td colspan="10" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+  </div>
+</div>
+    <div id="personnelImportModal" class="modal-overlay">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+          <h3>📥 นำเข้าทำเนียบข้อมูลบุคลากร</h3>
+          <button type="button" id="closePersonnelImportModalBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.5rem;">
+          <p class="modal-instruction" style="margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6;">
+            💡 <strong>คำแนะนำ:</strong> ดาวน์โหลดเทมเพลต Excel ด้านล่างนี้เพื่อกรอกข้อมูลบุคลากร จากนั้นนำมาอัปโหลดเข้าสู่ระบบ หรือใช้การวางข้อมูลดิบเพื่อประมวลผลทันที
+          </p>
+
+          <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" id="downloadPersonnelTemplateBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem;">
+              🟢 ดาวน์โหลดเทมเพลต Excel ข้อมูลบุคลากร (.xlsx)
+            </button>
+          </div>
+
+          <!-- Sleek Tab Controls -->
+          <div class="import-tabs" style="display: flex; border-bottom: 2px solid var(--border-glass); margin-bottom: 1.25rem; gap: 1rem;">
+            <button type="button" id="tabPersonnelImportFile" class="import-tab-btn active" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--post-orange); border-bottom: 3px solid var(--post-orange); cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              📂 นำเข้าจากไฟล์โดยตรง
+            </button>
+            <button type="button" id="tabPersonnelImportText" class="import-tab-btn" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--text-secondary); border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
+              📋 วางข้อความแบบเดิม
+            </button>
+          </div>
+
+          <!-- Tab Content 1: File Upload (Drag & Drop) -->
+          <div id="personnelImportFileContent" class="tab-panel">
+            <div id="personnelDragDropZone" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 12px; background: rgba(16, 185, 129, 0.02); padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+              <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.15));">📊</span>
+              <div style="font-weight: bold; color: var(--text-primary); font-size: 0.95rem;">ลากและวางไฟล์เทมเพลต Excel (.xlsx) ที่นี่</div>
+              <div style="color: var(--text-secondary); font-size: 0.8rem;">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ</div>
+              <input type="file" id="personnelFileSelector" accept=".xlsx, .xls" style="display: none;" />
+            </div>
+            <div id="personnelSelectedFileInfo" class="hidden" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+              <span id="personnelFileNameLabel" style="font-size: 0.85rem; font-weight: bold; color: var(--post-emerald);"></span>
+              <button type="button" id="clearSelectedPersonnelFileBtn" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 0.9rem;">✕ นำออก</button>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Textarea Paste -->
+          <div id="personnelImportTextContent" class="tab-panel hidden">
+            <div class="form-group">
+              <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
+              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, วันหยุดประจำ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	เสาร์-อาทิตย์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	ไขตู้/ขนส่ง	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	วันอาทิตย์	สมศรี"></textarea>
+            </div>
+          </div>
+
+          <!-- Preview Area -->
+          <div class="modal-table-container" style="margin-top: 1.5rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 250px; overflow-y: auto;">
+            <table class="modal-table" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 16%;">ชื่อ - นามสกุล</th>
+                  <th style="width: 10%;">ตำแหน่ง</th>
+                  <th style="width: 10%;">แผนก/กลุ่มงาน</th>
+                  <th style="width: 16%;">หน้าที่</th>
+                  <th style="width: 8%;">เงินเดือน</th>
+                  <th style="width: 8%;">ด้านจ่ายหลัก</th>
+                  <th style="width: 12%;">ประเภทพาหนะ</th>
+                  <th style="width: 12%;">วันหยุดประจำ</th>
+                  <th style="width: 8%;">ลงนามเริ่มต้น</th>
+                </tr>
+              </thead>
+              <tbody id="personnelImportPreviewTableBody">
+                <tr>
+                  <td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelPersonnelImportBtn" class="btn btn-secondary">ยกเลิก</button>
+          <button type="button" id="submitPersonnelImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
+            ✔️ ยืนยันนำเข้าข้อมูล
+          </button>
+        </div>
+      </div>
+    </div>`;
+}

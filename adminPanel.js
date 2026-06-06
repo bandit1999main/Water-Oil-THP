@@ -243,3 +243,45 @@ async function handleUserRejectClick(e) {
     }
   });
 }
+
+
+export function getAdminPanelTemplate() {
+  return `<div class="dashboard-grid animate-fade-in">
+  <div class="panel-column full-width-column" style="grid-column: span 2;">
+          <div id="adminTableCard" class="glass-card full-width">
+            <div class="card-header table-header-flex">
+              <div class="header-left">
+                <span class="card-icon">🔑</span>
+                <h3>จัดการสิทธิ์ผู้ใช้งานระบบ (User Management)</h3>
+              </div>
+            </div>
+            <div style="padding: 1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; background: rgba(0, 0, 0, 0.02); border-bottom: 1px solid var(--border-glass); border-radius: var(--radius-small) var(--radius-small) 0 0;">
+              💡 <strong>คู่มือดูแลระบบ:</strong> รายการผู้ใช้งานจะปรากฏที่นี่เมื่อพวกเขาเข้าสู่ระบบครั้งแรก บัญชีแอดมินหลัก <strong style="color: var(--post-orange);">bandit1999main@gmail.com</strong> จะไม่สามารถเปลี่ยนสิทธิ์หรือลบออกได้เพื่อความปลอดภัยสูงสุด
+            </div>
+            <div class="table-container">
+              <table id="adminUsersTable">
+                <thead>
+                  <tr>
+                    <th style="width: 5%;">ลำดับ</th>
+                    <th style="width: 7%;">โปรไฟล์</th>
+                    <th style="width: 16%;">ชื่อผู้ใช้งาน</th>
+                    <th style="width: 18%;">อีเมล</th>
+                    <th style="width: 10%;">สถานะ</th>
+                    <th style="width: 14%;">หน้าที่จัดทำ</th>
+                    <th style="width: 16%;">บทบาทหน้าที่</th>
+                    <th style="width: 14%;">การดำเนินการ</th>
+
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTableBody">
+                  <tr>
+                    <td colspan="8" class="no-data">ยังไม่มีประวัติข้อมูลผู้ใช้งานในระบบคลาวด์</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+  </div>
+</div>`;
+}
