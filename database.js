@@ -632,6 +632,18 @@ export async function deleteUserMetadata(uid) {
   }
 }
 
+export async function checkUserExists(uid) {
+  if (!isCloudConnected() || !uid) return false;
+  try {
+    const docRef = doc(db, "app_users", uid);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists();
+  } catch (error) {
+    console.error("❌ checkUserExists failed:", error);
+    return false;
+  }
+}
+
 // Register user metadata on successful login if it doesn't exist yet
 export async function registerUserMetadata(user) {
   if (!isCloudConnected() || !user) return;

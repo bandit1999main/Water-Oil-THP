@@ -32,6 +32,7 @@ import {
   listenToAuthState,
   loginWithGoogle,
   getGoogleRedirectResult,
+  checkUserExists,
   logoutUser,
   checkIsAdmin,
   fetchUsersList,
@@ -647,32 +648,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Firebase Auth DOM bindings and Event Listeners
   const googleLoginBtn = document.getElementById('googleLoginBtn');
+  const googleSignupBtn = document.getElementById('googleSignupBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const authOverlay = document.getElementById('authOverlay');
   const userProfileWidget = document.getElementById('userProfileWidget');
   const userAvatar = document.getElementById('userAvatar');
   const userDisplayName = document.getElementById('userDisplayName');
   const userRoleBadge = document.getElementById('userRoleBadge');
+  const switchToSignupLink = document.getElementById('switchToSignupLink');
+  const switchToLoginLink = document.getElementById('switchToLoginLink');
+  const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
+  const pendingUserEmail = document.getElementById('pendingUserEmail');
+
+  const modeAdminBtn = document.getElementById('modeAdminBtn');
+  const authLoadingState = document.getElementById('authLoadingState');
+  const authLoginState = document.getElementById('authLoginState');
+  const authSignupState = document.getElementById('authSignupState');
+  const authPendingState = document.getElementById('authPendingState');
+
+  if (switchToSignupLink) {
+    switchToSignupLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      sessionStorage.setItem('thp_auth_action', 'signup');
+      showSignupState();
+    });
+  }
+
+  if (switchToLoginLink) {
+    switchToLoginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      sessionStorage.setItem('thp_auth_action', 'login');
+      showLoginState();
+    });
+  }
 
   if (googleLoginBtn) {
     googleLoginBtn.addEventListener('click', async () => {
-      // Disable button to prevent double-click
       googleLoginBtn.disabled = true;
       googleLoginBtn.textContent = '⏳ กำลังเข้าสู่ระบบ...';
       try {
-        // loginWithGoogle ต้องถูกเรียกโดยตรงจาก user gesture
-        // ห้ามมี await ก่อนหน้า (ป้องกัน popup blocked)
+        sessionStorage.setItem('thp_auth_action', 'login');
         await loginWithGoogle();
       } catch (err) {
-        // auth/cancelled-popup-request = popup ถูกขอซ้ำ (ไม่ใช่ error จริง)
-        if (err.code === 'auth/cancelled-popup-request') {
-          // ignore silently
-        } else if (err.code === 'auth/popup-blocked') {
-          showToast('⚠️ Popup ถูกบล็อค กรุณาอนุญาต Popup ในเบราว์เซอร์', 'error');
-        } else {
-          showToast('การล็อกอินล้มเหลว: ' + (err.message || err.code), 'error');
-        }
-      } finally {
+        showToast('การล็อกอินล้มเหลว: ' + (err.message || err.code), 'error');
         googleLoginBtn.disabled = false;
         googleLoginBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -680,6 +698,26 @@ document.addEventListener('DOMContentLoaded', async () => {
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
         </svg> ลงชื่อเข้าใช้ด้วย Google`;
+      }
+    });
+  }
+
+  if (googleSignupBtn) {
+    googleSignupBtn.addEventListener('click', async () => {
+      googleSignupBtn.disabled = true;
+      googleSignupBtn.textContent = '⏳ กำลังขอลงทะเบียน...';
+      try {
+        sessionStorage.setItem('thp_auth_action', 'signup');
+        await loginWithGoogle();
+      } catch (err) {
+        showToast('การลงทะเบียนล้มเหลว: ' + (err.message || err.code), 'error');
+        googleSignupBtn.disabled = false;
+        googleSignupBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+        </svg> ลงทะเบียนด้วย Google`;
       }
     });
   }
@@ -695,13 +733,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const modeAdminBtn = document.getElementById('modeAdminBtn');
-  const authLoadingState = document.getElementById('authLoadingState');
-  const authLoginState = document.getElementById('authLoginState');
-  const authPendingState = document.getElementById('authPendingState');
-  const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
-  const pendingUserEmail = document.getElementById('pendingUserEmail');
-
   // Pending Logout button
   if (pendingLogoutBtn) {
     pendingLogoutBtn.addEventListener('click', async () => {
@@ -716,6 +747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     authOverlay.classList.add('active');
     if (authLoadingState) authLoadingState.classList.remove('hidden');
     if (authLoginState) authLoginState.classList.add('hidden');
+    if (authSignupState) authSignupState.classList.add('hidden');
     if (authPendingState) authPendingState.classList.add('hidden');
     userProfileWidget.classList.add('hidden');
   }
@@ -724,6 +756,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     authOverlay.classList.add('active');
     if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.remove('hidden');
+    if (authSignupState) authSignupState.classList.add('hidden');
     if (authPendingState) authPendingState.classList.add('hidden');
     userProfileWidget.classList.add('hidden');
     enableWriteActions(false);
@@ -731,10 +764,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     cloudSyncStarted = false; // รีเซ็ตสถานะ sync เมื่อออกจากระบบ
   }
 
+  function showSignupState() {
+    authOverlay.classList.add('active');
+    if (authLoadingState) authLoadingState.classList.add('hidden');
+    if (authLoginState) authLoginState.classList.add('hidden');
+    if (authSignupState) authSignupState.classList.remove('hidden');
+    if (authPendingState) authPendingState.classList.add('hidden');
+    userProfileWidget.classList.add('hidden');
+    enableWriteActions(false);
+    if (modeAdminBtn) modeAdminBtn.classList.add('hidden');
+  }
+
   function showPendingState(user) {
     authOverlay.classList.add('active');
     if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.add('hidden');
+    if (authSignupState) authSignupState.classList.add('hidden');
     if (authPendingState) authPendingState.classList.remove('hidden');
     if (pendingUserEmail) pendingUserEmail.textContent = user.email || '-';
     userProfileWidget.classList.remove('hidden');
@@ -750,6 +795,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     authOverlay.classList.remove('active');
     if (authLoadingState) authLoadingState.classList.add('hidden');
     if (authLoginState) authLoginState.classList.remove('hidden');
+    if (authSignupState) authSignupState.classList.add('hidden');
     if (authPendingState) authPendingState.classList.add('hidden');
     userProfileWidget.classList.remove('hidden');
     userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
@@ -782,7 +828,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   getGoogleRedirectResult().then(async (user) => {
     if (user) {
       console.log("✅ Redirect sign-in successful:", user.email);
-      await registerUserMetadata(user);
     }
   }).catch((err) => {
     console.error("❌ Redirect sign-in check completed with error (safe to ignore if already logged in):", err);
@@ -797,27 +842,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (user) {
-      userProfileWidget.classList.remove('hidden');
-      userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
-      userDisplayName.textContent = user.displayName || user.email;
-
-      // Register/update user metadata in Firestore (only writes if new user)
-      await registerUserMetadata(user);
-
+      const authActionMode = sessionStorage.getItem('thp_auth_action') || 'login';
       const isMainAdmin = checkIsAdmin(user);
 
-      // Main admin bypasses approval check
       if (isMainAdmin) {
+        // แอดมินหลักเข้าใช้งานได้เสมอและทำการอัปเดตข้อมูลอัตโนมัติ
+        await registerUserMetadata(user);
+        userProfileWidget.classList.remove('hidden');
+        userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+        userDisplayName.textContent = user.displayName || user.email;
         showApprovedState(user, { role: 'admin' });
         showToast(`ยินดีต้อนรับแอดมิน ${user.displayName || ''}!`, 'success');
         return;
       }
 
-      // For all other users, listen to their profile in real-time
-      // so approval changes by admin take effect immediately
+      // ตรวจสอบความมีตัวตนของสิทธิ์ใน Firestore
+      const exists = await checkUserExists(user.uid);
+
+      if (authActionMode === 'login') {
+        if (!exists) {
+          // หากต้องการ LOGIN แต่ไม่มีบัญชีในระบบ ให้ logout ทันทีและปฏิเสธสิทธิ์
+          console.warn(`❌ Login blocked: User ${user.email} not registered.`);
+          showToast("❌ ไม่พบบัญชีผู้ใช้นี้ในระบบ กรุณาทำการลงทะเบียนก่อนเข้าสู่ระบบ", "error");
+          await logoutUser();
+          showLoginState();
+          return;
+        }
+        // อัปเดตข้อมูลผู้ใช้เดิม
+        await registerUserMetadata(user);
+      } else if (authActionMode === 'signup') {
+        if (!exists) {
+          // หากต้องการ SIGNUP และเป็นเมลใหม่ ให้สร้างข้อมูลลง Firestore รออนุมัติ
+          console.log(`🆕 Registering new user via signup flow: ${user.email}`);
+          await registerUserMetadata(user);
+          showToast("ลงทะเบียนสำเร็จ! กรุณารอผู้ดูแลระบบอนุมัติการใช้งาน", "success");
+        } else {
+          // หากลงทะเบียนซ้ำ ให้นำเข้าระบบเลย
+          await registerUserMetadata(user);
+          showToast("บัญชีนี้เคยลงทะเบียนไว้แล้ว นำเข้าสู่ระบบอัตโนมัติ", "info");
+        }
+      }
+
+      userProfileWidget.classList.remove('hidden');
+      userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+      userDisplayName.textContent = user.displayName || user.email;
+
+      // ติดตามข้อมูลสิทธิ์ผู้ใช้งานแบบเรียลไทม์
       unsubUserProfile = listenToUserProfile(user.uid, (profileData) => {
         if (!profileData) {
-          // Profile not yet created (race condition) — show pending
           showPendingState(user);
           return;
         }
@@ -835,7 +907,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     } else {
       // Logged Out state
-      showLoginState();
+      const authActionMode = sessionStorage.getItem('thp_auth_action') || 'login';
+      if (authActionMode === 'signup') {
+        showSignupState();
+      } else {
+        showLoginState();
+      }
     }
   });
 

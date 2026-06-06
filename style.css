@@ -1352,3 +1352,12 @@ tr:hover td {
 .thp-btn-login:active {
   transform: translateY(0);
 }
+
+.thp-auth-link {
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.thp-auth-link:hover {
+  opacity: 0.8;
+  text-decoration: underline !important;
+}
