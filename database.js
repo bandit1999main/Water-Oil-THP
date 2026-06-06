@@ -9,6 +9,13 @@ import {
   writeBatch,
   onSnapshot
 } from 'firebase/firestore';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDJc5TGxm8oFPYPwhQXT7X3mS7BrTBVT8U",
@@ -21,14 +28,16 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 let useFirebase = false;
 
 // Initialize Firebase
 try {
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+  auth = getAuth(app);
   useFirebase = true;
-  console.log("🔥 Firebase initialized successfully! Connected to Thailand Post Oil Cloud Firestore.");
+  console.log("🔥 Firebase initialized successfully! Connected to Thailand Post Oil Cloud Firestore & Auth.");
 } catch (error) {
   console.error("⚠️ Failed to initialize Firebase. Falling back to local storage.", error);
   useFirebase = false;
@@ -36,6 +45,41 @@ try {
 
 export function isCloudConnected() {
   return useFirebase && db !== null;
+}
+
+export function getFirebaseAuth() {
+  return auth;
+}
+
+export function listenToAuthState(callback) {
+  if (!auth) return null;
+  return onAuthStateChanged(auth, callback);
+}
+
+export async function loginWithGoogle() {
+  if (!auth) return null;
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  } catch (error) {
+    console.error("❌ Google sign-in failed:", error);
+    throw error;
+  }
+}
+
+export async function logoutUser() {
+  if (!auth) return;
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("❌ Sign-out failed:", error);
+  }
+}
+
+export function checkIsAdmin(user) {
+  if (!user) return false;
+  return user.email === 'bandit1999main@gmail.com';
 }
 
 /**

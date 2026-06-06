@@ -27,25 +27,32 @@ service cloud.firestore {
 
     // --- Thailand Post Oil & Water Collections ---
     match /employees/{document} {
-      allow read, write: if true; // In a production app, restrict using: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /water_employees/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /personnel/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /templates/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /signatory_profiles/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /route_data/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
     match /global_settings/{document} {
-      allow read, write: if true;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
     }
   }
 }
