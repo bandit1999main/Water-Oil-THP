@@ -1405,3 +1405,8 @@ tr:hover td {
   border-color: var(--post-orange) !important;
   box-shadow: 0 0 0 4px rgba(var(--post-orange-rgb), 0.15) !important;
 }
+
+/* Welcome hero card banner hover effect */
+.welcome-hero-banner:hover {
+  transform: scale(1.04) rotate(1deg);
+}

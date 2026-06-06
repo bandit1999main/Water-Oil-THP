@@ -78,7 +78,9 @@
     <!-- Glassmorphic Login Overlay Modal -->
     <div id="authOverlay" class="modal-overlay active" style="z-index: 2000; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
       <div class="modal-content glass-modal animate-slide-in" style="max-width: 440px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 2.5rem; border-radius: var(--radius-normal); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);">
-        
+        <!-- Premium Logistics Banner Illustration -->
+        <img src="./logistics_banner.png" alt="Thailand Post Logistics Engine" style="width: calc(100% + 5rem); margin-top: -3rem; margin-bottom: 2rem; border-top-left-radius: var(--radius-normal); border-top-right-radius: var(--radius-normal); object-fit: cover; height: 160px; border-bottom: 1px solid var(--border-glass);" />
+
         <!-- State 0: App Initialization Loading State -->
         <div id="authLoadingState" style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
           <div class="thp-loader-container" style="margin-bottom: 2rem; position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
@@ -181,9 +183,12 @@
     <!-- Main Container -->
     <main id="appContainer" class="main-content-area">
       <!-- Welcome Header -->
-      <div class="welcome-heading">
-        <h2>ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.</h2>
-        <p>คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว</p>
+      <div class="welcome-heading" style="display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem; background: var(--card-bg-gradient); padding: 1.5rem 2rem; border-radius: var(--radius-normal); border: 1px solid var(--border-glass); box-shadow: 0 8px 32px var(--shadow-glass);">
+        <div style="flex: 1; min-width: 300px;">
+          <h2 style="margin: 0 0 0.5rem 0; font-family: var(--font-title); font-weight: 800; font-size: 1.5rem; background: linear-gradient(135deg, var(--text-primary), var(--post-orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.</h2>
+          <p style="margin: 0; color: var(--text-secondary); line-height: 1.6; font-size: 0.95rem;">คำนวณค่าน้ำมันพนักงาน นำจ่ายแทน และภารกิจตรวจการนำจ่ายของหัวหน้าโซน (ชนจ.) อัตโนมัติในระบบเดียว</p>
+        </div>
+        <img src="./logistics_banner.png" alt="Logistics Dashboard Banner" style="width: 240px; height: 110px; object-fit: cover; border-radius: var(--radius-small); border: 1.5px solid var(--border-glass); box-shadow: 0 8px 24px rgba(0,0,0,0.15); transition: transform 0.3s ease;" class="welcome-hero-banner" />
       </div>
 
       <div class="dashboard-grid">
