@@ -1277,6 +1277,10 @@ async function renderAdminUsersTable() {
         ? `<span style="color: var(--post-emerald);">✅ อนุมัติแล้ว</span>`
         : `<span style="color: var(--post-orange);">⏳ รออนุมัติ</span>`;
 
+    const duties = Array.isArray(user.duties) ? user.duties : [];
+    const hasFuel  = duties.includes('fuel')  || isMainAdmin;
+    const hasWater = duties.includes('water') || isMainAdmin;
+
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td style="text-align: center;">
@@ -1285,6 +1289,20 @@ async function renderAdminUsersTable() {
       <td><strong>${user.displayName || 'พนักงานไปรษณีย์'}</strong></td>
       <td>${user.email || '-'}</td>
       <td>${approvedBadge}</td>
+      <td>
+        <div style="display:flex; flex-direction:column; gap:0.3rem; align-items:flex-start;">
+          <label style="display:flex; align-items:center; gap:0.4rem; cursor:${isMainAdmin?'default':'pointer'}; font-size:0.82rem;">
+            <input type="checkbox" class="duty-checkbox" data-uid="${user.uid}" data-duty="fuel"
+              ${hasFuel ? 'checked' : ''} ${isMainAdmin ? 'disabled' : ''}>
+            <span>⛽ ค่าน้ำมัน</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:0.4rem; cursor:${isMainAdmin?'default':'pointer'}; font-size:0.82rem;">
+            <input type="checkbox" class="duty-checkbox" data-uid="${user.uid}" data-duty="water"
+              ${hasWater ? 'checked' : ''} ${isMainAdmin ? 'disabled' : ''}>
+            <span>💧 ค่าน้ำดื่ม</span>
+          </label>
+        </div>
+      </td>
       <td>
         <select class="form-select user-role-select" data-uid="${user.uid}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" ${isMainAdmin ? 'disabled' : ''}>
           <option value="user" ${!isAdminRole ? 'selected' : ''}>User (Read-Only)</option>
@@ -1307,6 +1325,10 @@ async function renderAdminUsersTable() {
   // Bind events dynamically
   tbody.querySelectorAll('.user-role-select').forEach(select => {
     select.addEventListener('change', handleUserRoleChange);
+  });
+
+  tbody.querySelectorAll('.duty-checkbox').forEach(cb => {
+    cb.addEventListener('change', handleUserDutyChange);
   });
 
   tbody.querySelectorAll('.approve-user-btn').forEach(btn => {
@@ -1371,7 +1393,34 @@ async function handleUserDeleteClick(e) {
   });
 }
 
+async function handleUserDutyChange(e) {
+  const uid      = e.target.getAttribute('data-uid');
+  const duty     = e.target.getAttribute('data-duty');   // 'fuel' | 'water'
+  const checked  = e.target.checked;
+  const targetUser = appUsersList.find(u => u.uid === uid);
+  if (!targetUser) return;
+
+  // Collect current duties from all checkboxes for this user
+  const allCheckboxes = document.querySelectorAll(`.duty-checkbox[data-uid="${uid}"]`);
+  const duties = [];
+  allCheckboxes.forEach(cb => {
+    if (cb.checked) duties.push(cb.getAttribute('data-duty'));
+  });
+
+  const success = await saveUserRole(uid, { duties });
+  if (success) {
+    const dutyLabel = duty === 'fuel' ? '⛽ ค่าน้ำมัน' : '💧 ค่าน้ำดื่ม';
+    const action    = checked ? 'เพิ่ม' : 'ลบ';
+    showToast(`${action}หน้าที่ ${dutyLabel} ให้ ${targetUser.displayName || targetUser.email} แล้ว`, 'success');
+    targetUser.duties = duties; // update local cache
+  } else {
+    showToast('ไม่สามารถบันทึกหน้าที่ได้', 'error');
+    e.target.checked = !checked; // revert checkbox
+  }
+}
+
 async function handleUserApproveClick(e) {
+
   const uid = e.currentTarget.getAttribute('data-uid');
   const targetUser = appUsersList.find(u => u.uid === uid);
   if (!targetUser) return;
