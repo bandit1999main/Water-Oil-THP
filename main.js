@@ -555,23 +555,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Setup live changes
   globalFuelPriceInput.addEventListener('change', () => {
     recalculateTableCosts();
-    saveGlobalSetting('fuelPrice', { value: parseFloat(globalFuelPriceInput.value) || 38.50 });
+    if (activeMode === 'fuel') {
+      saveGlobalSetting('fuelPrice', { value: parseFloat(globalFuelPriceInput.value) || 38.50 });
+    }
   });
 
   globalMonthSelect.addEventListener('change', () => {
-    saveGlobalSetting('month', { value: parseInt(globalMonthSelect.value) || 5 });
+    if (activeMode === 'fuel') {
+      saveGlobalSetting('fuelMonth', { value: parseInt(globalMonthSelect.value) || 5 });
+    } else if (activeMode === 'water') {
+      saveGlobalSetting('waterMonth', { value: parseInt(globalMonthSelect.value) || 5 });
+    }
   });
 
   globalYearSelect.addEventListener('input', () => {
     const val = parseInt(globalYearSelect.value);
     if (val >= 2500 && val <= 3000) {
-      saveGlobalSetting('year', { value: val });
+      if (activeMode === 'fuel') {
+        saveGlobalSetting('fuelYear', { value: val });
+      } else if (activeMode === 'water') {
+        saveGlobalSetting('waterYear', { value: val });
+      }
     }
   });
 
   globalYearSelect.addEventListener('change', () => {
     const val = parseInt(globalYearSelect.value) || 2569;
-    saveGlobalSetting('year', { value: val });
+    if (activeMode === 'fuel') {
+      saveGlobalSetting('fuelYear', { value: val });
+    } else if (activeMode === 'water') {
+      saveGlobalSetting('waterYear', { value: val });
+    }
   });
 
   if (globalPostOfficeNameInput) {
@@ -772,14 +786,13 @@ async function initCloudSync() {
       
       // Fetch global settings
       const globalSettings = await fetchGlobalSettings();
-      if (globalSettings.fuelPrice) {
-        globalFuelPriceInput.value = globalSettings.fuelPrice.value;
-      }
-      if (globalSettings.month) {
-        globalMonthSelect.value = globalSettings.month.value;
-      }
-      if (globalSettings.year) {
-        globalYearSelect.value = globalSettings.year.value;
+      if (activeMode === 'fuel') {
+        if (globalSettings.fuelPrice) globalFuelPriceInput.value = globalSettings.fuelPrice.value;
+        if (globalSettings.fuelMonth) globalMonthSelect.value = globalSettings.fuelMonth.value;
+        if (globalSettings.fuelYear) globalYearSelect.value = globalSettings.fuelYear.value;
+      } else if (activeMode === 'water') {
+        if (globalSettings.waterMonth) globalMonthSelect.value = globalSettings.waterMonth.value;
+        if (globalSettings.waterYear) globalYearSelect.value = globalSettings.waterYear.value;
       }
       if (globalSettings.postOfficeName) {
         globalPostOfficeNameInput.value = globalSettings.postOfficeName.value;
@@ -828,15 +841,24 @@ async function initCloudSync() {
       });
 
       listenToGlobalSettings((updatedSettings) => {
-        if (updatedSettings.fuelPrice && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
-          globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
-          recalculateTableCosts();
-        }
-        if (updatedSettings.month && globalMonthSelect.value !== String(updatedSettings.month.value)) {
-          globalMonthSelect.value = updatedSettings.month.value;
-        }
-        if (updatedSettings.year && globalYearSelect.value !== String(updatedSettings.year.value)) {
-          globalYearSelect.value = updatedSettings.year.value;
+        if (activeMode === 'fuel') {
+          if (updatedSettings.fuelPrice && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
+            globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
+            recalculateTableCosts();
+          }
+          if (updatedSettings.fuelMonth && globalMonthSelect.value !== String(updatedSettings.fuelMonth.value)) {
+            globalMonthSelect.value = updatedSettings.fuelMonth.value;
+          }
+          if (updatedSettings.fuelYear && globalYearSelect.value !== String(updatedSettings.fuelYear.value)) {
+            globalYearSelect.value = updatedSettings.fuelYear.value;
+          }
+        } else if (activeMode === 'water') {
+          if (updatedSettings.waterMonth && globalMonthSelect.value !== String(updatedSettings.waterMonth.value)) {
+            globalMonthSelect.value = updatedSettings.waterMonth.value;
+          }
+          if (updatedSettings.waterYear && globalYearSelect.value !== String(updatedSettings.waterYear.value)) {
+            globalYearSelect.value = updatedSettings.waterYear.value;
+          }
         }
         if (updatedSettings.postOfficeName && globalPostOfficeNameInput.value !== String(updatedSettings.postOfficeName.value)) {
           globalPostOfficeNameInput.value = updatedSettings.postOfficeName.value;
@@ -1093,10 +1115,30 @@ async function switchAppMode(mode) {
         } else {
           waterEmployees = await fetchWaterEmployees();
         }
+
+        // Fetch dynamic decoupled settings for the current mode
+        const settings = await fetchGlobalSettings();
+        if (mode === 'fuel') {
+          if (settings.fuelMonth) globalMonthSelect.value = settings.fuelMonth.value;
+          if (settings.fuelYear) globalYearSelect.value = settings.fuelYear.value;
+          if (settings.fuelPrice) globalFuelPriceInput.value = settings.fuelPrice.value;
+          document.querySelector('label[for="globalFuelPrice"]').classList.remove('hidden');
+          globalFuelPriceInput.classList.remove('hidden');
+          document.getElementById('openAvgCalcBtn').classList.remove('hidden');
+        } else if (mode === 'water') {
+          if (settings.waterMonth) globalMonthSelect.value = settings.waterMonth.value;
+          if (settings.waterYear) globalYearSelect.value = settings.waterYear.value;
+          // Water mode does not use fuel price mid-calculation inputs
+          document.querySelector('label[for="globalFuelPrice"]').classList.add('hidden');
+          globalFuelPriceInput.classList.add('hidden');
+          document.getElementById('openAvgCalcBtn').classList.add('hidden');
+        }
       } catch (err) {
-        console.error("Error loading mode data:", err);
+        console.error("Error loading mode data/settings:", err);
       }
     }
+    renderEmployeeTable();
+    updateTemplateSelectDropdown();
   }
 }
 
@@ -1239,12 +1281,13 @@ function updateEmployeeSelectDropdown() {
 }
 
 function handleEmpNameSelectChange(e) {
-  const selectedName = e.target.value;
+  const selectedName = e.target.value.trim();
+  
+  // Set the hidden empName input to keep compatibility with existing calculation submits
+  document.getElementById('empName').value = selectedName;
+
   const person = personnel.find(p => p.name === selectedName);
   if (!person) return;
-
-  // Set the hidden empName input to keep compatibility with existing calculation submits
-  document.getElementById('empName').value = person.name;
 
   // Autofill fields depending on mode
   if (activeMode === 'fuel') {
@@ -4526,6 +4569,13 @@ function openAttendanceImportModal() {
   submitImportBtn.disabled = true;
   submitImportBtn.innerHTML = '✔️ ยืนยันนำเข้าข้อมูล';
   tempParsedRecords = [];
+  
+  // Pre-select import mode option matching the current active mode
+  const targetRadio = document.querySelector(`input[name="importTargetMode"][value="${activeMode}"]`);
+  if (targetRadio) {
+    targetRadio.checked = true;
+  }
+  
   attendanceImportModal.classList.add('active');
 }
 
