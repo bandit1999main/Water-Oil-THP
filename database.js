@@ -556,5 +556,88 @@ export function listenToPersonnel(callback) {
   });
 }
 
+/**
+ * --- USER MANAGEMENT CRUD ---
+ */
+
+// Fetch all registered app users (admin list metadata)
+export async function fetchUsersList() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_users')) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, "app_users"));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), uid: doc.id });
+    });
+    localStorage.setItem('tp_users', JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error("❌ Firestore fetchUsersList failed.", error);
+    return JSON.parse(localStorage.getItem('tp_users')) || [];
+  }
+}
+
+// Save or Update a single user role/metadata
+export async function saveUserRole(uid, userData) {
+  if (!isCloudConnected()) return false;
+  try {
+    const docRef = doc(db, "app_users", uid);
+    await setDoc(docRef, { ...userData, updatedAt: Date.now() }, { merge: true });
+    console.log(`✅ User role/metadata for "${uid}" updated successfully.`);
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore saveUserRole failed.", error);
+    return false;
+  }
+}
+
+// Delete user from app metadata listing
+export async function deleteUserMetadata(uid) {
+  if (!isCloudConnected()) return false;
+  try {
+    await deleteDoc(doc(db, "app_users", uid));
+    console.log(`🗑️ User metadata "${uid}" deleted.`);
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore deleteUserMetadata failed.", error);
+    return false;
+  }
+}
+
+// Register user metadata on successful login if it doesn't exist yet
+export async function registerUserMetadata(user) {
+  if (!isCloudConnected() || !user) return;
+  try {
+    const docRef = doc(db, "app_users", user.uid);
+    // Write if doesn't exist, using merge to preserve existing role
+    await setDoc(docRef, {
+      uid: user.uid,
+      displayName: user.displayName || '',
+      email: user.email || '',
+      photoURL: user.photoURL || '',
+      lastLogin: Date.now()
+    }, { merge: true });
+  } catch (error) {
+    console.error("❌ Failed to register user metadata on Firestore:", error);
+  }
+}
+
+export function listenToUsers(callback) {
+  if (!isCloudConnected()) return null;
+  return onSnapshot(collection(db, "app_users"), (snapshot) => {
+    const list = [];
+    snapshot.forEach((doc) => {
+      list.push({ ...doc.data(), uid: doc.id });
+    });
+    localStorage.setItem('tp_users', JSON.stringify(list));
+    callback(list);
+  }, (error) => {
+    console.error("Firestore listenToUsers failed:", error);
+  });
+}
+
+
 
 

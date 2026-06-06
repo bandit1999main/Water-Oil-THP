@@ -32,7 +32,12 @@ import {
   listenToAuthState,
   loginWithGoogle,
   logoutUser,
-  checkIsAdmin
+  checkIsAdmin,
+  fetchUsersList,
+  saveUserRole,
+  deleteUserMetadata,
+  registerUserMetadata,
+  listenToUsers
 } from './database.js';
 
 // Helper Debounce Function for Performance Optimization
@@ -358,6 +363,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
   modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
   modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
+  if (document.getElementById('modeAdminBtn')) {
+    document.getElementById('modeAdminBtn').addEventListener('click', () => switchAppMode('admin'));
+  }
   deliveryRouteSelect.addEventListener('change', handleRouteSelect);
   empPositionSelect.addEventListener('change', handlePositionSelect);
   document.getElementById('isSubstitute').addEventListener('change', handlePositionSelect);
@@ -650,8 +658,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const modeAdminBtn = document.getElementById('modeAdminBtn');
+
   // Observe Authentication status changes
-  listenToAuthState((user) => {
+  listenToAuthState(async (user) => {
     if (user) {
       // Logged In state
       authOverlay.classList.remove('active');
@@ -659,23 +669,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
       userDisplayName.textContent = user.displayName || user.email;
       
+      // Auto-register user logs in app_users database collection
+      await registerUserMetadata(user);
+
       const isAdmin = checkIsAdmin(user);
       if (isAdmin) {
         userRoleBadge.textContent = 'Admin';
         userRoleBadge.style.color = 'var(--post-emerald)';
         showToast(`ยินดีต้อนรับแอดมิน ${user.displayName || ''}!`, 'success');
         enableWriteActions(true);
+        if (modeAdminBtn) {
+          modeAdminBtn.classList.remove('hidden'); // Show admin mode tab for administrators
+        }
       } else {
         userRoleBadge.textContent = 'User (Read-Only)';
         userRoleBadge.style.color = 'var(--text-secondary)';
         showToast(`ยินดีต้อนรับ ${user.displayName || ''}! คุณมีสิทธิ์อ่านข้อมูลเท่านั้น`, 'info');
         enableWriteActions(false);
+        if (modeAdminBtn) {
+          modeAdminBtn.classList.add('hidden'); // Hide admin tab for normal users
+        }
       }
     } else {
       // Logged Out state
       authOverlay.classList.add('active');
       userProfileWidget.classList.add('hidden');
       enableWriteActions(false);
+      if (modeAdminBtn) {
+        modeAdminBtn.classList.add('hidden');
+      }
     }
   });
 
@@ -799,6 +821,11 @@ async function initCloudSync() {
         else updateEmployeeSelectDropdown();
       });
 
+      listenToUsers((updatedUsers) => {
+        appUsersList = updatedUsers;
+        if (activeMode === 'admin') renderAdminUsersTable();
+      });
+
       listenToGlobalSettings((updatedSettings) => {
         if (updatedSettings.fuelPrice && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
           globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
@@ -869,10 +896,35 @@ async function switchAppMode(mode) {
   const tableTitle = document.querySelector('#mainTableCard .table-header-flex h3');
   
   // Toggle Card/Table Visibility based on mode
-  if (mode === 'personnel') {
+  if (mode === 'admin') {
     calculationFormCard.classList.add('hidden');
     mainTableCard.classList.add('hidden');
     document.querySelector('.metrics-grid').classList.add('hidden');
+    personnelCard.classList.add('hidden');
+    personnelTableCard.classList.add('hidden');
+    
+    document.getElementById('adminTableCard').classList.remove('hidden');
+    
+    // Buttons styling
+    modeAdminBtn.style.background = 'var(--post-orange)';
+    modeAdminBtn.style.color = 'white';
+    modeFuelBtn.style.background = 'transparent';
+    modeFuelBtn.style.color = 'var(--text-secondary)';
+    modeWaterBtn.style.background = 'transparent';
+    modeWaterBtn.style.color = 'var(--text-secondary)';
+    modePersonnelBtn.style.background = 'transparent';
+    modePersonnelBtn.style.color = 'var(--text-secondary)';
+    
+    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Admin Control Room v1.0';
+    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ส่วนการจัดการและดูแลสิทธิ์ผู้ใช้งานระบบคลาวด์';
+    if (welcomeHeadingP) welcomeHeadingP.textContent = 'กำหนดสิทธิ์ แก้ไขข้อมูลพนักงาน และควบคุมการเข้าถึงระบบจากฐานข้อมูลกลาง';
+    
+    renderAdminUsersTable();
+  } else if (mode === 'personnel') {
+    calculationFormCard.classList.add('hidden');
+    mainTableCard.classList.add('hidden');
+    document.querySelector('.metrics-grid').classList.add('hidden');
+    document.getElementById('adminTableCard').classList.add('hidden');
     
     personnelCard.classList.remove('hidden');
     personnelTableCard.classList.remove('hidden');
@@ -884,6 +936,8 @@ async function switchAppMode(mode) {
     modeFuelBtn.style.color = 'var(--text-secondary)';
     modeWaterBtn.style.background = 'transparent';
     modeWaterBtn.style.color = 'var(--text-secondary)';
+    modeAdminBtn.style.background = 'transparent';
+    modeAdminBtn.style.color = 'var(--text-secondary)';
     
     if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Personnel Registry v1.0';
     if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบจัดการข้อมูลบุคลากรประจำที่ทำการ / ปณ.';
@@ -906,9 +960,12 @@ async function switchAppMode(mode) {
     
     personnelCard.classList.add('hidden');
     personnelTableCard.classList.add('hidden');
+    document.getElementById('adminTableCard').classList.add('hidden');
     
     modePersonnelBtn.style.background = 'transparent';
     modePersonnelBtn.style.color = 'var(--text-secondary)';
+    modeAdminBtn.style.background = 'transparent';
+    modeAdminBtn.style.color = 'var(--text-secondary)';
     
     updateEmployeeSelectDropdown();
     
@@ -1036,10 +1093,132 @@ async function switchAppMode(mode) {
         console.error("Error loading mode data:", err);
       }
     }
-    renderEmployeeTable();
-    updateTemplateSelectDropdown();
   }
 }
+
+/* --- ADMIN USER MANAGEMENT CONTROLLERS --- */
+let appUsersList = [];
+
+async function renderAdminUsersTable() {
+  const tbody = document.getElementById('adminUsersTableBody');
+  if (!tbody) return;
+
+  if (isCloudConnected()) {
+    try {
+      appUsersList = await fetchUsersList();
+    } catch (err) {
+      console.error("Failed to fetch app users metadata:", err);
+      appUsersList = JSON.parse(localStorage.getItem('tp_users')) || [];
+    }
+  } else {
+    appUsersList = JSON.parse(localStorage.getItem('tp_users')) || [];
+  }
+
+  // Auto-sort users by name
+  appUsersList.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '', 'th'));
+
+  if (appUsersList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="no-data">ยังไม่มีประวัติข้อมูลผู้ใช้งานในระบบคลาวด์</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  appUsersList.forEach((user, index) => {
+    const isMainAdmin = user.email === 'bandit1999main@gmail.com';
+    const lastLoginText = user.lastLogin ? new Date(user.lastLogin).toLocaleString('th-TH') : '-';
+    const tr = document.createElement('tr');
+    
+    // Check role display
+    const isAdminRole = user.role === 'admin' || isMainAdmin;
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td style="text-align: center;">
+        <img src="${user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'}" alt="Photo" style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border-glass);" />
+      </td>
+      <td><strong>${user.displayName || 'พนักงานไปรษณีย์'}</strong></td>
+      <td>${user.email || '-'}</td>
+      <td>
+        <select class="form-select user-role-select" data-uid="${user.uid}" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;" ${isMainAdmin ? 'disabled' : ''}>
+          <option value="user" ${!isAdminRole ? 'selected' : ''}>User (Read-Only)</option>
+          <option value="admin" ${isAdminRole ? 'selected' : ''}>Admin (จัดการข้อมูล)</option>
+        </select>
+      </td>
+      <td>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+          <span>${lastLoginText}</span>
+          ${isMainAdmin ? '' : `
+            <button class="row-action-btn delete-user-btn" data-uid="${user.uid}" style="color: var(--post-red); cursor: pointer;" title="ลบข้อมูลการเข้าใช้งาน">🗑️</button>
+          `}
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Bind events dynamically
+  tbody.querySelectorAll('.user-role-select').forEach(select => {
+    select.addEventListener('change', handleUserRoleChange);
+  });
+
+  tbody.querySelectorAll('.delete-user-btn').forEach(btn => {
+    btn.addEventListener('click', handleUserDeleteClick);
+  });
+}
+
+async function handleUserRoleChange(e) {
+  const uid = e.target.getAttribute('data-uid');
+  const newRole = e.target.value;
+  const targetUser = appUsersList.find(u => u.uid === uid);
+  if (!targetUser) return;
+
+  showConfirmModal(
+    '🔄 ยืนยันเปลี่ยนสิทธิ์ผู้ใช้งาน',
+    `คุณต้องการเปลี่ยนสิทธิ์ของ "${targetUser.displayName}" เป็น ${newRole === 'admin' ? 'Admin' : 'User (Read-Only)'} ใช่หรือไม่?`,
+    '🔄',
+    async () => {
+      showToast('กำลังปรับปรุงสิทธิ์...', 'info');
+      const success = await saveUserRole(uid, { role: newRole });
+      if (success) {
+        showToast('อัปเดตสิทธิ์เรียบร้อยแล้ว!', 'success');
+        renderAdminUsersTable();
+      } else {
+        showToast('ไม่สามารถอัปเดตสิทธิ์ได้', 'error');
+      }
+    },
+    'btn-primary',
+    'ยืนยันเปลี่ยนสิทธิ์'
+  );
+}
+
+async function handleUserDeleteClick(e) {
+  const uid = e.currentTarget.getAttribute('data-uid');
+  const targetUser = appUsersList.find(u => u.uid === uid);
+  if (!targetUser) return;
+
+  showConfirmModal(
+    '🗑️ ลบข้อมูลบัญชีผู้ใช้งาน',
+    `คุณต้องการลบข้อมูลบัญชีของ "${targetUser.displayName}" ออกจากระบบดูแลความปลอดภัยใช่หรือไม่? (การลบนี้จะตัดสิทธิ์เข้าถึงชั่วคราวจนกว่าจะล็อกอินใหม่)`,
+    '🗑️',
+    async () => {
+      showToast('กำลังลบข้อมูลบัญชี...', 'info');
+      const success = await deleteUserMetadata(uid);
+      if (success) {
+        showToast('ลบข้อมูลบัญชีสำเร็จ!', 'success');
+        renderAdminUsersTable();
+      } else {
+        showToast('ไม่สามารถลบข้อมูลบัญชีได้', 'error');
+      }
+    },
+    'btn-danger',
+    'ยืนยันการลบ'
+  );
+}
+
 
 /* --- PERSONNEL REGISTRY CONTROLLERS --- */
 

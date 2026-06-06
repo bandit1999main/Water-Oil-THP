@@ -47,6 +47,9 @@
             <button id="modePersonnelBtn" class="btn btn-small" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: transparent; color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
               <span>👥</span> จัดการบุคลากร
             </button>
+            <button id="modeAdminBtn" class="btn btn-small hidden" style="border-radius: 8px; padding: 0.35rem 0.8rem; font-size: 0.8rem; background: transparent; color: var(--text-secondary); border: none; font-weight: 700; cursor: pointer; transition: all var(--transition-fast); display: flex; align-items: center; gap: 0.25rem;">
+              <span>🔑</span> ดูแลระบบ (Admin)
+            </button>
           </div>
           
           <div id="dbStatusBadge" class="db-status-badge connecting">
@@ -696,6 +699,38 @@
                 <tbody id="personnelTableBody">
                   <tr>
                     <td colspan="10" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Admin Panel (User Management) -->
+          <div id="adminTableCard" class="glass-card full-width hidden">
+            <div class="card-header table-header-flex">
+              <div class="header-left">
+                <span class="card-icon">🔑</span>
+                <h3>จัดการสิทธิ์ผู้ใช้งานระบบ (User Management)</h3>
+              </div>
+            </div>
+            <div style="padding: 1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; background: rgba(0, 0, 0, 0.02); border-bottom: 1px solid var(--border-glass); border-radius: var(--radius-small) var(--radius-small) 0 0;">
+              💡 <strong>คู่มือดูแลระบบ:</strong> รายการผู้ใช้งานจะปรากฏที่นี่เมื่อพวกเขาเข้าสู่ระบบครั้งแรก บัญชีแอดมินหลัก <strong style="color: var(--post-orange);">bandit1999main@gmail.com</strong> จะไม่สามารถเปลี่ยนสิทธิ์หรือลบออกได้เพื่อความปลอดภัยสูงสุด
+            </div>
+            <div class="table-container">
+              <table id="adminUsersTable">
+                <thead>
+                  <tr>
+                    <th style="width: 8%;">ลำดับ</th>
+                    <th style="width: 12%;">โปรไฟล์</th>
+                    <th style="width: 20%;">ชื่อผู้ใช้งาน</th>
+                    <th style="width: 25%;">อีเมล</th>
+                    <th style="width: 15%;">บทบาทหน้าที่</th>
+                    <th style="width: 20%;">เข้าสู่ระบบล่าสุด</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTableBody">
+                  <tr>
+                    <td colspan="6" class="no-data">ยังไม่มีประวัติข้อมูลผู้ใช้งานในระบบคลาวด์</td>
                   </tr>
                 </tbody>
               </table>
