@@ -89,6 +89,7 @@ let tempMissions = []; // temporary missions list for current supervisor input
 const globalFuelPriceInput = document.getElementById('globalFuelPrice');
 const globalMonthSelect = document.getElementById('globalMonth');
 const globalYearSelect = document.getElementById('globalYear');
+const globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
 const deliveryRouteSelect = document.getElementById('deliveryRoute');
 const empPositionSelect = document.getElementById('empPosition');
 const empDutySelect = document.getElementById('empDuty');
@@ -542,6 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
     saveGlobalSetting('year', { value: val });
   });
 
+  if (globalPostOfficeNameInput) {
+    globalPostOfficeNameInput.addEventListener('change', () => {
+      saveGlobalSetting('postOfficeName', { value: globalPostOfficeNameInput.value.trim() || 'มาบตาพุด' });
+    });
+  }
+
   // Populate Route Editor Dropdown
   Object.keys(ROUTE_DATA).forEach(route => {
     const opt = document.createElement('option');
@@ -644,6 +651,9 @@ async function initCloudSync() {
       if (globalSettings.year) {
         globalYearSelect.value = globalSettings.year.value;
       }
+      if (globalSettings.postOfficeName) {
+        globalPostOfficeNameInput.value = globalSettings.postOfficeName.value;
+      }
       if (globalSettings.signatories) {
         const sigs = globalSettings.signatories;
         document.getElementById('sigMakerTitle').value = sigs.makerTitle || '';
@@ -692,6 +702,9 @@ async function initCloudSync() {
         }
         if (updatedSettings.year && globalYearSelect.value !== String(updatedSettings.year.value)) {
           globalYearSelect.value = updatedSettings.year.value;
+        }
+        if (updatedSettings.postOfficeName && globalPostOfficeNameInput.value !== String(updatedSettings.postOfficeName.value)) {
+          globalPostOfficeNameInput.value = updatedSettings.postOfficeName.value;
         }
         if (updatedSettings.signatories) {
           const sigs = updatedSettings.signatories;
@@ -2364,6 +2377,11 @@ function renderEmployeeTable() {
     // index is relative to the table section
     const currentTableIndex = row.item.isSubstitute ? ++substituteCount : ++regularCount;
 
+    let planBtnHtml = '';
+    if (row.item.formMode === 'supervisor') {
+      planBtnHtml = `<button class="btn btn-primary btn-small print-plan-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem; background: var(--post-orange); border-color: var(--post-orange);">🖨️ แผนตรวจ</button>`;
+    }
+
     tr.innerHTML = `
       <td>${currentTableIndex}</td>
       <td><strong>${row.name}</strong></td>
@@ -2374,14 +2392,18 @@ function renderEmployeeTable() {
       <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
       <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</strong></td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #eee; font-weight: 300;">${row.signature}</span></td>
-      <td class="actions-col" style="width: 240px; white-space: nowrap;">
+      <td class="actions-col" style="width: 280px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
+        ${planBtnHtml}
         <button class="btn btn-secondary btn-small clone-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">📋 คัดลอก</button>
         <button class="btn btn-danger btn-small delete-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">🗑️ ลบ</button>
       </td>
     `;
 
     tr.querySelector('.edit-row-btn').addEventListener('click', () => openEditModal(false, row.parentIndex));
+    if (row.item.formMode === 'supervisor') {
+      tr.querySelector('.print-plan-btn').addEventListener('click', () => printSupervisorPlan(row.parentIndex));
+    }
     tr.querySelector('.clone-row-btn').addEventListener('click', () => cloneRow(row.parentIndex));
     tr.querySelector('.delete-row-btn').addEventListener('click', () => deleteRow(row.parentIndex));
 
@@ -3428,6 +3450,144 @@ function printReport() {
 
   // Give browser 300ms to render print layout before opening dialog
   setTimeout(() => window.print(), 300);
+}
+
+function printSupervisorPlan(parentIndex) {
+  const item = employees[parentIndex];
+  if (!item || item.formMode !== 'supervisor') {
+    showToast('ข้อมูลพนักงานไม่ถูกต้อง หรือไม่ใช่หัวหน้าโซนนำจ่าย (ชนจ.)', 'error');
+    return;
+  }
+
+  // Filter for delivery inspection (ตรวจสอบการนำจ่าย) missions
+  const inspectMissions = item.missions.filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+  if (inspectMissions.length === 0) {
+    showToast('หัวหน้าโซนคนนี้ไม่มีภารกิจ "ตรวจสอบการนำจ่าย" จึงไม่มีแผนการออกตรวจสอบ', 'warning');
+    return;
+  }
+
+  const postOfficeName = globalPostOfficeNameInput ? (globalPostOfficeNameInput.value.trim() || 'มาบตาพุด') : 'มาบตาพุด';
+  const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+  const yearText = globalYearSelect.value;
+
+  const postmasterName = document.getElementById('sigMakerName').value.trim() || 'นายนิพล ทรัพย์หมื่นแสน';
+  const postmasterPos = document.getElementById('sigMakerPos').value.trim() || 'หัวหน้าทำการไปรษณีย์มาบตาพุด';
+
+  const printSupervisorPlanArea = document.getElementById('printSupervisorPlanArea');
+  printSupervisorPlanArea.innerHTML = '';
+
+  let tableRowsHtml = [];
+  let totalInspectDist = 0;
+  let totalLiters = 0;
+
+  inspectMissions.forEach(m => {
+    const routeInfo = ROUTE_DATA[m.route];
+    const dailyDist = routeInfo ? routeInfo.workerDist : 0;
+    const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+
+    // A supervisor mission can have multiple dates, e.g. "1, 8, 17, 23, 29"
+    // Let's split by comma and render one row per date!
+    const dateArray = m.dates.split(',').map(d => d.trim()).filter(d => d.length > 0);
+    
+    dateArray.forEach(dt => {
+      // 1 day of inspection
+      const halfDist = dailyDist / 2;
+      const liters = dailyLiters / 2;
+      
+      totalInspectDist += halfDist;
+      totalLiters += liters;
+
+      tableRowsHtml.push(`
+        <tr>
+          <td>ด้านจ่ายที่ ${m.route}</td>
+          <td>${dt}</td>
+          <td>${dailyDist.toFixed(2)}</td>
+          <td>${halfDist.toFixed(2)}</td>
+          <td>${liters.toFixed(2)}</td>
+        </tr>
+      `);
+    });
+  });
+
+  const numRoutes = inspectMissions.length;
+
+  // Render the structure matching the image exactly!
+  printSupervisorPlanArea.innerHTML = `
+    <div class="print-plan-attachment">เอกสารแนบ 1</div>
+    <div class="print-plan-title">แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</div>
+    
+    <div class="print-plan-paragraph">
+      <strong>(1) เรียน หน.ปณ. ${postOfficeName}</strong>
+    </div>
+    
+    <div class="print-plan-paragraph">
+      ข้าพเจ้า <strong>${item.name}</strong> ตำแหน่ง <strong>${item.position || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOfficeName}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป. (นจ. 1)/951 ลว. 22 กันยายน 2560 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${numRoutes}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
+    </div>
+
+    <table class="print-plan-table">
+      <thead>
+        <tr>
+          <th>ด้านจ่ายในความรับผิดชอบ</th>
+          <th>ว./ด./ป. ที่ออกตรวจสอบ</th>
+          <th>ระยะทาง (กม./วัน)</th>
+          <th>ระยะทางออกตรวจสอบการนำจ่าย<br>(ครึ่งหนึ่งของระยะทางด้านจ่าย) (กม./วัน)</th>
+          <th>น้ำมันเชื้อเพลิงที่ใช้ (ลิตร/วัน)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml.join('')}
+        <tr style="font-weight: bold; background: #f2f2f2;">
+          <td colspan="3" style="text-align: right !important;">รวม</td>
+          <td>${totalInspectDist.toFixed(2)}</td>
+          <td>${totalLiters.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="print-plan-paragraph" style="margin-top: 1.5rem;">
+      จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
+    </div>
+
+    <div class="print-plan-signatures">
+      <div class="print-plan-sig-row">
+        <div class="print-plan-sig-box">
+          <p>..........................................................</p>
+          <p><strong>(${item.name})</strong></p>
+          <p>ตำแหน่ง ${item.position || 'หัวหน้าโซนนำจ่าย'}</p>
+          <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-plan-approval-section">
+      <p><strong>(2) ความเห็นของหัวหน้าทำการไปรษณีย์</strong></p>
+      <p style="margin-left: 1.5cm;">
+        ( &nbsp; ) อนุมัติ<br>
+        ( &nbsp; ) อื่นๆ ............................................................................................................
+      </p>
+      
+      <div class="print-plan-sig-row" style="margin-top: 1.5rem;">
+        <div class="print-plan-sig-box">
+          <p>..........................................................</p>
+          <p><strong>(${postmasterName})</strong></p>
+          <p>ตำแหน่ง ${postmasterPos}</p>
+          <p>วันที่......... เดือน.................................. พ.ศ. ................</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Store the active mode before printing
+  const originalMode = document.documentElement.getAttribute('data-mode');
+
+  // Change attribute to trigger correct stylesheet display
+  document.documentElement.setAttribute('data-mode', 'supervisor-plan');
+
+  setTimeout(() => {
+    window.print();
+    // Restore mode
+    document.documentElement.setAttribute('data-mode', originalMode);
+  }, 300);
 }
 
 /* --- SAVED TEMPLATES / BATCH MANAGER LOGIC --- */

@@ -897,6 +897,79 @@ tr:hover td {
     page: portrait-page;
   }
 
+  [data-mode="supervisor-plan"] #printSupervisorPlanArea {
+    display: block !important;
+    padding: 1cm 1.5cm !important;
+    width: 100%;
+    page: portrait-page;
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-plan-title {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+    text-decoration: underline;
+    margin-bottom: 1.5rem;
+    margin-top: 1rem;
+    color: black;
+  }
+  .print-plan-attachment {
+    text-align: right;
+    font-size: 10pt;
+    font-weight: normal;
+    color: black;
+  }
+  .print-plan-paragraph {
+    text-indent: 1.5cm;
+    font-size: 11pt;
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 1.5rem;
+    color: black;
+  }
+  .print-plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+  }
+  .print-plan-table th, .print-plan-table td {
+    border: 1px solid black !important;
+    padding: 6px 8px !important;
+    font-size: 10pt !important;
+    text-align: center !important;
+    color: black !important;
+  }
+  .print-plan-table th {
+    font-weight: bold !important;
+    background: #f2f2f2 !important;
+  }
+  .print-plan-signatures {
+    margin-top: 2rem;
+    font-size: 10.5pt;
+    line-height: 1.8;
+    color: black;
+  }
+  .print-plan-sig-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 2rem;
+  }
+  .print-plan-sig-box {
+    text-align: center;
+    width: 350px;
+    color: black;
+  }
+  .print-plan-approval-section {
+    margin-top: 3rem;
+    font-size: 10.5pt;
+    line-height: 1.8;
+    border-top: 1px dashed black;
+    padding-top: 1.5rem;
+    color: black;
+  }
+
   .print-header {
     text-align: center;
     margin-bottom: 0.8rem;

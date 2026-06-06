@@ -103,16 +103,22 @@
               </div>
             </div>
 
-            <div class="form-group" style="margin-top: 1rem;">
-              <label for="globalFuelPrice">ราคาน้ำมันเชื้อเพลิงที่ใช้อ้างอิง (บาท/ลิตร)</label>
-              <div class="input-with-action">
-                <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="38.50" step="0.01" />
-                <button type="button" id="openAvgCalcBtn" class="btn btn-secondary btn-small">
-                  🧮 คำนวณถัวเฉลี่ยถ่วงน้ำหนัก
-                </button>
+            <div class="form-row-2" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label for="globalPostOfficeName">ชื่อที่ทำการไปรษณีย์ / ปณ.</label>
+                <input type="text" id="globalPostOfficeName" class="form-input" placeholder="เช่น มาบตาพุด" value="มาบตาพุด" />
               </div>
-              <p class="input-tip">สามารถแก้ไขเพื่อใช้ราคานี้กับทุกคน หรือกดเพื่อคำนวณถัวเฉลี่ยตามระเบียบ</p>
+              <div class="form-group">
+                <label for="globalFuelPrice">ราคาน้ำมันอ้างอิง (บาท/ลิตร)</label>
+                <div class="input-with-action">
+                  <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="38.50" step="0.01" />
+                  <button type="button" id="openAvgCalcBtn" class="btn btn-secondary btn-small" style="white-space: nowrap; padding: 0.5rem 0.6rem;">
+                    🧮 คำนวณถัวเฉลี่ย
+                  </button>
+                </div>
+              </div>
             </div>
+            <p class="input-tip" style="margin-top: 0.25rem;">สามารถระบุชื่อ ปณ. และราคาน้ำมันอ้างอิงเพื่อใช้ในการคำนวณและออกรายงาน</p>
 
             <!-- Signature Configurations for PDF Report -->
             <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-glass); padding-top: 1rem;">
@@ -1553,6 +1559,11 @@
           <p>ตำแหน่ง <span id="printSigApproverPosValWater">..........................................................</span></p>
         </div>
       </div>
+    </div>
+
+    <!-- Printable Supervisor Inspection Plan Layout (Hidden on Screen, Visible on Print) -->
+    <div id="printSupervisorPlanArea" class="print-only">
+      <!-- Generated dynamically in JavaScript -->
     </div>
 
     <!-- Scripts -->
