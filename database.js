@@ -63,11 +63,23 @@ export async function loginWithGoogle() {
   if (!auth) return null;
   const provider = new GoogleAuthProvider();
   try {
-    // ใช้ signInWithRedirect แทน Popup เพื่อป้องกันการโดนบล็อกบนเบราว์เซอร์มือถือ
-    await signInWithRedirect(auth, provider);
+    // ลองใช้ signInWithPopup เป็นหลักเพื่อความรวดเร็วและไม่ต้อง reload หน้าเว็บ
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
   } catch (error) {
-    console.error("❌ Google redirect sign-in failed:", error);
-    throw error;
+    // หากโดนบล็อกป๊อปอัป (เช่นบนมือถือ) ให้ใช้ redirect เป็น fallback อัตโนมัติ
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+      console.warn("⚠️ Popup blocked, falling back to signInWithRedirect...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectErr) {
+        console.error("❌ Google redirect sign-in failed:", redirectErr);
+        throw redirectErr;
+      }
+    } else {
+      console.error("❌ Google sign-in failed:", error);
+      throw error;
+    }
   }
 }
 
@@ -78,7 +90,7 @@ export async function getGoogleRedirectResult() {
     return result ? result.user : null;
   } catch (error) {
     console.error("❌ getRedirectResult failed:", error);
-    throw error;
+    return null; // ป้องกันการ throw error ไปยังหน้าหลักจนทำให้แอปค้าง
   }
 }
 

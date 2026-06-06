@@ -777,9 +777,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await registerUserMetadata(user);
     }
   }).catch((err) => {
-    console.error("❌ Redirect sign-in failed:", err);
-    showToast("การลงชื่อเข้าใช้งานล้มเหลว: " + (err.message || err.code), "error");
-    showLoginState();
+    console.error("❌ Redirect sign-in check completed with error (safe to ignore if already logged in):", err);
   });
 
   // Observe Authentication status changes
