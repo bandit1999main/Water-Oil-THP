@@ -43,6 +43,22 @@ export function initPersonnelManager() {
     checkDuplicatesBtn.addEventListener('click', scanForDuplicateNames);
   }
 
+  // Bind Export, Print, and Clear Report Buttons for Personnel
+  const exportPersonnelCsvBtn = document.getElementById('exportPersonnelCsvBtn');
+  if (exportPersonnelCsvBtn) {
+    exportPersonnelCsvBtn.addEventListener('click', exportPersonnelCsv);
+  }
+
+  const printPersonnelReportBtn = document.getElementById('printPersonnelReportBtn');
+  if (printPersonnelReportBtn) {
+    printPersonnelReportBtn.addEventListener('click', printPersonnelReport);
+  }
+
+  const clearAllPersonnelBtn = document.getElementById('clearAllPersonnelBtn');
+  if (clearAllPersonnelBtn) {
+    clearAllPersonnelBtn.addEventListener('click', clearAllPersonnel);
+  }
+
   // Bind custom department group show/hide
   const personDepartmentSelect = document.getElementById('personDepartment');
   const personDepartmentCustomGroup = document.getElementById('personDepartmentCustomGroup');
@@ -1168,4 +1184,191 @@ async function handleConfirmPersonnelImport() {
   };
 
   dupModal.classList.add('active');
+}
+
+export function exportPersonnelCsv() {
+  const personnel = getPersonnel();
+  if (personnel.length === 0) {
+    window.showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
+    return;
+  }
+  let csvContent = "\uFEFF";
+  csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง,แผนก/กลุ่มงาน,หน้าที่,เงินเดือน (บาท),ด้านจ่ายหลัก,ประเภทพาหนะ,วันหยุดประจำสัปดาห์,ลงนามเริ่มต้น\n";
+  
+  personnel.forEach((item, index) => {
+    const restDaysStr = item.restDays && item.restDays.length > 0 
+      ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join('-')
+      : 'ไม่มี';
+    csvContent += `${index + 1},"${item.name}","${item.position}","${item.department || 'ทั่วไป'}","${item.duty || '-'}",${item.salary || 0},"${item.route || '-'}","${item.vehicle || '-'}","${restDaysStr}","${item.signature || item.name}"\n`;
+  });
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `ทะเบียนบุคลากร_ไปรษณีย์ไทย.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export function printPersonnelReport() {
+  const personnel = getPersonnel();
+  if (personnel.length === 0) {
+    window.showToast('ไม่มีข้อมูลที่จะพิมพ์!', 'warning');
+    return;
+  }
+
+  personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  
+  let tableRowsHtml = '';
+  personnel.forEach((item, index) => {
+    const restDaysStr = item.restDays && item.restDays.length > 0 
+      ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')
+      : 'ไม่มี';
+    tableRowsHtml += `
+      <tr>
+        <td>${index + 1}</td>
+        <td><strong>${item.name}</strong></td>
+        <td>${item.position}</td>
+        <td>${item.department || 'ทั่วไป'}</td>
+        <td>${item.duty || '-'}</td>
+        <td>${item.salary ? item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+        <td>${item.route ? 'ด้านจ่ายที่ ' + item.route : '-'}</td>
+        <td>${item.vehicle || '-'}</td>
+        <td>${restDaysStr}</td>
+        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #444; font-weight: 300;">${item.signature || item.name}</span></td>
+      </tr>
+    `;
+  });
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>ทำเนียบข้อมูลบุคลากร ไปรษณีย์ไทย</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.5cm !important;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 0.3cm;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 0.4rem !important;
+          padding-bottom: 0.3rem !important;
+          border-bottom: 2px double #000 !important;
+        }
+        .print-title-container h2 {
+          font-size: 14pt !important;
+          font-weight: bold;
+          margin: 0 0 0.25rem 0;
+        }
+        .print-title-container p {
+          font-size: 10pt;
+          margin: 0 0 0.25rem 0;
+          color: #555;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 1rem;
+        }
+        .print-table th, 
+        .print-table td {
+          border: 1px solid black !important;
+          padding: 4px 4px !important;
+          font-size: 8pt !important;
+          line-height: 1.2 !important;
+          color: black !important;
+          background: transparent !important;
+        }
+        .print-table th {
+          font-weight: bold !important;
+          text-align: center !important;
+          background: #f2f2f2 !important;
+        }
+        .print-table td {
+          text-align: left;
+          vertical-align: middle !important;
+        }
+        .print-table td:nth-child(1),
+        .print-table td:nth-child(6),
+        .print-table td:nth-child(7),
+        .print-table td:nth-child(8),
+        .print-table td:nth-child(9) {
+          text-align: center !important;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <div class="print-title-container">
+          <h2>ทำเนียบและทะเบียนข้อมูลบุคลากรหลัก</h2>
+          <p>บริษัท ไปรษณีย์ไทย จำกัด • ข้อมูล ณ วันที่ ${new Date().toLocaleDateString('th-TH')}</p>
+        </div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 4%">ลำดับ</th>
+            <th style="width: 18%">ชื่อ - นามสกุล</th>
+            <th style="width: 10%">ตำแหน่ง</th>
+            <th style="width: 10%">แผนก/กลุ่มงาน</th>
+            <th style="width: 20%">หน้าที่ปฏิบัติงาน</th>
+            <th style="width: 10%">เงินเดือน (บาท)</th>
+            <th style="width: 8%">ด้านจ่ายหลัก</th>
+            <th style="width: 10%">ประเภทพาหนะ</th>
+            <th style="width: 10%">วันหยุดประจำสัปดาห์</th>
+            <th style="width: 10%">ลงนามเริ่มต้น</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+export async function clearAllPersonnel() {
+  window.showConfirm({
+    title: '⚠️ ยืนยันล้างข้อมูลทะเบียนพนักงานทั้งหมด',
+    message: 'คุณต้องการลบรายชื่อพนักงานทั้งหมดออกจากฐานข้อมูลบุคลากรหลักใช่หรือไม่? (การกระทำนี้จะล้างข้อมูลถาวร)',
+    icon: '⚠️',
+    okText: 'ล้างข้อมูลทั้งหมด',
+    okClass: 'btn-danger',
+    onConfirm: async () => {
+      setPersonnel([]);
+      await savePersonnelList([]);
+      renderPersonnelTable();
+      if (window.updateEmployeeSelectDropdown) {
+        window.updateEmployeeSelectDropdown();
+      }
+      window.showToast('ล้างตารางข้อมูลทะเบียนบุคลากรเรียบร้อยแล้ว!', 'success');
+    }
+  });
 }
