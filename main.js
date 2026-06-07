@@ -114,6 +114,8 @@ let ROUTE_DATA = JSON.parse(localStorage.getItem('tp_route_data')) || initRouteD
 let appUsersList = [];
 let cachedGlobalSettings = null;
 let tempParsedRecords = [];
+let unsubscribeEmployees = null;
+let unsubscribeWaterEmployees = null;
 
 // DOM Elements
 // DOM Elements
@@ -415,6 +417,30 @@ function setupCalculatorDOMReferencesAndEvents() {
   }
 
   // Bind Event Listeners
+  if (globalMonthSelect) {
+    globalMonthSelect.addEventListener('change', () => {
+      const val = globalMonthSelect.value;
+      if (activeMode === 'fuel') {
+        saveGlobalSetting('fuelMonth', { value: val });
+      } else if (activeMode === 'water') {
+        saveGlobalSetting('waterMonth', { value: val });
+      }
+      bindMonthlyDataListeners();
+    });
+  }
+
+  if (globalYearSelect) {
+    globalYearSelect.addEventListener('change', () => {
+      const val = globalYearSelect.value;
+      if (activeMode === 'fuel') {
+        saveGlobalSetting('fuelYear', { value: val });
+      } else if (activeMode === 'water') {
+        saveGlobalSetting('waterYear', { value: val });
+      }
+      bindMonthlyDataListeners();
+    });
+  }
+
   deliveryRouteSelect.addEventListener('change', () => {
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.handleRouteSelect());
@@ -917,6 +943,45 @@ function applyGlobalSettingsToDOM() {
   }
 }
 
+function bindMonthlyDataListeners() {
+  if (unsubscribeEmployees) {
+    unsubscribeEmployees();
+    unsubscribeEmployees = null;
+  }
+  if (unsubscribeWaterEmployees) {
+    unsubscribeWaterEmployees();
+    unsubscribeWaterEmployees = null;
+  }
+
+  // Quick offline load
+  import('./database.js').then(async (dbMod) => {
+    try {
+      if (activeMode === 'fuel') {
+        employees = await dbMod.fetchEmployees();
+        renderEmployeeTable();
+      } else if (activeMode === 'water') {
+        waterEmployees = await dbMod.fetchWaterEmployees();
+        renderEmployeeTable();
+      }
+    } catch (e) {
+      console.error("Failed to load initial partition data:", e);
+    }
+  });
+
+  if (isCloudConnected()) {
+    import('./database.js').then((dbMod) => {
+      unsubscribeEmployees = dbMod.listenToEmployees((updatedList) => {
+        employees = updatedList;
+        if (activeMode === 'fuel') renderEmployeeTable();
+      });
+      unsubscribeWaterEmployees = dbMod.listenToWaterEmployees((updatedList) => {
+        waterEmployees = updatedList;
+        if (activeMode === 'water') renderEmployeeTable();
+      });
+    });
+  }
+}
+
 async function initCloudSync() {
   const badge = document.getElementById('dbStatusBadge');
   if (!badge) return;
@@ -932,20 +997,10 @@ async function initCloudSync() {
 
       await fetchSavedTemplates();
       updateAllRouteDropdownTexts();
-      renderEmployeeTable();
+      bindMonthlyDataListeners();
       updateTemplateSelectDropdown();
 
       // ===== REAL-TIME LISTENERS (cross-device sync) =====
-      listenToEmployees((updatedList) => {
-        employees = updatedList;
-        if (activeMode === 'fuel') renderEmployeeTable();
-      });
-
-      listenToWaterEmployees((updatedList) => {
-        waterEmployees = updatedList;
-        if (activeMode === 'water') renderEmployeeTable();
-      });
-
       listenToPersonnel((updatedList) => {
         personnel = updatedList;
         if (activeMode === 'personnel') {
@@ -965,6 +1020,8 @@ async function initCloudSync() {
       });
 
       listenToGlobalSettings((updatedSettings) => {
+        let monthChanged = false;
+        let yearChanged = false;
         if (activeMode === 'fuel') {
           if (updatedSettings.fuelPrice && globalFuelPriceInput && globalFuelPriceInput.value !== String(updatedSettings.fuelPrice.value)) {
             globalFuelPriceInput.value = updatedSettings.fuelPrice.value;
@@ -972,17 +1029,24 @@ async function initCloudSync() {
           }
           if (updatedSettings.fuelMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.fuelMonth.value)) {
             globalMonthSelect.value = updatedSettings.fuelMonth.value;
+            monthChanged = true;
           }
           if (updatedSettings.fuelYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.fuelYear.value)) {
             globalYearSelect.value = updatedSettings.fuelYear.value;
+            yearChanged = true;
           }
         } else if (activeMode === 'water') {
           if (updatedSettings.waterMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.waterMonth.value)) {
             globalMonthSelect.value = updatedSettings.waterMonth.value;
+            monthChanged = true;
           }
           if (updatedSettings.waterYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.waterYear.value)) {
             globalYearSelect.value = updatedSettings.waterYear.value;
+            yearChanged = true;
           }
+        }
+        if (monthChanged || yearChanged) {
+          bindMonthlyDataListeners();
         }
         if (updatedSettings.postOfficeName && globalPostOfficeNameInput && globalPostOfficeNameInput.value !== String(updatedSettings.postOfficeName.value)) {
           globalPostOfficeNameInput.value = updatedSettings.postOfficeName.value;

@@ -117,31 +117,53 @@ export function checkIsAdmin(user) {
 }
 
 /**
+export function getActiveEmployeesCollectionName() {
+  const yrEl = document.getElementById('globalYear');
+  const moEl = document.getElementById('globalMonth');
+  const yr = yrEl ? yrEl.value : '2569';
+  const mo = moEl ? moEl.value.padStart(2, '0') : '05';
+  return `employees_${yr}_${mo}`;
+}
+
+export function getActiveWaterEmployeesCollectionName() {
+  const yrEl = document.getElementById('globalYear');
+  const moEl = document.getElementById('globalMonth');
+  const yr = yrEl ? yrEl.value : '2569';
+  const mo = moEl ? moEl.value.padStart(2, '0') : '05';
+  return `water_employees_${yr}_${mo}`;
+}
+
+/**
  * --- EMPLOYEES CRUD ---
  */
 
 // Fetch all employees from Firestore
 export async function fetchEmployees() {
+  const collName = getActiveEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
   if (!isCloudConnected()) {
-    return JSON.parse(localStorage.getItem('tp_employees')) || [];
+    return JSON.parse(localStorage.getItem(localKey)) || [];
   }
   try {
-    const querySnapshot = await getDocs(collection(db, "employees"));
+    const querySnapshot = await getDocs(collection(db, collName));
     const list = [];
     querySnapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
     // Store locally as fallback cache
-    localStorage.setItem('tp_employees', JSON.stringify(list));
+    localStorage.setItem(localKey, JSON.stringify(list));
     return list;
   } catch (error) {
-    console.error("❌ Firestore fetchEmployees failed. Falling back to local storage.", error);
-    return JSON.parse(localStorage.getItem('tp_employees')) || [];
+    console.error(`❌ Firestore fetchEmployees failed for ${collName}. Falling back to local storage.`, error);
+    return JSON.parse(localStorage.getItem(localKey)) || [];
   }
 }
 
 // Save all employees to Firestore in batch
 export async function saveEmployees(employeesList) {
+  const collName = getActiveEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
+  
   // Ensure every item has a stable unique ID
   const now = Date.now();
   employeesList.forEach((emp, i) => {
@@ -149,7 +171,7 @@ export async function saveEmployees(employeesList) {
   });
 
   // Always update local storage first
-  localStorage.setItem('tp_employees', JSON.stringify(employeesList));
+  localStorage.setItem(localKey, JSON.stringify(employeesList));
 
   if (!isCloudConnected()) return false;
 
@@ -157,24 +179,24 @@ export async function saveEmployees(employeesList) {
     const batch = writeBatch(db);
     
     // First, get all existing docs to clean up deleted ones
-    const querySnapshot = await getDocs(collection(db, "employees"));
+    const querySnapshot = await getDocs(collection(db, collName));
     querySnapshot.forEach((d) => {
       if (!employeesList.some(emp => String(emp.id) === d.id)) {
-        batch.delete(doc(db, "employees", d.id));
+        batch.delete(doc(db, collName, d.id));
       }
     });
 
     // Add or update existing ones
     employeesList.forEach((emp) => {
-      const docRef = doc(db, "employees", String(emp.id));
+      const docRef = doc(db, collName, String(emp.id));
       batch.set(docRef, emp);
     });
 
     await batch.commit();
-    console.log("✅ Employees successfully synced to Cloud Firestore.");
+    console.log(`✅ Employees successfully synced to Cloud Firestore (${collName}).`);
     return true;
   } catch (error) {
-    console.error("❌ Firestore saveEmployees failed.", error);
+    console.error(`❌ Firestore saveEmployees failed for ${collName}.`, error);
     return false;
   }
 }
@@ -185,55 +207,60 @@ export async function saveEmployees(employeesList) {
 
 // Fetch all water employees from Firestore
 export async function fetchWaterEmployees() {
+  const collName = getActiveWaterEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
   if (!isCloudConnected()) {
-    return JSON.parse(localStorage.getItem('tp_water_employees')) || [];
+    return JSON.parse(localStorage.getItem(localKey)) || [];
   }
   try {
-    const querySnapshot = await getDocs(collection(db, "water_employees"));
+    const querySnapshot = await getDocs(collection(db, collName));
     const list = [];
     querySnapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
-    localStorage.setItem('tp_water_employees', JSON.stringify(list));
+    localStorage.setItem(localKey, JSON.stringify(list));
     return list;
   } catch (error) {
-    console.error("❌ Firestore fetchWaterEmployees failed. Falling back to local storage.", error);
-    return JSON.parse(localStorage.getItem('tp_water_employees')) || [];
+    console.error(`❌ Firestore fetchWaterEmployees failed for ${collName}. Falling back to local storage.`, error);
+    return JSON.parse(localStorage.getItem(localKey)) || [];
   }
 }
 
 // Save all water employees to Firestore in batch
 export async function saveWaterEmployees(employeesList) {
+  const collName = getActiveWaterEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
+
   // Ensure every item has a stable unique ID
   const now = Date.now();
   employeesList.forEach((emp, i) => {
     if (!emp.id) emp.id = `water_${now}_${i}`;
   });
 
-  localStorage.setItem('tp_water_employees', JSON.stringify(employeesList));
+  localStorage.setItem(localKey, JSON.stringify(employeesList));
 
   if (!isCloudConnected()) return false;
 
   try {
     const batch = writeBatch(db);
     
-    const querySnapshot = await getDocs(collection(db, "water_employees"));
+    const querySnapshot = await getDocs(collection(db, collName));
     querySnapshot.forEach((d) => {
       if (!employeesList.some(emp => String(emp.id) === d.id)) {
-        batch.delete(doc(db, "water_employees", d.id));
+        batch.delete(doc(db, collName, d.id));
       }
     });
 
     employeesList.forEach((emp) => {
-      const docRef = doc(db, "water_employees", String(emp.id));
+      const docRef = doc(db, collName, String(emp.id));
       batch.set(docRef, emp);
     });
 
     await batch.commit();
-    console.log("✅ Water employees successfully synced to Cloud Firestore.");
+    console.log(`✅ Water employees successfully synced to Cloud Firestore (${collName}).`);
     return true;
   } catch (error) {
-    console.error("❌ Firestore saveWaterEmployees failed.", error);
+    console.error(`❌ Firestore saveWaterEmployees failed for ${collName}.`, error);
     return false;
   }
 }
@@ -442,29 +469,33 @@ export async function deleteSignatoryProfile(profileName) {
  */
 export function listenToEmployees(callback) {
   if (!isCloudConnected()) return null;
-  return onSnapshot(collection(db, "employees"), (snapshot) => {
+  const collName = getActiveEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
+  return onSnapshot(collection(db, collName), (snapshot) => {
     const list = [];
     snapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
-    localStorage.setItem('tp_employees', JSON.stringify(list));
+    localStorage.setItem(localKey, JSON.stringify(list));
     callback(list);
   }, (error) => {
-    console.error("Firestore listenToEmployees failed:", error);
+    console.error(`Firestore listenToEmployees failed for ${collName}:`, error);
   });
 }
 
 export function listenToWaterEmployees(callback) {
   if (!isCloudConnected()) return null;
-  return onSnapshot(collection(db, "water_employees"), (snapshot) => {
+  const collName = getActiveWaterEmployeesCollectionName();
+  const localKey = `tp_${collName}`;
+  return onSnapshot(collection(db, collName), (snapshot) => {
     const list = [];
     snapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
-    localStorage.setItem('tp_water_employees', JSON.stringify(list));
+    localStorage.setItem(localKey, JSON.stringify(list));
     callback(list);
   }, (error) => {
-    console.error("Firestore listenToWaterEmployees failed:", error);
+    console.error(`Firestore listenToWaterEmployees failed for ${collName}:`, error);
   });
 }
 
