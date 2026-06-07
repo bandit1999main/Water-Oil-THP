@@ -1,7 +1,13 @@
 import {
   savePersonnelList,
   fetchPersonnelList,
-  isCloudConnected
+  isCloudConnected,
+  saveEmployees,
+  saveWaterEmployees,
+  fetchAttendanceList,
+  saveAttendanceRecord,
+  saveAttendanceList,
+  listenToAttendanceList
 } from './database.js';
 
 let tempParsedPersonnelRecords = [];
@@ -146,6 +152,30 @@ export function initPersonnelManager() {
 
   // Initial render
   renderPersonnelTable();
+
+  // Tab Bar Switching
+  const tabRegistryBtn = document.getElementById('tabRegistryBtn');
+  const tabAttendanceBtn = document.getElementById('tabAttendanceBtn');
+  const registryTabContent = document.getElementById('registryTabContent');
+  const attendanceTabContent = document.getElementById('attendanceTabContent');
+
+  if (tabRegistryBtn && tabAttendanceBtn && registryTabContent && attendanceTabContent) {
+    tabRegistryBtn.addEventListener('click', () => {
+      tabRegistryBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--post-orange) !important; color: white !important; border: 1px solid var(--post-orange) !important; cursor: pointer;');
+      tabAttendanceBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
+      registryTabContent.style.display = 'block';
+      attendanceTabContent.style.display = 'none';
+      renderPersonnelTable();
+    });
+
+    tabAttendanceBtn.addEventListener('click', () => {
+      tabAttendanceBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--post-orange) !important; color: white !important; border: 1px solid var(--post-orange) !important; cursor: pointer;');
+      tabRegistryBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
+      registryTabContent.style.display = 'none';
+      attendanceTabContent.style.display = 'block';
+      initAttendanceGrid();
+    });
+  }
 }
 
 export function renderPersonnelTable() {
@@ -1375,267 +1405,1080 @@ export async function clearAllPersonnel() {
 
 
 export function getPersonnelTemplate() {
-  return `<div class="dashboard-grid animate-fade-in">
-  <div class="panel-column">
-          <div id="personnelCard" class="glass-card">
-            <div class="card-header">
-              <span class="card-icon">👥</span>
-              <h3 id="personnelFormTitle">ลงทะเบียนข้อมูลบุคลากร</h3>
-            </div>
+  return `<div style="display: flex; flex-direction: column; width: 100%;">
+  <!-- Tab Buttons -->
+  <div class="tab-bar-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.75rem;">
+    <button type="button" id="tabRegistryBtn" class="btn" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--post-orange) !important; color: white !important; border: 1px solid var(--post-orange) !important; cursor: pointer;">
+      👥 ทะเบียนรายชื่อพนักงาน
+    </button>
+    <button type="button" id="tabAttendanceBtn" class="btn" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;">
+      📅 บันทึกเวลาทำงานประจำเดือน
+    </button>
+  </div>
+
+  <!-- Tab Contents -->
+  <div id="registryTabContent" class="personnel-tab-content">
+    <div class="dashboard-grid animate-fade-in">
+      <div class="panel-column">
+              <div id="personnelCard" class="glass-card">
+                <div class="card-header">
+                  <span class="card-icon">👥</span>
+                  <h3 id="personnelFormTitle">ลงทะเบียนข้อมูลบุคลากร</h3>
+                </div>
+                
+                <form id="personnelForm">
+                  <input type="hidden" id="personnelEditIndex" value="" />
+                  
+                  <div class="form-group">
+                    <label for="personName">ชื่อ - นามสกุล</label>
+                    <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+                  </div>
+
+                  <div class="form-row-2">
+                    <div class="form-group">
+                      <label for="personPosition">ตำแหน่ง</label>
+                      <select id="personPosition" class="form-select">
+                        <option value="หน.ปณ.">หน.ปณ.</option>
+                        <option value="พนักงาน">พนักงาน</option>
+                        <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                        <option value="ลูกจ้าง">ลูกจ้าง</option>
+                        <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="personDuty">หน้าที่</label>
+                      <select id="personDuty" class="form-select">
+                        <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                        <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                        <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                        <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                        <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-row-2">
+                    <div class="form-group">
+                      <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
+                      <input type="number" id="personSalary" class="form-input" value="0" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                      <label for="personDepartment">แผนก/กลุ่มงาน</label>
+                      <select id="personDepartment" class="form-select">
+                        <option value="นำจ่าย">นำจ่าย</option>
+                        <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
+                        <option value="รับฝาก">รับฝาก</option>
+                        <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
+                        <option value="custom">อื่นๆ (ระบุเอง)...</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group hidden" id="personDepartmentCustomGroup" style="margin-bottom: 1.25rem;">
+                    <label for="personDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
+                    <input type="text" id="personDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
+                  </div>
+
+                  <div class="form-row-2">
+                    <div class="form-group">
+                      <label for="personRoute">ด้านจ่ายหลัก</label>
+                      <select id="personRoute" class="form-select">
+                        <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
+                        <!-- Dynamically filled in JS -->
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="personVehicle">ประเภทพาหนะหลัก</label>
+                      <select id="personVehicle" class="form-select">
+                        <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                        <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
+                        <option value="เรือยนต์">เรือยนต์</option>
+                        <option value="รถยนต์">รถยนต์</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="0" style="cursor: pointer;" /> อา.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="1" style="cursor: pointer;" /> จ.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="2" style="cursor: pointer;" /> อ.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="3" style="cursor: pointer;" /> พ.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="4" style="cursor: pointer;" /> พฤ.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="5" style="cursor: pointer;" /> ศ.
+                      </label>
+                      <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" name="personRestDays" value="6" style="cursor: pointer;" /> ส.
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="personSignature">ลงนามรับเงินเริ่มต้น</label>
+                    <input type="text" id="personSignature" class="form-input" placeholder="ว่างไว้ใช้ชื่อตนเอง" />
+                  </div>
+
+                  <div class="button-group" style="margin-top: 1rem;">
+                    <button type="submit" id="savePersonnelBtn" class="btn btn-primary btn-full">
+                      📥 บันทึกบุคลากร
+                    </button>
+                    <button type="button" id="resetPersonnelBtn" class="btn btn-secondary hidden">
+                      ยกเลิก
+                    </button>
+                  </div>
+                </form>
+              </div>
+      </div>
+      <div class="panel-column">
+              <div id="personnelTableCard" class="glass-card full-width">
+                <div class="card-header table-header-flex">
+                  <div class="header-left">
+                    <span class="card-icon">👥</span>
+                    <h3>ทำเนียบข้อมูลบุคลากรทั้งหมด</h3>
+                  </div>
+                  <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" id="importPersonnelBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
+                      📥 นำเข้าบุคลากรจาก Excel / CSV
+                    </button>
+                    <button type="button" id="exportPersonnelCsvBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">
+                      📤 ส่งออกข้อมูล CSV
+                    </button>
+                    <button type="button" id="printPersonnelReportBtn" class="btn btn-secondary btn-small">
+                      🖨️ พิมพ์ทำเนียบ
+                    </button>
+                    <button type="button" id="clearAllPersonnelBtn" class="btn btn-danger btn-small">
+                      🗑️ ล้างทั้งหมด
+                    </button>
+                  </div>
+                </div>
+
+                <div style="margin: 0.75rem 0; display: flex; justify-content: flex-end; padding: 0 0.5rem;">
+                  <div style="position: relative; width: 260px;">
+                    <input type="text" id="personnelSearchInput" class="form-input" style="padding: 0.35rem 0.75rem 0.35rem 1.75rem; font-size: 0.85rem;" placeholder="ค้นหารายชื่อ/ตำแหน่ง/กลุ่มงาน..." />
+                    <span style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; opacity: 0.5;">🔍</span>
+                  </div>
+                </div>
+
+                <div class="table-container">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 5%;">ที่</th>
+                        <th style="width: 20%;">ชื่อ - นามสกุล</th>
+                        <th style="width: 12%;">ตำแหน่ง</th>
+                        <th style="width: 13%;">แผนก/กลุ่มงาน</th>
+                        <th style="width: 18%;">หน้าที่</th>
+                        <th style="width: 10%;">เงินเดือน</th>
+                        <th style="width: 10%;">ด้านจ่ายหลัก</th>
+                        <th style="width: 12%;">พาหนะหลัก</th>
+                        <th style="width: 10%;">ลงนาม</th>
+                        <th style="width: 8%;" class="actions-col">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="personnelTableBody">
+                      <!-- Dynamic rows in JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="attendanceTabContent" class="personnel-tab-content" style="display: none;">
+    <div class="glass-card full-width animate-fade-in" id="attendanceCard">
+      <div class="card-header table-header-flex">
+        <div class="header-left">
+          <span class="card-icon">📅</span>
+          <h3>ตารางลงเวลาทำงานประจำรอบเดือน</h3>
+        </div>
+        <div class="header-actions-flex" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          
+          <!-- Month/Year selectors -->
+          <div style="display: flex; gap: 0.4rem; align-items: center; background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: var(--radius-small); border: 1px solid var(--border-glass);">
+            <label for="attMonth" style="font-size: 0.8rem; font-weight: bold; color: var(--text-secondary);">เดือน:</label>
+            <select id="attMonth" class="form-select" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: transparent; border: none; color: var(--text-primary); cursor: pointer; width: auto; font-family: inherit;">
+              <option value="1">มกราคม</option>
+              <option value="2">กุมภาพันธ์</option>
+              <option value="3">มีนาคม</option>
+              <option value="4">เมษายน</option>
+              <option value="5" selected>พฤษภาคม</option>
+              <option value="6">มิถุนายน</option>
+              <option value="7">กรกฎาคม</option>
+              <option value="8">สิงหาคม</option>
+              <option value="9">กันยายน</option>
+              <option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option>
+              <option value="12">ธันวาคม</option>
+            </select>
             
-            <form id="personnelForm">
-              <input type="hidden" id="personnelEditIndex" value="" />
-              
-              <div class="form-group">
-                <label for="personName">ชื่อ - นามสกุล</label>
-                <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
-              </div>
-
-              <div class="form-row-2">
-                <div class="form-group">
-                  <label for="personPosition">ตำแหน่ง</label>
-                  <select id="personPosition" class="form-select">
-                    <option value="หน.ปณ.">หน.ปณ.</option>
-                    <option value="พนักงาน">พนักงาน</option>
-                    <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
-                    <option value="ลูกจ้าง">ลูกจ้าง</option>
-                    <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="personDuty">หน้าที่</label>
-                  <select id="personDuty" class="form-select">
-                    <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
-                    <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
-                    <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
-                    <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
-                    <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-row-2">
-                <div class="form-group">
-                  <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
-                  <input type="number" id="personSalary" class="form-input" value="0" />
-                </div>
-                <div class="form-group" style="margin-bottom: 1.25rem;">
-                  <label for="personDepartment">แผนก/กลุ่มงาน</label>
-                  <select id="personDepartment" class="form-select">
-                    <option value="นำจ่าย">นำจ่าย</option>
-                    <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
-                    <option value="รับฝาก">รับฝาก</option>
-                    <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
-                    <option value="custom">อื่นๆ (ระบุเอง)...</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div class="form-group hidden" id="personDepartmentCustomGroup" style="margin-bottom: 1.25rem;">
-                <label for="personDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
-                <input type="text" id="personDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
-              </div>
-
-              <div class="form-row-2">
-                <div class="form-group">
-                  <label for="personRoute">ด้านจ่ายหลัก</label>
-                  <select id="personRoute" class="form-select">
-                    <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
-                    <!-- Dynamically filled in JS -->
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="personVehicle">ประเภทพาหนะหลัก</label>
-                  <select id="personVehicle" class="form-select">
-                    <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
-                    <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
-                    <option value="เรือยนต์">เรือยนต์</option>
-                    <option value="รถยนต์">รถยนต์</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
-                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="0" style="cursor: pointer;" /> อา.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="1" style="cursor: pointer;" /> จ.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="2" style="cursor: pointer;" /> อ.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="3" style="cursor: pointer;" /> พ.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="4" style="cursor: pointer;" /> พฤ.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="5" style="cursor: pointer;" /> ศ.
-                  </label>
-                  <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
-                    <input type="checkbox" name="personRestDays" value="6" style="cursor: pointer;" /> ส.
-                  </label>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="personSignature">ลงนามรับเงินเริ่มต้น</label>
-                <input type="text" id="personSignature" class="form-input" placeholder="ว่างไว้ใช้ชื่อตนเอง" />
-              </div>
-
-              <div class="button-group" style="margin-top: 1rem;">
-                <button type="submit" id="savePersonnelBtn" class="btn btn-primary btn-full">
-                  📥 บันทึกบุคลากร
-                </button>
-                <button type="button" id="resetPersonnelBtn" class="btn btn-secondary hidden">
-                  ยกเลิก
-                </button>
-              </div>
-            </form>
+            <label for="attYear" style="font-size: 0.8rem; font-weight: bold; color: var(--text-secondary); margin-left: 0.4rem;">ปี พ.ศ.:</label>
+            <input type="number" id="attYear" class="form-input" style="padding: 0.2rem 0.4rem; font-size: 0.8rem; background: transparent; border: none; color: var(--text-primary); width: 60px; font-weight: bold; font-family: inherit;" value="2569" min="2500" max="3000" />
           </div>
 
-  </div>
-  <div class="panel-column">
-          <div id="personnelTableCard" class="glass-card full-width">
-            <div class="card-header table-header-flex">
-              <div class="header-left">
-                <span class="card-icon">👥</span>
-                <h3>ทำเนียบข้อมูลบุคลากรทั้งหมด</h3>
-              </div>
-              <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button type="button" id="importPersonnelBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
-                  📥 นำเข้าบุคลากรจาก Excel / CSV
-                </button>
-                <button type="button" id="exportPersonnelCsvBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">
-                  📤 ส่งออกข้อมูล CSV
-                </button>
-                <button type="button" id="printPersonnelReportBtn" class="btn btn-primary btn-small" style="background: var(--post-orange); color: white; border: none; font-weight: 600;">
-                  🖨️ พิมพ์ทำเนียบ
-                </button>
-                <button type="button" id="clearAllPersonnelBtn" class="btn btn-danger btn-small" style="border: 1px solid var(--post-red); color: var(--post-red); background: rgba(239, 68, 68, 0.05);">
-                  ⚠️ ล้างข้อมูลทะเบียน
-                </button>
-              </div>
-            </div>
-
-            <!-- Search Bar for Personnel -->
-            <div class="search-bar-container" style="margin-top: 1rem; display: flex; gap: 0.5rem; max-width: 650px; padding: 0 1.5rem; flex-wrap: wrap;">
-              <input type="text" id="personnelSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา..." style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem; flex: 1; min-width: 250px;" />
-              <button type="button" id="checkDuplicatesBtn" class="btn btn-secondary btn-small" style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.85rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; cursor: pointer;">
-                🔍 ตรวจสอบรายชื่อซ้ำในระบบ
-              </button>
-            </div>
-
-            <div class="table-container">
-              <table id="personnelTable">
-                <thead>
-                  <tr>
-                    <th>ลำดับ</th>
-                    <th>ชื่อ - นามสกุล</th>
-                    <th>ตำแหน่ง</th>
-                    <th>แผนก/กลุ่มงาน</th>
-                    <th>หน้าที่</th>
-                    <th>เงินเดือน (บาท)</th>
-                    <th>ด้านจ่ายหลัก</th>
-                    <th>ประเภทพาหนะ</th>
-                    <th>ลงนามเริ่มต้น</th>
-                    <th class="actions-col">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="personnelTableBody">
-                  <tr>
-                    <td colspan="10" class="no-data">ยังไม่มีข้อมูลบุคลากร กรุณาลงทะเบียนด้านซ้าย</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-  </div>
-</div>
-    <div id="personnelImportModal" class="modal-overlay">
-      <div class="modal-content glass-modal animate-slide-in" style="max-width: 800px; width: 95%;">
-        <div class="modal-header">
-          <h3>📥 นำเข้าทำเนียบข้อมูลบุคลากร</h3>
-          <button type="button" id="closePersonnelImportModalBtn" class="btn-close">&times;</button>
-        </div>
-        <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.5rem;">
-          <p class="modal-instruction" style="margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6;">
-            💡 <strong>คำแนะนำ:</strong> ดาวน์โหลดเทมเพลต Excel ด้านล่างนี้เพื่อกรอกข้อมูลบุคลากร จากนั้นนำมาอัปโหลดเข้าสู่ระบบ หรือใช้การวางข้อมูลดิบเพื่อประมวลผลทันที
-          </p>
-
-          <div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            <button type="button" id="downloadPersonnelTemplateBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05); display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem;">
-              🟢 ดาวน์โหลดเทมเพลต Excel ข้อมูลบุคลากร (.xlsx)
-            </button>
-          </div>
-
-          <!-- Sleek Tab Controls -->
-          <div class="import-tabs" style="display: flex; border-bottom: 2px solid var(--border-glass); margin-bottom: 1.25rem; gap: 1rem;">
-            <button type="button" id="tabPersonnelImportFile" class="import-tab-btn active" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--post-orange); border-bottom: 3px solid var(--post-orange); cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
-              📂 นำเข้าจากไฟล์โดยตรง
-            </button>
-            <button type="button" id="tabPersonnelImportText" class="import-tab-btn" style="background: none; border: none; padding: 0.75rem 1rem; font-weight: bold; font-family: var(--font-main); color: var(--text-secondary); border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 0.35rem;">
-              📋 วางข้อความแบบเดิม
-            </button>
-          </div>
-
-          <!-- Tab Content 1: File Upload (Drag & Drop) -->
-          <div id="personnelImportFileContent" class="tab-panel">
-            <div id="personnelDragDropZone" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 12px; background: rgba(16, 185, 129, 0.02); padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
-              <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.15));">📊</span>
-              <div style="font-weight: bold; color: var(--text-primary); font-size: 0.95rem;">ลากและวางไฟล์เทมเพลต Excel (.xlsx) ที่นี่</div>
-              <div style="color: var(--text-secondary); font-size: 0.8rem;">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ</div>
-              <input type="file" id="personnelFileSelector" accept=".xlsx, .xls" style="display: none;" />
-            </div>
-            <div id="personnelSelectedFileInfo" class="hidden" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
-              <span id="personnelFileNameLabel" style="font-size: 0.85rem; font-weight: bold; color: var(--post-emerald);"></span>
-              <button type="button" id="clearSelectedPersonnelFileBtn" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 0.9rem;">✕ นำออก</button>
-            </div>
-          </div>
-
-          <!-- Tab Content 2: Textarea Paste -->
-          <div id="personnelImportTextContent" class="tab-panel hidden">
-            <div class="form-group">
-              <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
-              <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, วันหยุดประจำ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมศักดิ์ รักดี	ลูกจ้างประจำ	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	เสาร์-อาทิตย์	สมศักดิ์&#10;นางสาวสมศรี ทรงดี	ลูกจ้างเหมา	ไขตู้/ขนส่ง	เจ้าหน้าที่ไขตู้ไปรษณีย์	12000	12	รถยนต์	วันอาทิตย์	สมศรี"></textarea>
-            </div>
-          </div>
-
-          <!-- Preview Area -->
-          <div class="modal-table-container" style="margin-top: 1.5rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 250px; overflow-y: auto;">
-            <table class="modal-table" style="width: 100%;">
-              <thead>
-                <tr>
-                  <th style="width: 16%;">ชื่อ - นามสกุล</th>
-                  <th style="width: 10%;">ตำแหน่ง</th>
-                  <th style="width: 10%;">แผนก/กลุ่มงาน</th>
-                  <th style="width: 16%;">หน้าที่</th>
-                  <th style="width: 8%;">เงินเดือน</th>
-                  <th style="width: 8%;">ด้านจ่ายหลัก</th>
-                  <th style="width: 12%;">ประเภทพาหนะ</th>
-                  <th style="width: 12%;">วันหยุดประจำ</th>
-                  <th style="width: 8%;">ลงนามเริ่มต้น</th>
-                </tr>
-              </thead>
-              <tbody id="personnelImportPreviewTableBody">
-                <tr>
-                  <td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" id="cancelPersonnelImportBtn" class="btn btn-secondary">ยกเลิก</button>
-          <button type="button" id="submitPersonnelImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
-            ✔️ ยืนยันนำเข้าข้อมูล
-          </button>
+          <!-- Quick Actions -->
+          <button type="button" id="attCheckAllBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem;">✔️ ติ๊กทั้งหมด</button>
+          <button type="button" id="attClearAllBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem;">✕ ล้างทั้งหมด</button>
+          <button type="button" id="importAttBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem; border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">📥 นำเข้าลงเวลา</button>
+          <button type="button" id="exportAttBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">📤 ส่งออกตาราง</button>
         </div>
       </div>
-    </div>`;
+
+      <div style="margin: 0.75rem 0; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0 0.5rem;">
+        <p class="input-tip" style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">
+          * ตารางวันที่ 1-31 ช่องไฮไลต์สีส้ม/เทาคือวันหยุดประจำสัปดาห์ตามทะเบียนประวัติ จำนวนวันมาทำงานสะสมจะถูกซิงก์ไปที่หน้าคำนวณเบิกเงินอัตโนมัติ
+        </p>
+        <div style="position: relative; width: 250px;">
+          <input type="text" id="attSearchInput" class="form-input" style="padding: 0.35rem 0.75rem 0.35rem 1.75rem; font-size: 0.85rem;" placeholder="ค้นหาชื่อพนักงาน..." />
+          <span style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; opacity: 0.5;">🔍</span>
+        </div>
+      </div>
+
+      <!-- Responsive table container with overflow and sticky name -->
+      <div class="attendance-table-wrapper" style="width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass);">
+        <style>
+          .att-sticky-col {
+            position: sticky;
+            left: 0;
+            background: #141724;
+            z-index: 10;
+            border-right: 2px solid var(--border-glass) !important;
+          }
+          .data-table th.att-day-header {
+            min-width: 35px;
+            padding: 0.4rem 0.2rem;
+            text-align: center;
+          }
+          .att-checkbox-cell {
+            text-align: center;
+            padding: 0.25rem !important;
+          }
+          .att-checkbox-cell input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+          }
+          .att-rest-day-cell {
+            background: rgba(244, 63, 94, 0.12) !important;
+          }
+        </style>
+        <table class="data-table" style="width: 100%; min-width: 1300px; border-collapse: collapse;">
+          <thead>
+            <tr id="attTableHeaderRow">
+              <!-- Dynamically generated day headers in JS -->
+            </tr>
+          </thead>
+          <tbody id="attTableBody">
+            <!-- Dynamically filled in JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registry Import Modal (Original) -->
+  <div id="personnelImportModal" class="modal-overlay" style="z-index: 4000;">
+    <div class="glass-card modal-content" style="max-width: 900px; width: 95%;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.5rem;">📊</span>
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">นำเข้าข้อมูลทะเบียนบุคลากรด้วย Excel / CSV</h3>
+        </div>
+        <button type="button" id="closePersonnelImportModalBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.25rem;">✕</button>
+      </div>
+      <div class="modal-body" style="padding-top: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+          <button type="button" id="tabPersonnelImportFile" class="btn btn-small" style="font-weight: bold; background: var(--post-orange); color: white;">📂 นำเข้าไฟล์ Excel</button>
+          <button type="button" id="tabPersonnelImportText" class="btn btn-small btn-secondary">📝 วางข้อความ</button>
+          <button type="button" id="downloadPersonnelTemplateBtn" class="btn btn-small btn-secondary" style="margin-left: auto; border-color: var(--post-emerald); color: var(--post-emerald); background: transparent;">📥 ดาวน์โหลดเทมเพลต</button>
+        </div>
+
+        <!-- Tab Content 1: File Upload (Drag & Drop) -->
+        <div id="personnelImportFileContent" class="tab-panel">
+          <div id="personnelDragDropZone" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 12px; background: rgba(16, 185, 129, 0.02); padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+            <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.15));">📊</span>
+            <div style="font-weight: bold; color: var(--text-primary); font-size: 0.95rem;">ลากและวางไฟล์เทมเพลต Excel (.xlsx) ที่นี่</div>
+            <div style="color: var(--text-secondary); font-size: 0.8rem;">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ</div>
+            <input type="file" id="personnelFileSelector" accept=".xlsx, .xls" style="display: none;" />
+          </div>
+          <div id="personnelSelectedFileInfo" class="hidden" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <span id="personnelFileNameLabel" style="font-size: 0.85rem; font-weight: bold; color: var(--post-emerald);"></span>
+            <button type="button" id="clearSelectedPersonnelFileBtn" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 0.9rem;">✕ นำออก</button>
+          </div>
+        </div>
+
+        <!-- Tab Content 2: Textarea Paste -->
+        <div id="personnelImportTextContent" class="tab-panel hidden">
+          <div class="form-group">
+            <label for="personnelImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel</label>
+            <textarea id="personnelImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลที่นี่ โดยเรียงคอลัมน์ดังนี้: ชื่อ-นามสกุล, ตำแหน่ง, แผนก/กลุ่มงาน, หน้าที่, เงินเดือน, ด้านจ่ายหลัก, ประเภทพาหนะ, วันหยุดประจำ, ลงนามเริ่มต้น (คั่นด้วยแท็บหรือช่องว่าง)&#10;เช่น:&#10;นายสมชาย รักดี	พนักงาน	นำจ่าย	เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ	15000	5	รถจักรยานยนต์	0	สมชาย"></textarea>
+          </div>
+        </div>
+
+        <!-- Preview Area -->
+        <div class="modal-table-container" style="margin-top: 1.5rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 250px; overflow-y: auto;">
+          <table class="modal-table" style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="width: 16%;">ชื่อ - นามสกุล</th>
+                <th style="width: 10%;">ตำแหน่ง</th>
+                <th style="width: 10%;">แผนก/กลุ่มงาน</th>
+                <th style="width: 16%;">หน้าที่</th>
+                <th style="width: 8%;">เงินเดือน</th>
+                <th style="width: 8%;">ด้านจ่ายหลัก</th>
+                <th style="width: 12%;">ประเภทพาหนะ</th>
+                <th style="width: 12%;">วันหยุดประจำ</th>
+                <th style="width: 8%;">ลงนามเริ่มต้น</th>
+              </tr>
+            </thead>
+            <tbody id="personnelImportPreviewTableBody">
+              <tr>
+                <td colspan="9" class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelPersonnelImportBtn" class="btn btn-secondary">ยกเลิก</button>
+        <button type="button" id="submitPersonnelImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
+          ✔️ ยืนยันนำเข้าข้อมูล
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Import Modal -->
+  <div id="attendanceImportModal" class="modal-overlay" style="z-index: 4000;">
+    <div class="glass-card modal-content" style="max-width: 800px; width: 90%;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.5rem;">📅</span>
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">นำเข้าข้อมูลตารางเช็คชื่อการทำงานประจำเดือน</h3>
+        </div>
+        <button type="button" id="closeAttendanceImportModalBtn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.25rem;">✕</button>
+      </div>
+      <div class="modal-body" style="padding-top: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+          <button type="button" id="tabAttImportFile" class="btn btn-small" style="font-weight: bold; background: var(--post-orange); color: white;">📂 นำเข้าไฟล์ Excel</button>
+          <button type="button" id="tabAttImportText" class="btn btn-small btn-secondary">📝 วางข้อความ</button>
+          <button type="button" id="downloadAttTemplateBtn" class="btn btn-small btn-secondary" style="margin-left: auto; border-color: var(--post-emerald); color: var(--post-emerald); background: transparent;">📥 ดาวน์โหลดเทมเพลต</button>
+        </div>
+
+        <!-- Tab Content 1: File Upload (Drag & Drop) -->
+        <div id="attImportFileContent" class="tab-panel">
+          <div id="attDragDropZone" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 12px; background: rgba(16, 185, 129, 0.02); padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.25s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+            <span style="font-size: 2.5rem; filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.15));">📊</span>
+            <div style="font-weight: bold; color: var(--text-primary); font-size: 0.95rem;">ลากและวางไฟล์ตารางลงเวลา Excel (.xlsx) ที่นี่</div>
+            <div style="color: var(--text-secondary); font-size: 0.8rem;">หรือคลิกเพื่อเลือกไฟล์จากคอมพิวเตอร์ของคุณ</div>
+            <input type="file" id="attendanceFileSelector" accept=".xlsx, .xls" style="display: none;" />
+          </div>
+          <div id="attSelectedFileInfo" class="hidden" style="margin-top: 0.75rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 0.5rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <span id="attFileNameLabel" style="font-size: 0.85rem; font-weight: bold; color: var(--post-emerald);"></span>
+            <button type="button" id="clearSelectedAttFileBtn" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 0.9rem;">✕ นำออก</button>
+          </div>
+        </div>
+
+        <!-- Tab Content 2: Textarea Paste -->
+        <div id="attImportTextContent" class="tab-panel hidden">
+          <div class="form-group">
+            <label for="attImportPastedText" style="font-weight: bold; margin-bottom: 0.5rem; display: block;">วางข้อมูลตารางจาก Excel (คั่นด้วยแท็บ)</label>
+            <textarea id="attImportPastedText" class="form-input" style="height: 140px; font-family: monospace; font-size: 0.8rem; resize: vertical;" placeholder="วางข้อมูลแถวจาก Excel โดยคอลัมน์แรกสุดเป็นชื่อพนักงาน ตามด้วยค่าการลงเวลา (1=มาทำงาน, 0 หรือเว้นว่าง = ไม่ได้มา) ของแต่ละวัน&#10;เช่น:&#10;นายสมชาย รักดี	1	1	0	1	1..."></textarea>
+          </div>
+        </div>
+
+        <!-- Preview Area -->
+        <div class="modal-table-container" style="margin-top: 1.5rem; border: 1px solid var(--border-glass); border-radius: var(--radius-small); background: rgba(0, 0, 0, 0.02); max-height: 200px; overflow-y: auto; overflow-x: auto;">
+          <table class="modal-table" style="width: 100%; min-width: 800px;">
+            <thead id="attImportPreviewHeader">
+              <!-- Dynamically filled -->
+            </thead>
+            <tbody id="attImportPreviewTableBody">
+              <tr>
+                <td class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelAttImportBtn" class="btn btn-secondary">ยกเลิก</button>
+        <button type="button" id="submitAttImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
+          ✔️ ยืนยันนำเข้าการลงเวลา
+        </button>
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+/* --- PERSONNEL DAILY ATTENDANCE MATRIX LOGIC --- */
+let unsubscribeAttendance = null;
+let attendanceList = [];
+let xlsxCache = null;
+
+async function getXLSX() {
+  if (!xlsxCache) {
+    xlsxCache = await import('xlsx-js-style');
+  }
+  return xlsxCache;
+}
+
+function initAttendanceGrid() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  
+  const globalMonth = document.getElementById('globalMonth');
+  const globalYear = document.getElementById('globalYear');
+  
+  if (attMonthSelect && globalMonth) attMonthSelect.value = globalMonth.value;
+  if (attYearInput && globalYear) attYearInput.value = globalYear.value;
+  
+  setupAttendanceEventsAndListeners();
+  bindAttendanceDataListeners();
+}
+
+let isAttEventsBound = false;
+function setupAttendanceEventsAndListeners() {
+  if (isAttEventsBound) return;
+  isAttEventsBound = true;
+  
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  const attSearchInput = document.getElementById('attSearchInput');
+  const attCheckAllBtn = document.getElementById('attCheckAllBtn');
+  const attClearAllBtn = document.getElementById('attClearAllBtn');
+  const importAttBtn = document.getElementById('importAttBtn');
+  const exportAttBtn = document.getElementById('exportAttBtn');
+  
+  if (attMonthSelect) attMonthSelect.addEventListener('change', bindAttendanceDataListeners);
+  if (attYearInput) attYearInput.addEventListener('change', bindAttendanceDataListeners);
+  if (attSearchInput) attSearchInput.addEventListener('input', () => renderAttendanceTableRows());
+  
+  if (attCheckAllBtn) attCheckAllBtn.addEventListener('click', () => toggleAllAttendanceDays(true));
+  if (attClearAllBtn) attClearAllBtn.addEventListener('click', () => toggleAllAttendanceDays(false));
+  if (exportAttBtn) exportAttBtn.addEventListener('click', exportAttendanceToExcel);
+  
+  // Modal bindings
+  const attImportModal = document.getElementById('attendanceImportModal');
+  const closeAttImportModalBtn = document.getElementById('closeAttendanceImportModalBtn');
+  const cancelAttImportBtn = document.getElementById('cancelAttImportBtn');
+  const submitAttImportBtn = document.getElementById('submitAttImportBtn');
+  const tabAttImportFile = document.getElementById('tabAttImportFile');
+  const tabAttImportText = document.getElementById('tabAttImportText');
+  const attDragDropZone = document.getElementById('attDragDropZone');
+  const attendanceFileSelector = document.getElementById('attendanceFileSelector');
+  const clearSelectedAttFileBtn = document.getElementById('clearSelectedAttFileBtn');
+  const attImportPastedText = document.getElementById('attImportPastedText');
+  const downloadAttTemplateBtn = document.getElementById('downloadAttTemplateBtn');
+
+  if (importAttBtn) importAttBtn.addEventListener('click', () => attImportModal.classList.add('active'));
+  if (closeAttImportModalBtn) closeAttImportModalBtn.addEventListener('click', () => attImportModal.classList.remove('active'));
+  if (cancelAttImportBtn) cancelAttImportBtn.addEventListener('click', () => attImportModal.classList.remove('active'));
+  
+  if (tabAttImportFile) tabAttImportFile.addEventListener('click', () => switchAttImportTab('file'));
+  if (tabAttImportText) tabAttImportText.addEventListener('click', () => switchAttImportTab('text'));
+  
+  if (attDragDropZone && attendanceFileSelector) {
+    attDragDropZone.addEventListener('click', () => attendanceFileSelector.click());
+    attendanceFileSelector.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) processUploadedAttFile(e.target.files[0]);
+    });
+    attDragDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      attDragDropZone.style.borderColor = 'var(--post-orange)';
+    });
+    attDragDropZone.addEventListener('dragleave', () => {
+      attDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    });
+    attDragDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      attDragDropZone.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      if (e.dataTransfer.files.length > 0) {
+        attendanceFileSelector.files = e.dataTransfer.files;
+        processUploadedAttFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+  
+  if (clearSelectedAttFileBtn) clearSelectedAttFileBtn.addEventListener('click', clearSelectedAttImportFile);
+  if (attImportPastedText) {
+    attImportPastedText.addEventListener('input', handleAttPaste);
+    attImportPastedText.addEventListener('paste', handleAttPaste);
+  }
+  if (submitAttImportBtn) submitAttImportBtn.addEventListener('click', handleConfirmAttImport);
+  if (downloadAttTemplateBtn) downloadAttTemplateBtn.addEventListener('click', downloadAttTemplateXlsx);
+}
+
+async function bindAttendanceDataListeners() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  
+  if (unsubscribeAttendance) {
+    unsubscribeAttendance();
+    unsubscribeAttendance = null;
+  }
+  
+  attendanceList = await fetchAttendanceList(year, month);
+  renderAttendanceGridHeaderAndRows(year, month);
+  
+  if (isCloudConnected()) {
+    unsubscribeAttendance = listenToAttendanceList(year, month, (list) => {
+      attendanceList = list;
+      renderAttendanceTableRows();
+    });
+  }
+}
+
+function getDaysInMonth(year, month) {
+  const ceYear = year - 543;
+  return new Date(ceYear, month, 0).getDate();
+}
+
+function renderAttendanceGridHeaderAndRows(year, month) {
+  const tableHeaderRow = document.getElementById('attTableHeaderRow');
+  if (!tableHeaderRow) return;
+  
+  const daysCount = getDaysInMonth(year, month);
+  
+  let html = `
+    <th class="att-sticky-col" style="width: 40px; text-align: center;">ที่</th>
+    <th class="att-sticky-col" style="width: 180px; text-align: left; left: 40px;">ชื่อ - นามสกุล</th>
+  `;
+  
+  const ceYear = year - 543;
+  for (let d = 1; d <= daysCount; d++) {
+    const dateObj = new Date(ceYear, month - 1, d);
+    const dayOfWeek = dateObj.getDay();
+    const dayName = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][dayOfWeek];
+    const isSun = dayOfWeek === 0;
+    const isSat = dayOfWeek === 6;
+    let labelColor = 'inherit';
+    if (isSun) labelColor = '#f43f5e';
+    else if (isSat) labelColor = '#fb923c';
+    
+    html += `
+      <th class="att-day-header" style="color: ${labelColor}; font-size: 0.75rem;">
+        <div>${d}</div>
+        <div style="font-size: 0.65rem; opacity: 0.8; font-weight: normal;">${dayName}</div>
+      </th>
+    `;
+  }
+  
+  html += `
+    <th style="width: 80px; text-align: center; font-weight: bold; color: var(--post-orange);">รวม (วัน)</th>
+  `;
+  
+  tableHeaderRow.innerHTML = html;
+  
+  renderAttendanceTableRows();
+}
+
+function renderAttendanceTableRows() {
+  const tableBody = document.getElementById('attTableBody');
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!tableBody || !attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  const ceYear = year - 543;
+  
+  const personnel = getPersonnel();
+  const sortedPersonnel = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  
+  const searchQuery = (document.getElementById('attSearchInput')?.value || '').toLowerCase().trim();
+  const filtered = sortedPersonnel.filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery));
+  
+  tableBody.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="${daysCount + 3}" class="no-data" style="text-align: center; padding: 2rem;">
+          ไม่พบข้อมูลรายชื่อพนักงาน
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  filtered.forEach((person, idx) => {
+    const tr = document.createElement('tr');
+    
+    const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [] };
+    const checkedDaysSet = new Set(attRec.checkedDays);
+    
+    let rowHtml = `
+      <td class="att-sticky-col" style="text-align: center; background: #141724; color: var(--text-secondary);">${idx + 1}</td>
+      <td class="att-sticky-col" style="text-align: left; background: #141724; font-weight: bold; left: 40px;">
+        ${person.name}
+      </td>
+    `;
+    
+    const restDays = person.restDays || [];
+    
+    for (let d = 1; d <= daysCount; d++) {
+      const dateObj = new Date(ceYear, month - 1, d);
+      const dayOfWeek = dateObj.getDay();
+      
+      const isRestDay = restDays.includes(dayOfWeek);
+      const isChecked = checkedDaysSet.has(d);
+      
+      rowHtml += `
+        <td class="att-checkbox-cell ${isRestDay ? 'att-rest-day-cell' : ''}">
+          <input type="checkbox" data-name="${person.name}" data-day="${d}" ${isChecked ? 'checked' : ''} />
+        </td>
+      `;
+    }
+    
+    rowHtml += `
+      <td style="text-align: center; font-weight: bold; color: var(--post-orange); font-size: 1rem;" id="att-total-${person.name}">
+        ${attRec.checkedDays.length}
+      </td>
+    `;
+    
+    tr.innerHTML = rowHtml;
+    tableBody.appendChild(tr);
+  });
+  
+  tableBody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', async (e) => {
+      const name = e.target.getAttribute('data-name');
+      const day = parseInt(e.target.getAttribute('data-day'));
+      const isChecked = e.target.checked;
+      
+      let attRec = attendanceList.find(item => item.name === name);
+      if (!attRec) {
+        attRec = { name, checkedDays: [] };
+        attendanceList.push(attRec);
+      }
+      
+      const daySet = new Set(attRec.checkedDays);
+      if (isChecked) {
+        daySet.add(day);
+      } else {
+        daySet.delete(day);
+      }
+      attRec.checkedDays = Array.from(daySet).sort((a, b) => a - b);
+      
+      const totalCell = document.getElementById(`att-total-${name}`);
+      if (totalCell) totalCell.textContent = attRec.checkedDays.length;
+      
+      await saveAttendanceRecord(year, month, name, attRec.checkedDays);
+      syncWorkDaysToCalculators(name, attRec.checkedDays.length);
+    });
+  });
+}
+
+async function syncWorkDaysToCalculators(empName, totalDays) {
+  let fuelChanged = false;
+  const fuelList = window.employees || [];
+  const fuelIdx = fuelList.findIndex(e => e.name === empName);
+  if (fuelIdx !== -1) {
+    if (fuelList[fuelIdx].formMode !== 'supervisor') {
+      fuelList[fuelIdx].workDays = totalDays;
+      fuelChanged = true;
+    }
+  }
+  
+  let waterChanged = false;
+  const waterList = window.waterEmployees || [];
+  const waterIdx = waterList.findIndex(e => e.name === empName);
+  if (waterIdx !== -1) {
+    waterList[waterIdx].workDays = totalDays;
+    waterChanged = true;
+  }
+  
+  if (fuelChanged) {
+    await saveEmployees(fuelList);
+    if (window.renderEmployeeTable) window.renderEmployeeTable();
+  }
+  if (waterChanged) {
+    await saveWaterEmployees(waterList);
+    if (window.renderWaterTable) window.renderWaterTable();
+  }
+}
+
+async function toggleAllAttendanceDays(checkAll) {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  const ceYear = year - 543;
+  
+  const personnel = getPersonnel();
+  
+  window.showConfirm({
+    title: checkAll ? 'เลือกวันทำงานทั้งหมด' : 'ล้างวันทำงานทั้งหมด',
+    message: checkAll 
+      ? `คุณต้องการติ๊กเลือกวันทำงานทั้งหมด (เว้นวันหยุดประจำสัปดาห์) ให้พนักงานทุกคนในเดือนนี้ใช่หรือไม่?`
+      : `คุณต้องการล้างวันทำงานทั้งหมดให้พนักงานทุกคนในเดือนนี้ใช่หรือไม่?`,
+    icon: '❓',
+    okText: 'ดำเนินการ',
+    okClass: checkAll ? 'btn-primary' : 'btn-danger',
+    onConfirm: async () => {
+      window.showToast('กำลังประมวลผล...', 'info');
+      const updatedList = [];
+      
+      personnel.forEach(person => {
+        let checkedDays = [];
+        if (checkAll) {
+          const restDays = person.restDays || [];
+          for (let d = 1; d <= daysCount; d++) {
+            const dateObj = new Date(ceYear, month - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            if (!restDays.includes(dayOfWeek)) {
+              checkedDays.push(d);
+            }
+          }
+        }
+        updatedList.push({ name: person.name, checkedDays });
+      });
+      
+      attendanceList = updatedList;
+      await saveAttendanceList(year, month, updatedList);
+      renderAttendanceTableRows();
+      
+      for (const item of updatedList) {
+        await syncWorkDaysToCalculators(item.name, item.checkedDays.length);
+      }
+      
+      window.showToast('ดำเนินการสำเร็จ!', 'success');
+    }
+  });
+}
+
+async function exportAttendanceToExcel() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  
+  window.showToast('กำลังเตรียมข้อมูลส่งออก...', 'info');
+  
+  try {
+    const XLSX = await getXLSX();
+    const personnel = getPersonnel();
+    const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    
+    const headers = ['ลำดับ', 'ชื่อ-นามสกุล'];
+    for (let d = 1; d <= daysCount; d++) {
+      headers.push(String(d));
+    }
+    headers.push('วันทำงานรวม');
+    
+    const data = [headers];
+    
+    sorted.forEach((person, idx) => {
+      const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [] };
+      const checkedSet = new Set(attRec.checkedDays);
+      const row = [idx + 1, person.name];
+      for (let d = 1; d <= daysCount; d++) {
+        row.push(checkedSet.has(d) ? 1 : 0);
+      }
+      row.push(attRec.checkedDays.length);
+      data.push(row);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_address = { c: C, r: R };
+        const cell_ref = XLSX.utils.encode_cell(cell_address);
+        const cell = ws[cell_ref];
+        if (!cell) continue;
+        
+        cell.s = {
+          border: {
+            top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+          },
+          font: { name: 'Sarabun', sz: 10 },
+          alignment: { vertical: 'center', horizontal: 'center' }
+        };
+        
+        if (R === 0) {
+          cell.s.fill = { fgColor: { rgb: 'F5F5F5' } };
+          cell.s.font.bold = True;
+        }
+        
+        if (C === 1 && R > 0) {
+          cell.s.alignment.horizontal = 'left';
+        }
+      }
+    }
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    
+    const filename = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    window.showToast('ส่งออกตารางลงเวลาสำเร็จ!', 'success');
+  } catch (error) {
+    console.error("Failed to export attendance:", error);
+    window.showToast('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
+  }
+}
+
+async function downloadAttTemplateXlsx() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  
+  try {
+    const XLSX = await getXLSX();
+    const personnel = getPersonnel();
+    const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    
+    const headers = ['ลำดับ', 'ชื่อ-นามสกุล'];
+    for (let d = 1; d <= daysCount; d++) {
+      headers.push(String(d));
+    }
+    
+    const data = [headers];
+    sorted.forEach((person, idx) => {
+      const row = [idx + 1, person.name];
+      for (let d = 1; d <= daysCount; d++) {
+        row.push('');
+      }
+      data.push(row);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    
+    XLSX.writeFile(wb, `attendance_template_${year}_${String(month).padStart(2, '0')}.xlsx`);
+    window.showToast('ดาวน์โหลดเทมเพลตสำเร็จ!', 'success');
+  } catch (error) {
+    console.error(error);
+    window.showToast('ดาวน์โหลดเทมเพลตไม่สำเร็จ', 'error');
+  }
+}
+
+function switchAttImportTab(tab) {
+  const tabFile = document.getElementById('tabAttImportFile');
+  const tabText = document.getElementById('tabAttImportText');
+  const fileContent = document.getElementById('attImportFileContent');
+  const textContent = document.getElementById('attImportTextContent');
+  
+  if (tab === 'file') {
+    if (tabFile) tabFile.setAttribute('style', 'font-weight: bold; background: var(--post-orange); color: white;');
+    if (tabText) tabText.setAttribute('style', 'font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
+    if (fileContent) fileContent.classList.remove('hidden');
+    if (textContent) textContent.classList.add('hidden');
+  } else {
+    if (tabText) tabText.setAttribute('style', 'font-weight: bold; background: var(--post-orange); color: white;');
+    if (tabFile) tabFile.setAttribute('style', 'font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
+    if (textContent) textContent.classList.remove('hidden');
+    if (fileContent) fileContent.classList.add('hidden');
+  }
+}
+
+let tempParsedAttRecords = [];
+
+function clearSelectedAttImportFile() {
+  const attendanceFileSelector = document.getElementById('attendanceFileSelector');
+  const attSelectedFileInfo = document.getElementById('attSelectedFileInfo');
+  const submitAttImportBtn = document.getElementById('submitAttImportBtn');
+  
+  if (attendanceFileSelector) attendanceFileSelector.value = '';
+  if (attSelectedFileInfo) attSelectedFileInfo.classList.add('hidden');
+  if (submitAttImportBtn) {
+    submitAttImportBtn.disabled = true;
+    submitAttImportBtn.textContent = '✔️ ยืนยันนำเข้าการลงเวลา';
+  }
+  tempParsedAttRecords = [];
+  document.getElementById('attImportPreviewTableBody').innerHTML = '<tr><td class="no-data" style="text-align: center; padding: 1.5rem;">ยังไม่มีข้อมูล รอโหลดไฟล์หรือวางข้อมูลเพื่อประมวลผล</td></tr>';
+}
+
+function processUploadedAttFile(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const XLSX = await getXLSX();
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      parseAttRows(rows);
+      
+      const fileInfo = document.getElementById('attSelectedFileInfo');
+      const filenameLabel = document.getElementById('attFileNameLabel');
+      if (fileInfo && filenameLabel) {
+        filenameLabel.textContent = `📁 ${file.name}`;
+        fileInfo.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error(error);
+      window.showToast('ไม่สามารถอ่านไฟล์ได้', 'error');
+      clearSelectedAttImportFile();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function handleAttPaste(e) {
+  let text = '';
+  if (e.type === 'paste') {
+    text = (e.clipboardData || window.clipboardData).getData('text');
+  } else {
+    text = e.target.value;
+  }
+  
+  if (!text.trim()) return;
+  
+  const rows = text.split('\n').map(row => row.split('\t'));
+  parseAttRows(rows);
+}
+
+function parseAttRows(rows) {
+  if (rows.length < 2) return;
+  
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, rows.length); i++) {
+    if (rows[i].some(cell => String(cell).includes('ชื่อ') || String(cell).includes('นามสกุล'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+  
+  const headers = rows[headerIdx];
+  let nameColIdx = headers.findIndex(h => String(h).includes('ชื่อ'));
+  if (nameColIdx === -1) nameColIdx = 1;
+  
+  const records = [];
+  const personnel = getPersonnel();
+  const personnelNames = new Set(personnel.map(p => p.name.trim()));
+  
+  let matchCount = 0;
+  
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length <= nameColIdx) continue;
+    
+    const name = String(row[nameColIdx] || '').trim();
+    if (!name || name === 'undefined' || name === 'ชื่อ-นามสกุล') continue;
+    
+    const checkedDays = [];
+    let dayColStart = nameColIdx + 1;
+    for (let d = 1; d <= daysCount; d++) {
+      const cellVal = row[dayColStart + d - 1];
+      if (cellVal !== undefined && (parseInt(cellVal) === 1 || String(cellVal).toLowerCase() === 'x' || String(cellVal).toLowerCase() === 'true')) {
+        checkedDays.push(d);
+      }
+    }
+    
+    const exists = personnelNames.has(name);
+    if (exists) matchCount++;
+    
+    records.push({ name, checkedDays, exists });
+  }
+  
+  tempParsedAttRecords = records;
+  renderAttImportPreview(daysCount);
+}
+
+function renderAttImportPreview(daysCount) {
+  const previewHeader = document.getElementById('attImportPreviewHeader');
+  const previewBody = document.getElementById('attImportPreviewTableBody');
+  const submitAttImportBtn = document.getElementById('submitAttImportBtn');
+  if (!previewHeader || !previewBody || !submitAttImportBtn) return;
+  
+  let headerHtml = `
+    <th>ชื่อ-นามสกุล</th>
+    <th>สถานะ</th>
+    <th>วันที่ติ๊กทำงาน</th>
+    <th>รวม</th>
+  `;
+  previewHeader.innerHTML = `<tr>${headerHtml}</tr>`;
+  
+  previewBody.innerHTML = '';
+  
+  tempParsedAttRecords.forEach(rec => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align: left;"><strong>${rec.name}</strong></td>
+      <td style="text-align: left;">
+        ${rec.exists ? '<span style="color: var(--post-emerald); font-weight: bold;">✔️ พบในระบบ</span>' : '<span style="color: var(--post-red);">❌ ไม่พบพนักงาน</span>'}
+      </td>
+      <td style="font-size: 0.75rem; text-align: left;">
+        ${rec.checkedDays.length > 0 ? rec.checkedDays.join(', ') : '-'}
+      </td>
+      <td style="font-weight: bold; color: var(--post-orange);">${rec.checkedDays.length} วัน</td>
+    `;
+    previewBody.appendChild(tr);
+  });
+  
+  const matchCount = tempParsedAttRecords.filter(r => r.exists).length;
+  submitAttImportBtn.disabled = matchCount === 0;
+  submitAttImportBtn.innerHTML = `✔️ ยืนยันนำเข้าข้อมูล (${matchCount} รายชื่อ)`;
+}
+
+async function handleConfirmAttImport() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  
+  window.showToast('กำลังนำเข้าข้อมูล...', 'info');
+  try {
+    const matchedRecords = tempParsedAttRecords.filter(r => r.exists);
+    
+    for (const rec of matchedRecords) {
+      await saveAttendanceRecord(year, month, rec.name, rec.checkedDays);
+      await syncWorkDaysToCalculators(rec.name, rec.checkedDays.length);
+    }
+    
+    await bindAttendanceDataListeners();
+    
+    document.getElementById('attendanceImportModal').classList.remove('active');
+    clearSelectedAttImportFile();
+    window.showToast('นำเข้าตารางเวลาทำงานเสร็จสิ้น!', 'success');
+  } catch (error) {
+    console.error(error);
+    window.showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูลนำเข้า', 'error');
+  }
 }

@@ -758,6 +758,104 @@ export async function fetchEmployeesFromCollection(collName) {
   }
 }
 
+/**
+ * --- ATTENDANCE CRUD ---
+ */
+export async function fetchAttendanceList(year, month) {
+  const collName = `attendance_${year}_${String(month).padStart(2, '0')}`;
+  const localKey = `tp_${collName}`;
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem(localKey)) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, collName));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem(localKey, JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error(`❌ Firestore fetchAttendanceList failed for ${collName}:`, error);
+    return JSON.parse(localStorage.getItem(localKey)) || [];
+  }
+}
+
+export async function saveAttendanceRecord(year, month, empName, checkedDays) {
+  const collName = `attendance_${year}_${String(month).padStart(2, '0')}`;
+  const localKey = `tp_${collName}`;
+  
+  const list = JSON.parse(localStorage.getItem(localKey)) || [];
+  const idx = list.findIndex(item => item.name === empName);
+  const record = { name: empName, checkedDays };
+  if (idx !== -1) {
+    list[idx] = record;
+  } else {
+    list.push(record);
+  }
+  localStorage.setItem(localKey, JSON.stringify(list));
+  
+  if (!isCloudConnected()) return false;
+  
+  try {
+    const docRef = doc(db, collName, empName);
+    await setDoc(docRef, record);
+    return true;
+  } catch (error) {
+    console.error(`❌ Firestore saveAttendanceRecord failed for ${collName}:`, error);
+    return false;
+  }
+}
+
+export async function saveAttendanceList(year, month, attendanceList) {
+  const collName = `attendance_${year}_${String(month).padStart(2, '0')}`;
+  const localKey = `tp_${collName}`;
+  
+  localStorage.setItem(localKey, JSON.stringify(attendanceList));
+  
+  if (!isCloudConnected()) return false;
+  
+  try {
+    const batch = writeBatch(db);
+    
+    const querySnapshot = await getDocs(collection(db, collName));
+    querySnapshot.forEach((d) => {
+      if (!attendanceList.some(item => item.name === d.id)) {
+        batch.delete(doc(db, collName, d.id));
+      }
+    });
+    
+    attendanceList.forEach((item) => {
+      const docRef = doc(db, collName, item.name);
+      batch.set(docRef, item);
+    });
+    
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error(`❌ Firestore saveAttendanceList failed for ${collName}:`, error);
+    return false;
+  }
+}
+
+export function listenToAttendanceList(year, month, callback) {
+  const collName = `attendance_${year}_${String(month).padStart(2, '0')}`;
+  const localKey = `tp_${collName}`;
+  if (!isCloudConnected()) return null;
+  
+  return onSnapshot(collection(db, collName), (snapshot) => {
+    const list = [];
+    snapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem(localKey, JSON.stringify(list));
+    callback(list);
+  }, (error) => {
+    console.error(`❌ Firestore listenToAttendanceList failed for ${collName}:`, error);
+  });
+}
+
+
 
 
 

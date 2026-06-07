@@ -15,6 +15,7 @@ import {
   listenToEmployees,
   listenToWaterEmployees,
   fetchEmployeesFromCollection,
+  fetchAttendanceList,
   fetchRouteData,
   saveRouteData,
   resetCloudRouteData,
@@ -2484,11 +2485,24 @@ async function handleCopyFromPrevMonth() {
 async function processCopy(prevList, isOverwrite) {
   const currentList = activeMode === 'fuel' ? employees : waterEmployees;
 
+  // Load current month's attendance list to pre-fill workDays
+  const currMoSelect = document.getElementById('globalMonth');
+  const currYrInput = document.getElementById('globalYear');
+  let attList = [];
+  if (currMoSelect && currYrInput) {
+    const month = parseInt(currMoSelect.value);
+    const year = parseInt(currYrInput.value);
+    attList = await fetchAttendanceList(year, month);
+  }
+
   // Clean cloned items
   const cleanedPrevList = prevList.map(emp => {
     const clone = { ...emp };
     delete clone.id; // clear original document ID so we save as new document
-    clone.workDays = 0;
+    
+    const attRec = attList.find(a => a.name === clone.name);
+    clone.workDays = attRec ? attRec.checkedDays.length : 0;
+
     if (clone.daysNotWorked !== undefined) clone.daysNotWorked = 0;
     if (clone.missions !== undefined) clone.missions = [];
     return clone;
@@ -2527,8 +2541,21 @@ async function handleLoadFromRegistry() {
       return;
     }
 
+    // Load attendance to sync workDays
+    const currMoSelect = document.getElementById('globalMonth');
+    const currYrInput = document.getElementById('globalYear');
+    let attList = [];
+    if (currMoSelect && currYrInput) {
+      const month = parseInt(currMoSelect.value);
+      const year = parseInt(currYrInput.value);
+      attList = await fetchAttendanceList(year, month);
+    }
+
     // Map personnel to appropriate list based on activeMode
     const mappedList = registry.map(person => {
+      const attRec = attList.find(a => a.name === person.name);
+      const workDays = attRec ? attRec.checkedDays.length : 0;
+
       if (activeMode === 'fuel') {
         const isSupervisor = person.position === 'หัวหน้าโซน' || person.position === 'หัวหน้าโซนนำจ่าย' || person.duty === 'หัวหน้าโซนนำจ่าย';
         const item = {
@@ -2537,7 +2564,7 @@ async function handleLoadFromRegistry() {
           duty: person.duty || 'นำจ่าย',
           vehicle: person.vehicle || 'จักรยานยนต์',
           signature: person.signature || person.name,
-          workDays: 0,
+          workDays: workDays,
           remarks: '',
         };
 
@@ -2559,7 +2586,7 @@ async function handleLoadFromRegistry() {
           position: person.position || 'พนักงาน',
           duty: person.duty || 'นำจ่าย',
           salary: person.salary || 0,
-          workDays: 0,
+          workDays: workDays,
           remarks: '',
           signature: person.signature || person.name
         };
