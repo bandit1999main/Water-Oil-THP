@@ -384,8 +384,8 @@ export function cloneRow(index) {
   delete clone.id; // remove ID to let database autogenerate a new one
   employees.push(clone);
   setEmployees(employees);
-  saveEmployees(employees);
   renderFuelTable();
+  saveEmployees(employees);
   window.showToast('คัดลอกข้อมูลพนักงานเสร็จเรียบร้อย!', 'success');
 }
 
@@ -399,8 +399,8 @@ export function deleteRow(index) {
     onConfirm: async () => {
       employees.splice(index, 1);
       setEmployees(employees);
-      await saveEmployees(employees);
       renderFuelTable();
+      saveEmployees(employees);
       window.showToast('ลบรายการพนักงานเรียบร้อยแล้ว!', 'success');
     }
   });
@@ -646,7 +646,6 @@ export async function handleFuelFormSubmit(e) {
 
   const isEdit = editIndexVal !== '';
   setEmployees(employees);
-  await saveEmployees(employees);
   document.getElementById('employeeForm').reset();
   const routeStatsPreview = document.getElementById('routeStatsPreview');
   if (routeStatsPreview) routeStatsPreview.classList.add('hidden');
@@ -657,6 +656,7 @@ export async function handleFuelFormSubmit(e) {
   }
   
   renderFuelTable();
+  saveEmployees(employees);
   window.showToast(isEdit ? 'อัปเดตข้อมูลสำเร็จ!' : 'บันทึกข้อมูลสำเร็จ!', 'success');
 }
 
@@ -1400,13 +1400,13 @@ export function printFuelReport() {
           padding: 0.5cm !important;
           page-break-after: always;
           box-sizing: border-box;
-          min-height: 297mm;
+          min-height: 210mm;
         }
         .print-page:last-child {
           page-break-after: avoid;
         }
         @page {
-          size: A4 portrait;
+          size: A4 landscape;
           margin: 0.2cm;
         }
         .print-header {
@@ -1522,8 +1522,8 @@ export async function clearFuelData() {
     okText: 'ล้างข้อมูลทั้งหมด',
     onConfirm: async () => {
       setEmployees([]);
-      await saveEmployees([]);
       renderFuelTable();
+      saveEmployees([]);
       window.showToast('ล้างตารางข้อมูลค่าน้ำมันเรียบร้อยแล้ว!', 'success');
     }
   });
