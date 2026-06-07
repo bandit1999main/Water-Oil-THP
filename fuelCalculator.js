@@ -1400,7 +1400,6 @@ export function printFuelReport() {
           padding: 0.5cm !important;
           page-break-after: always;
           box-sizing: border-box;
-          min-height: 210mm;
         }
         .print-page:last-child {
           page-break-after: avoid;
