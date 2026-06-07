@@ -140,8 +140,8 @@ export function deleteWaterEmployee(idx) {
     onConfirm: async () => {
       waterEmployees.splice(idx, 1);
       setWaterEmployees(waterEmployees);
-      await saveWaterEmployees(waterEmployees);
       renderWaterTable();
+      saveWaterEmployees(waterEmployees);
       window.showToast('ลบรายชื่อเรียบร้อยแล้ว!', 'success');
     }
   });
@@ -190,9 +190,9 @@ export async function handleWaterFormSubmit(e) {
   }
 
   setWaterEmployees(waterEmployees);
-  await saveWaterEmployees(waterEmployees);
   document.getElementById('employeeForm').reset();
   renderWaterTable();
+  saveWaterEmployees(waterEmployees);
   window.showToast(
     editIndexVal !== '' ? 'อัปเดตข้อมูลสำเร็จ!' : 'เพิ่มรายชื่อสำเร็จ!',
     'success'
@@ -342,9 +342,9 @@ export function printWaterReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid black !important;
-          padding: 2.2px 2px !important;
-          font-size: 6.8pt !important;
+          border: 1px solid #555 !important;
+          padding: 4px 3px !important;
+          font-size: 7.5pt !important;
           line-height: 1.15 !important;
           color: black !important;
           background: transparent !important;
@@ -359,8 +359,12 @@ export function printWaterReport() {
           vertical-align: middle !important;
         }
         .print-table td:nth-child(2) {
-          font-size: 11pt !important;
+          font-size: 8.5pt !important;
           font-weight: bold !important;
+        }
+        .print-table td:nth-child(8) {
+          white-space: nowrap !important;
+          font-size: 7.8pt !important;
         }
         .print-table td:nth-child(1),
         .print-table td:nth-child(4),
@@ -396,7 +400,7 @@ export function printWaterReport() {
         .print-signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 0.3rem !important;
+          margin-top: 1.2rem !important;
           page-break-inside: avoid;
         }
         .sig-box {
@@ -490,8 +494,8 @@ export async function clearWaterData() {
     okText: 'ล้างข้อมูลทั้งหมด',
     onConfirm: async () => {
       setWaterEmployees([]);
-      await saveWaterEmployees([]);
       renderWaterTable();
+      saveWaterEmployees([]);
       window.showToast('ล้างตารางข้อมูลค่าน้ำดื่มเรียบร้อยแล้ว!', 'success');
     }
   });
