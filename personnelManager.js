@@ -2189,9 +2189,13 @@ async function exportAttendanceToExcel() {
     for (let d = 1; d <= daysCount; d++) {
       headers.push(String(d));
     }
-    headers.push('วันทำงานรวม');
+    headers.push('รวมมาทำงาน');
     
-    const data = [headers];
+    const data = [
+      ['แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)'],
+      ['คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้ารับวันมาทำงาน)'],
+      headers
+    ];
     
     sorted.forEach((person, idx) => {
       const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [] };
@@ -2204,15 +2208,52 @@ async function exportAttendanceToExcel() {
       data.push(row);
     });
     
+    // Add 15 extra empty rows for visual alignment
+    const startIdx = sorted.length;
+    for (let i = 0; i < 15; i++) {
+      const row = [startIdx + i + 1, ''];
+      for (let d = 1; d <= daysCount; d++) {
+        row.push('');
+      }
+      row.push('');
+      data.push(row);
+    }
+    
     const ws = XLSX.utils.aoa_to_sheet(data);
+    const colsCount = 2 + daysCount + 1;
+    
+    // Merge title banner and subtitle
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
+    ];
+    
+    // Set column widths
+    const colsW = [{ wch: 6 }, { wch: 28 }];
+    for (let d = 1; d <= daysCount; d++) {
+      colsW.push({ wch: 3.5 });
+    }
+    colsW.push({ wch: 15 });
+    ws['!cols'] = colsW;
+    
+    // Set row heights
+    const totalRows = data.length;
+    const rowsH = [{ hpx: 35 }, { hpx: 24 }, { hpx: 26 }];
+    for (let r = 3; r < totalRows; r++) {
+      rowsH.push({ hpx: 20 });
+    }
+    ws['!rows'] = rowsH;
     
     const range = XLSX.utils.decode_range(ws['!ref']);
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cell_address = { c: C, r: R };
         const cell_ref = XLSX.utils.encode_cell(cell_address);
-        const cell = ws[cell_ref];
-        if (!cell) continue;
+        let cell = ws[cell_ref];
+        if (!cell) {
+          cell = { t: 's', v: '' };
+          ws[cell_ref] = cell;
+        }
         
         cell.s = {
           border: {
@@ -2226,12 +2267,30 @@ async function exportAttendanceToExcel() {
         };
         
         if (R === 0) {
-          cell.s.fill = { fgColor: { rgb: 'F5F5F5' } };
-          cell.s.font.bold = true;
-        }
-        
-        if (C === 1 && R > 0) {
-          cell.s.alignment.horizontal = 'left';
+          cell.s.fill = { fgColor: { rgb: 'F04E23' } };
+          cell.s.font = { name: 'Sarabun', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.border = {};
+        } else if (R === 1) {
+          cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
+          cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '444444' } };
+          cell.s.border = {};
+        } else if (R === 2) {
+          cell.s.fill = { fgColor: { rgb: '2B2B2B' } };
+          cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.border = {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '444444' } },
+            right: { style: 'thin', color: { rgb: '444444' } }
+          };
+        } else {
+          if (C === 1) {
+            cell.s.alignment.horizontal = 'left';
+          }
+          if (C === colsCount - 1) {
+            cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
+            cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
+          }
         }
       }
     }
@@ -2266,17 +2325,110 @@ async function downloadAttTemplateXlsx() {
     for (let d = 1; d <= daysCount; d++) {
       headers.push(String(d));
     }
+    headers.push('รวมมาทำงาน');
     
-    const data = [headers];
+    const data = [
+      ['แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)'],
+      ['คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้ารับวันมาทำงาน)'],
+      headers
+    ];
+    
     sorted.forEach((person, idx) => {
       const row = [idx + 1, person.name];
       for (let d = 1; d <= daysCount; d++) {
         row.push('');
       }
+      row.push('');
       data.push(row);
     });
     
+    // Add 25 empty template rows
+    const startIdx = sorted.length;
+    for (let i = 0; i < 25; i++) {
+      const row = [startIdx + i + 1, ''];
+      for (let d = 1; d <= daysCount; d++) {
+        row.push('');
+      }
+      row.push('');
+      data.push(row);
+    }
+    
     const ws = XLSX.utils.aoa_to_sheet(data);
+    const colsCount = 2 + daysCount + 1;
+    
+    // Merge title banner and subtitle
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
+    ];
+    
+    // Set column widths
+    const colsW = [{ wch: 6 }, { wch: 28 }];
+    for (let d = 1; d <= daysCount; d++) {
+      colsW.push({ wch: 3.5 });
+    }
+    colsW.push({ wch: 15 });
+    ws['!cols'] = colsW;
+    
+    // Set row heights
+    const totalRows = data.length;
+    const rowsH = [{ hpx: 35 }, { hpx: 24 }, { hpx: 26 }];
+    for (let r = 3; r < totalRows; r++) {
+      rowsH.push({ hpx: 20 });
+    }
+    ws['!rows'] = rowsH;
+    
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_address = { c: C, r: R };
+        const cell_ref = XLSX.utils.encode_cell(cell_address);
+        let cell = ws[cell_ref];
+        if (!cell) {
+          cell = { t: 's', v: '' };
+          ws[cell_ref] = cell;
+        }
+        
+        cell.s = {
+          border: {
+            top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+            right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+          },
+          font: { name: 'Sarabun', sz: 10 },
+          alignment: { vertical: 'center', horizontal: 'center' }
+        };
+        
+        if (R === 0) {
+          cell.s.fill = { fgColor: { rgb: 'F04E23' } };
+          cell.s.font = { name: 'Sarabun', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.border = {};
+        } else if (R === 1) {
+          cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
+          cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '444444' } };
+          cell.s.border = {};
+        } else if (R === 2) {
+          cell.s.fill = { fgColor: { rgb: '2B2B2B' } };
+          cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.border = {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '444444' } },
+            right: { style: 'thin', color: { rgb: '444444' } }
+          };
+        } else {
+          if (C === 1) {
+            cell.s.alignment.horizontal = 'left';
+          }
+          if (C === colsCount - 1) {
+            cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
+            cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
+          }
+        }
+      }
+    }
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
     
