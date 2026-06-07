@@ -671,28 +671,33 @@ export function printSupervisorPlan(parentIndex) {
   const y = globalYearSelect.value;
   const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
 
-  const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
-  const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
-  const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
-  
-  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
-  const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
-  const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
-  
-  const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
   const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
   const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
 
+  let totalInspectDist = 0;
+  let totalFuelUsed = 0;
   let missionsHtml = '';
-  item.missions.forEach((mission, idx) => {
+  const ROUTE_DATA = getRouteData();
+
+  item.missions.forEach((mission) => {
+    const routeInfo = ROUTE_DATA[mission.route];
+    const workerDist = routeInfo ? parseFloat(routeInfo.workerDist) || 0 : 0;
+    const workerLiters = routeInfo ? parseFloat(routeInfo.workerLiters) || 0 : 0;
+
+    const isInspection = mission.type === 'ตรวจสอบการนำจ่าย';
+    const insDist = isInspection ? (workerDist / 2) : workerDist;
+    const insLiters = isInspection ? (workerLiters / 2) : workerLiters;
+
+    totalInspectDist += insDist;
+    totalFuelUsed += insLiters;
+
     missionsHtml += `
       <tr>
-        <td>${idx + 1}</td>
-        <td>${mission.type}</td>
-        <td>ด้านที่ ${mission.route}</td>
-        <td>${mission.days} วัน</td>
+        <td style="text-align: left; padding-left: 10px;">ด้านจ่ายที่ ${mission.route}</td>
         <td>${mission.dates || '-'}</td>
-        <td>${mission.distance.toFixed(1)} กม.</td>
+        <td>${workerDist.toFixed(2)}</td>
+        <td>${insDist.toFixed(2)}</td>
+        <td>${insLiters.toFixed(2)}</td>
       </tr>
     `;
   });
@@ -702,105 +707,146 @@ export function printSupervisorPlan(parentIndex) {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>แผนภูมิภารกิจ ชนจ. - ${item.name}</title>
+      <title>แผนการออกตรวจสอบการนำจ่าย - ${item.name}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
         body {
           font-family: 'Sarabun', sans-serif;
-          padding: 1cm;
+          padding: 1.5cm 1.5cm 1cm 1.5cm;
           font-size: 11pt;
           line-height: 1.6;
+          color: black;
+          background: white;
         }
-        h2, h3 {
+        h2 {
           text-align: center;
-          margin: 0.2rem 0;
+          font-size: 13pt;
+          font-weight: bold;
+          margin-bottom: 1.5rem;
+          text-decoration: underline;
         }
-        .meta-table {
-          width: 100%;
+        .header-section {
           margin-bottom: 1rem;
-          border-collapse: collapse;
         }
-        .meta-table td {
-          padding: 4px;
+        .body-text {
+          text-indent: 1.5cm;
+          text-align: justify;
+          margin-bottom: 1rem;
         }
         .plan-table {
           width: 100%;
           border-collapse: collapse;
           margin-top: 1rem;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
         .plan-table th, .plan-table td {
           border: 1px solid black;
-          padding: 8px;
+          padding: 6px;
           text-align: center;
+          font-size: 10pt;
         }
         .plan-table th {
           background-color: #f2f2f2;
+          font-weight: bold;
         }
-        .print-signatures {
+        .sig-container {
+          margin-top: 1.5rem;
           display: flex;
-          justify-content: space-between;
-          margin-top: 3rem;
+          flex-direction: column;
+          align-items: flex-end;
+          font-size: 11pt;
+        }
+        .sig-block {
+          text-align: center;
+          width: 300px;
+        }
+        .approval-section {
+          margin-top: 2rem;
+          border-top: 1px dashed #777;
+          padding-top: 1rem;
           page-break-inside: avoid;
         }
-        .sig-box {
-          text-align: center;
-          width: 32%;
+        .approval-title {
+          font-weight: bold;
+          margin-bottom: 0.5rem;
+        }
+        .checkbox-row {
+          margin-left: 1cm;
+          margin-bottom: 0.5rem;
+        }
+        .approval-sig-container {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 1rem;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 0.5cm;
         }
       </style>
     </head>
     <body>
-      <h2>แผนภูมิแสดงรายละเอียดภารกิจตรวจการนำจ่ายและเดินทางนำจ่ายแทน</h2>
-      <h3>ประจำเดือน ${m} พ.ศ. ${y}</h3>
-      <br>
-      <table class="meta-table">
-        <tr>
-          <td><strong>ชื่อ-นามสกุล:</strong> ${item.name}</td>
-          <td><strong>ตำแหน่ง:</strong> ${item.position}</td>
-        </tr>
-        <tr>
-          <td><strong>หน้าที่:</strong> หัวหน้าโซนนำจ่าย (ชนจ.)</td>
-          <td><strong>ที่ทำการไปรษณีย์:</strong> ปณ. ${postOffice}</td>
-        </tr>
-        <tr>
-          <td><strong>ประเภทพาหนะ:</strong> ${item.vehicle}</td>
-          <td><strong>จำนวนวันปฏิบัติภารกิจรวม:</strong> ${item.workDays} วัน</td>
-        </tr>
-      </table>
+      <h2>แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</h2>
+      
+      <div class="header-section">
+        <strong>เรียน</strong> หน.ปณ.${postOffice}
+      </div>
+
+      <div class="body-text">
+        ข้าพเจ้า <strong>${item.name}</strong> ตำแหน่ง <strong>${item.position}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${m}</strong> พ.ศ. <strong>${y}</strong> ตามบันทึก ปณภ.ที่ ปณภ.รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าฯยานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${item.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
+      </div>
 
       <table class="plan-table">
         <thead>
           <tr>
-            <th>ภารกิจที่</th>
-            <th>ประเภทภารกิจ</th>
-            <th>ด้านจ่าย/เป้าหมาย</th>
-            <th>จำนวนวันปฏิบัติงาน</th>
-            <th>วันที่ปฏิบัติงาน (วันที่ระบุ)</th>
-            <th>ระยะทางเดินทางสะสม</th>
+            <th style="width: 25%">ด้านจ่ายในความรับผิดชอบ</th>
+            <th style="width: 20%">ว./ด./ป. ที่ตรวจสอบ</th>
+            <th style="width: 15%">ระยะทาง (กม./วัน)</th>
+            <th style="width: 20%">ระยะทางที่ออกตรวจสอบการนำจ่าย<br>(ครึ่งหนึ่งของระยะทางด้านจ่าย) (กม./วัน)</th>
+            <th style="width: 20%">น้ำมันเชื้อเพลิงที่ใช้ (ลิตร/วัน)</th>
           </tr>
         </thead>
         <tbody>
           ${missionsHtml}
+          <tr style="font-weight: bold; background-color: #fafafa;">
+            <td colspan="3" style="text-align: right; padding-right: 15px;">รวม</td>
+            <td>${totalInspectDist.toFixed(2)}</td>
+            <td>${totalFuelUsed.toFixed(2)}</td>
+          </tr>
         </tbody>
       </table>
 
-      <div class="print-signatures">
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
-          <p>ตำแหน่ง ${sigMakerPosVal}</p>
+      <div class="body-text" style="text-indent: 1.5cm; margin-bottom: 2rem;">
+        จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
+      </div>
+
+      <div class="sig-container">
+        <div class="sig-block">
+          <p>ลงชื่อ..........................................................ผู้ขออนุมัติ</p>
+          <p style="margin-top: 0.5rem; font-weight: bold;">( ${item.name} )</p>
+          <p>ตำแหน่ง ${item.position}</p>
+          <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
         </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
-          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+      </div>
+
+      <div class="approval-section">
+        <div class="approval-title">(2) ความเห็นของหัวหน้าที่ทำการไปรษณีย์</div>
+        <div class="checkbox-row">
+          ( &nbsp; &nbsp; ) อนุมัติ
         </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
-          <p>ตำแหน่ง ${sigApproverPosVal}</p>
+        <div class="checkbox-row">
+          ( &nbsp; &nbsp; ) อื่นๆ ....................................................................................................................................................
+        </div>
+        
+        <div class="approval-sig-container">
+          <div class="sig-block">
+            <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">( ${sigApproverNameVal} )</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+            <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
+          </div>
         </div>
       </div>
 
