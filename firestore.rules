@@ -25,34 +25,32 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (request.auth.token.email == 'bandit1999main@gmail.com' || request.auth.uid == resource.data.uid);
     }
 
-    // --- Thailand Post Oil & Water Collections ---
-    match /employees/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /water_employees/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /personnel/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /templates/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /signatory_profiles/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /route_data/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    match /global_settings/{document} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
+    // --- Thailand Post Oil, Water, & Attendance Collections (dynamic & static) ---
+    match /{collectionId}/{document} {
+      allow read: if request.auth != null && (
+        collectionId == 'employees' ||
+        collectionId.matches('employees_[0-9]+_[0-9]+') ||
+        collectionId == 'water_employees' ||
+        collectionId.matches('water_employees_[0-9]+_[0-9]+') ||
+        collectionId == 'personnel' ||
+        collectionId == 'templates' ||
+        collectionId == 'signatory_profiles' ||
+        collectionId == 'route_data' ||
+        collectionId == 'global_settings' ||
+        collectionId.matches('attendance_[0-9]+_[0-9]+')
+      );
+      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com' && (
+        collectionId == 'employees' ||
+        collectionId.matches('employees_[0-9]+_[0-9]+') ||
+        collectionId == 'water_employees' ||
+        collectionId.matches('water_employees_[0-9]+_[0-9]+') ||
+        collectionId == 'personnel' ||
+        collectionId == 'templates' ||
+        collectionId == 'signatory_profiles' ||
+        collectionId == 'route_data' ||
+        collectionId == 'global_settings' ||
+        collectionId.matches('attendance_[0-9]+_[0-9]+')
+      );
     }
     match /app_users/{userId} {
       // Any logged-in user can read their own profile (needed for real-time approval listener)

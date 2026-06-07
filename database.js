@@ -116,7 +116,7 @@ export function checkIsAdmin(user) {
   return user.email === 'bandit1999main@gmail.com';
 }
 
-/**
+// Collection name helper functions
 export function getActiveEmployeesCollectionName() {
   const yrEl = document.getElementById('globalYear');
   const moEl = document.getElementById('globalMonth');

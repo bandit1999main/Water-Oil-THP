@@ -2227,7 +2227,7 @@ async function exportAttendanceToExcel() {
         
         if (R === 0) {
           cell.s.fill = { fgColor: { rgb: 'F5F5F5' } };
-          cell.s.font.bold = True;
+          cell.s.font.bold = true;
         }
         
         if (C === 1 && R > 0) {
