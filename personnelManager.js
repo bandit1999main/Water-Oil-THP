@@ -2198,7 +2198,7 @@ async function exportAttendanceToExcel() {
       const checkedSet = new Set(attRec.checkedDays);
       const row = [idx + 1, person.name];
       for (let d = 1; d <= daysCount; d++) {
-        row.push(checkedSet.has(d) ? 1 : 0);
+        row.push(checkedSet.has(d) ? '/' : '');
       }
       row.push(attRec.checkedDays.length);
       data.push(row);
@@ -2404,8 +2404,11 @@ function parseAttRows(rows) {
     let dayColStart = nameColIdx + 1;
     for (let d = 1; d <= daysCount; d++) {
       const cellVal = row[dayColStart + d - 1];
-      if (cellVal !== undefined && (parseInt(cellVal) === 1 || String(cellVal).toLowerCase() === 'x' || String(cellVal).toLowerCase() === 'true')) {
-        checkedDays.push(d);
+      if (cellVal !== undefined) {
+        const valStr = String(cellVal).trim().toLowerCase();
+        if (valStr === '1' || valStr === 'x' || valStr === 'true' || valStr === '/' || valStr === '✓' || valStr === 't') {
+          checkedDays.push(d);
+        }
       }
     }
     
