@@ -289,11 +289,11 @@ function deletePersonnel(index) {
     onConfirm: async () => {
       personnel.splice(index, 1);
       setPersonnel(personnel);
-      await savePersonnelList(personnel);
       renderPersonnelTable();
       if (window.updateEmployeeSelectDropdown) {
         window.updateEmployeeSelectDropdown();
       }
+      savePersonnelList(personnel);
       window.showToast('ลบข้อมูลบุคลากรสำเร็จ!', 'success');
     }
   });
@@ -379,7 +379,6 @@ async function handlePersonnelFormSubmit(e) {
   }
 
   setPersonnel(personnel);
-  await savePersonnelList(personnel);
   if (personnelForm) personnelForm.reset();
   document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
   if (personDepartmentCustomGroup) personDepartmentCustomGroup.classList.add('hidden');
@@ -387,6 +386,7 @@ async function handlePersonnelFormSubmit(e) {
   if (window.updateEmployeeSelectDropdown) {
     window.updateEmployeeSelectDropdown();
   }
+  savePersonnelList(personnel);
   window.showToast(editIndexVal !== '' ? 'อัปเดตข้อมูลบุคลากรสำเร็จ!' : 'ลงทะเบียนบุคลากรสำเร็จ!', 'success');
 }
 
@@ -449,7 +449,6 @@ function openDuplicateResolutionModal(newItem, duplicates) {
       personnel[dup.originalIdx] = newItem;
 
       setPersonnel(personnel);
-      await savePersonnelList(personnel);
       if (personnelForm) personnelForm.reset();
       document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
       if (personDepartmentCustomGroup) personDepartmentCustomGroup.classList.add('hidden');
@@ -457,6 +456,7 @@ function openDuplicateResolutionModal(newItem, duplicates) {
       if (window.updateEmployeeSelectDropdown) {
         window.updateEmployeeSelectDropdown();
       }
+      savePersonnelList(personnel);
       modal.classList.remove('active');
       window.showToast('บันทึกทับข้อมูลบุคลากรสำเร็จ!', 'success');
     });
@@ -472,7 +472,6 @@ function openDuplicateResolutionModal(newItem, duplicates) {
   newForceAddBtn.addEventListener('click', async () => {
     personnel.push(newItem);
     setPersonnel(personnel);
-    await savePersonnelList(personnel);
     if (personnelForm) personnelForm.reset();
     document.querySelectorAll('input[name="personRestDays"]').forEach(cb => cb.checked = false);
     if (personDepartmentCustomGroup) personDepartmentCustomGroup.classList.add('hidden');
@@ -480,6 +479,7 @@ function openDuplicateResolutionModal(newItem, duplicates) {
     if (window.updateEmployeeSelectDropdown) {
       window.updateEmployeeSelectDropdown();
     }
+    savePersonnelList(personnel);
     modal.classList.remove('active');
     window.showToast('ลงทะเบียนบุคลากรใหม่สำเร็จ!', 'success');
   });
@@ -590,11 +590,11 @@ function scanForDuplicateNames() {
             const currentPersonnel = getPersonnel();
             currentPersonnel.splice(person.originalIdx, 1);
             setPersonnel(currentPersonnel);
-            await savePersonnelList(currentPersonnel);
             renderPersonnelTable();
             if (window.updateEmployeeSelectDropdown) {
               window.updateEmployeeSelectDropdown();
             }
+            savePersonnelList(currentPersonnel);
             modal.classList.remove('active');
             window.showToast('ลบข้อมูลเรียบร้อย!', 'success');
             scanForDuplicateNames();
@@ -679,11 +679,11 @@ function wireRegistryEditModal() {
         personnel[idx] = item;
         
         setPersonnel(personnel);
-        await savePersonnelList(personnel);
         renderPersonnelTable();
         if (window.updateEmployeeSelectDropdown) {
           window.updateEmployeeSelectDropdown();
         }
+        savePersonnelList(personnel);
         modal.classList.remove('active');
         window.showToast('อัปเดตข้อมูลบุคลากรสำเร็จ!', 'success');
       }
@@ -1044,11 +1044,11 @@ async function handleConfirmPersonnelImport() {
   if (duplicates.length === 0) {
     nonDuplicates.forEach(record => personnel.push(record));
     setPersonnel(personnel);
-    await savePersonnelList(personnel);
     renderPersonnelTable();
     if (window.updateEmployeeSelectDropdown) {
       window.updateEmployeeSelectDropdown();
     }
+    savePersonnelList(personnel);
     
     const modal = document.getElementById('personnelImportModal');
     if (modal) modal.classList.remove('active');
@@ -1166,11 +1166,11 @@ async function handleConfirmPersonnelImport() {
     nonDuplicates.forEach(record => personnel.push(record));
 
     setPersonnel(personnel);
-    await savePersonnelList(personnel);
     renderPersonnelTable();
     if (window.updateEmployeeSelectDropdown) {
       window.updateEmployeeSelectDropdown();
     }
+    savePersonnelList(personnel);
 
     dupModal.classList.remove('active');
     const mainModal = document.getElementById('personnelImportModal');
@@ -1363,11 +1363,11 @@ export async function clearAllPersonnel() {
     okClass: 'btn-danger',
     onConfirm: async () => {
       setPersonnel([]);
-      await savePersonnelList([]);
       renderPersonnelTable();
       if (window.updateEmployeeSelectDropdown) {
         window.updateEmployeeSelectDropdown();
       }
+      savePersonnelList([]);
       window.showToast('ล้างตารางข้อมูลทะเบียนบุคลากรเรียบร้อยแล้ว!', 'success');
     }
   });

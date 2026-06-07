@@ -342,16 +342,16 @@ export function printWaterReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid #555 !important;
+          border: 1px solid #888 !important;
           padding: 4px 3px !important;
-          font-size: 7.5pt !important;
-          line-height: 1.15 !important;
+          font-size: 8pt !important;
+          line-height: 1.25 !important;
           color: black !important;
-          background: transparent !important;
         }
         .print-table th {
           font-weight: bold !important;
           text-align: center !important;
+          background-color: #f8f8f8 !important;
         }
         .print-table td {
           text-align: left;
@@ -382,7 +382,7 @@ export function printWaterReport() {
         }
         .summary-block {
           width: 280px;
-          font-size: 7pt !important;
+          font-size: 7.5pt !important;
         }
         .summary-block p {
           display: flex;
@@ -395,34 +395,38 @@ export function printWaterReport() {
           border-bottom: 4px double #000;
           padding: 2px 0;
           margin-top: 2px;
-          font-size: 7.8pt !important;
+          font-size: 8pt !important;
         }
         .print-signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 1.2rem !important;
+          margin-top: 1.5cm !important;
           page-break-inside: avoid;
         }
         .sig-box {
           text-align: center;
           width: 32%;
-          font-size: 7pt !important;
+          font-size: 7.2pt !important;
           line-height: 1.3 !important;
         }
       </style>
     </head>
     <body>
-      <div class="print-header">
-        <div class="print-title-container">
-          <h2>แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ</h2>
-          <h3>บริษัท ไปรษณีย์ไทย จำกัด</h3>
-          <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+      <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.15rem !important; margin-bottom: 0.25rem !important;">
+        <div style="width: 80px;"></div>
+        <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+          <h2 style="font-size: 10.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ</h2>
+          <h3 style="font-size: 9pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">บริษัท ไปรษณีย์ไทย จำกัด</h3>
+          <p style="font-size: 8pt; margin: 0 0 0.25rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
         </div>
-        <div class="print-meta-info">
-          <p>เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
-          <p>เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
-          <p>หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
+        <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
+          ตราประทับ<br>ปณ.
         </div>
+      </div>
+      <div class="print-meta-info" style="text-align: right; font-size: 6.8pt !important; color: #444; margin-bottom: 0.4rem;">
+        <p style="margin: 0 0 0.05rem 0;">เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
+        <p style="margin: 0 0 0.05rem 0;">เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
+        <p style="margin: 0 0 0.05rem 0;">หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
       </div>
 
       <table class="print-table">

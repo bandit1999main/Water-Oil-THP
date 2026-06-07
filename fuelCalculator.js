@@ -714,7 +714,7 @@ export function printSupervisorPlan(parentIndex) {
       <style>
         body {
           font-family: 'Sarabun', sans-serif;
-          padding: 1.5cm 1.5cm 1cm 1.5cm;
+          padding: 0;
           font-size: 11pt;
           line-height: 1.6;
           color: black;
@@ -722,7 +722,7 @@ export function printSupervisorPlan(parentIndex) {
         }
         h2 {
           text-align: center;
-          font-size: 13pt;
+          font-size: 14pt;
           font-weight: bold;
           margin-bottom: 1.5rem;
           text-decoration: underline;
@@ -742,17 +742,17 @@ export function printSupervisorPlan(parentIndex) {
           margin-bottom: 1.5rem;
         }
         .plan-table th, .plan-table td {
-          border: 1px solid black;
+          border: 1px solid #888;
           padding: 6px;
           text-align: center;
           font-size: 10pt;
         }
         .plan-table th {
-          background-color: #f2f2f2;
+          background-color: #f8f8f8;
           font-weight: bold;
         }
         .sig-container {
-          margin-top: 1.5rem;
+          margin-top: 1.5cm;
           display: flex;
           flex-direction: column;
           align-items: flex-end;
@@ -779,11 +779,14 @@ export function printSupervisorPlan(parentIndex) {
         .approval-sig-container {
           display: flex;
           justify-content: flex-end;
-          margin-top: 1rem;
+          margin-top: 1.5cm;
         }
         @page {
           size: A4 portrait;
-          margin: 0.5cm;
+          margin-left: 2.5cm;
+          margin-right: 2.0cm;
+          margin-top: 2.0cm;
+          margin-bottom: 2.0cm;
         }
       </style>
     </head>
@@ -1255,11 +1258,15 @@ export function printFuelReport() {
 
     return `
       <div class="print-page">
-        <div class="print-header">
-          <div class="print-title-container">
-            <h2>รายละเอียดบัญชีรายชื่อพนักงานใช้รถจักรยานยนต์ส่วนตัวปฏิบัติหน้าที่นำจ่ายไปรษณีย์ภัณฑ์ค้างจ่าย</h2>
-            <h3>กลุ่มงาน: ${title}</h3>
-            <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+        <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.15rem !important; margin-bottom: 0.2rem !important;">
+          <div style="width: 80px;"></div>
+          <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+            <h2 style="font-size: 10pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">รายละเอียดบัญชีรายชื่อพนักงานใช้รถจักรยานยนต์ส่วนตัวปฏิบัติหน้าที่นำจ่ายไปรษณีย์ภัณฑ์ค้างจ่าย</h2>
+            <h3 style="font-size: 8.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">กลุ่มงาน: ${title}</h3>
+            <p style="font-size: 7.8pt; margin: 0 0 0.2rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+          </div>
+          <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
+            ตราประทับ<br>ปณ.
           </div>
         </div>
 
@@ -1332,7 +1339,7 @@ export function printFuelReport() {
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td>${m.type}</td>
+          <td style="text-align: left !important; padding-left: 8px !important;">${m.type}</td>
           <td>ด้านที่ ${m.route}</td>
           <td>${m.days} วัน</td>
           <td>${m.dates || '-'}</td>
@@ -1397,17 +1404,17 @@ export function printFuelReport() {
           </tbody>
         </table>
 
-        <div style="margin-top: 0.5rem; text-align: left; font-size: 7.2pt; border: 1px solid black; padding: 4px; border-radius: 4px;">
+        <div style="margin-top: 0.6rem; text-align: left; font-size: 7.5pt; border-top: 2px solid #888; border-bottom: 2px solid #888; padding: 6px 4px; background-color: #fafafa; line-height: 1.4;">
           <strong>หมายเหตุสำคัญ (ชนจ. Regulations):</strong><br>
           - ภารกิจ "ตรวจสอบการนำจ่าย" (ตรวจโซน): การเบิกจ่ายน้ำมันและระยะทางเดินทางจะคิดลดลงกึ่งหนึ่ง (50%) จากอัตราเกณฑ์มาตรฐานของผู้นำจ่ายจริง<br>
           - ภารกิจ "นำจ่ายแทน" / "ฝึกสอนงาน": การเบิกจ่ายค่าน้ำมันและค่าพาหนะจะถูกคำนวณเต็มพิกัดอัตราปกติ (100%) ตามจริงของด้านจ่ายนั้นๆ
         </div>
 
-        <div class="print-signatures" style="margin-top: 1rem;">
+        <div class="print-signatures">
           <div class="sig-box">
             <p>ลงชื่อ..........................................................ผู้จัดทำ (ชนจ.)</p>
             <p style="margin-top: 0.5rem;">(${sup.signature || sup.name})</p>
-            <p>หัวหน้าโซนนำจ่าย</p>
+            <p>${sup.duty || 'หัวหน้าโซนนำจ่าย'}</p>
           </div>
           <div class="sig-box">
             <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
@@ -1481,16 +1488,16 @@ export function printFuelReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid #555 !important;
+          border: 1px solid #888 !important;
           padding: 4px 3px !important;
-          font-size: 7.5pt !important;
-          line-height: 1.15 !important;
+          font-size: 8pt !important;
+          line-height: 1.25 !important;
           color: black !important;
-          background: transparent !important;
         }
         .print-table th {
           font-weight: bold !important;
           text-align: center !important;
+          background-color: #f8f8f8 !important;
         }
         .print-table td {
           text-align: center;
@@ -1518,7 +1525,7 @@ export function printFuelReport() {
         }
         .summary-block {
           width: 250px;
-          font-size: 7pt !important;
+          font-size: 7.5pt !important;
         }
         .summary-block p {
           display: flex;
@@ -1531,12 +1538,12 @@ export function printFuelReport() {
           border-bottom: 4px double #000;
           padding: 2px 0;
           margin-top: 2px;
-          font-size: 7.5pt !important;
+          font-size: 8pt !important;
         }
         .print-signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 1.2rem !important;
+          margin-top: 1.5cm !important;
           page-break-inside: avoid;
         }
         .sig-box {
