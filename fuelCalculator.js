@@ -798,7 +798,7 @@ export function printSupervisorPlan(parentIndex) {
       </div>
 
       <div class="body-text">
-        ข้าพเจ้า <strong>${item.name}</strong> <strong>${item.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${m}</strong> พ.ศ. <strong>${y}</strong> ตามบันทึก ปณภ.ที่ ปณภ.รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าฯยานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${item.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
+        ข้าพเจ้า <strong>${item.name}</strong> <strong>${item.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${m}</strong> พ.ศ. <strong>${y}</strong> ตามบันทึก ปณท ที่ ปณท รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${item.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(0)}</strong> กม. โดยมีรายละเอียด ดังนี้
       </div>
 
       <table class="plan-table">
@@ -1361,6 +1361,10 @@ export function printFuelReport() {
             <h3>ผู้รายงาน: ${sup.name} (${sup.position}) | ที่ทำการ ปณ. ${postOffice}</h3>
             <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
           </div>
+        </div>
+        
+        <div style="margin-top: 0.6rem; margin-bottom: 0.6rem; font-size: 8.2pt; text-align: justify; line-height: 1.4; text-indent: 1cm; color: black;">
+          ข้าพเจ้า <strong>${sup.name}</strong> <strong>${sup.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขอเสนอใบสรุปผลการปฏิบัติงานของหัวหน้าโซนนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${sup.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่ายและเดินทางปฏิบัติงานนำจ่ายแทน รวมสะสมทั้งสิ้น <strong>${sup.missions.reduce((acc, m) => acc + m.distance, 0).toFixed(0)}</strong> กม. โดยมีรายละเอียด ดังนี้
         </div>
 
         <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 8.5pt;">รายละเอียดภารกิจตรวจการนำจ่ายและเดินทางนำจ่ายแทน:</h4>
