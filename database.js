@@ -739,6 +739,26 @@ export function listenToUsers(callback) {
   });
 }
 
+export async function fetchEmployeesFromCollection(collName) {
+  const localKey = `tp_${collName}`;
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem(localKey)) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, collName));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem(localKey, JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error(`❌ Firestore fetchEmployeesFromCollection failed for ${collName}. Falling back to local storage.`, error);
+    return JSON.parse(localStorage.getItem(localKey)) || [];
+  }
+}
+
+
 
 
 

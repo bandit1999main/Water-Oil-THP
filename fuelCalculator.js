@@ -1643,6 +1643,16 @@ export function getCalculatorsTemplate() {
             </div>
             <p class="input-tip" style="margin-top: 0.25rem;">สามารถระบุชื่อ ปณ. และราคาน้ำมันอ้างอิงเพื่อใช้ในการคำนวณและออกรายงาน</p>
 
+            <!-- Quick Actions for loading data -->
+            <div class="quick-actions-bar" style="margin-top: 1rem; display: flex; gap: 0.5rem; border-top: 1px dashed var(--border-glass); padding-top: 1rem;">
+              <button type="button" id="copyFromPrevMonthBtn" class="btn btn-secondary btn-small" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; font-size: 0.8rem; padding: 0.5rem 0.4rem;">
+                📋 คัดลอกรายชื่อจากเดือนก่อน
+              </button>
+              <button type="button" id="loadFromRegistryBtn" class="btn btn-secondary btn-small" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; white-space: nowrap; font-size: 0.8rem; padding: 0.5rem 0.4rem;">
+                👤 โหลดทะเบียนบุคลากร
+              </button>
+            </div>
+
             <!-- Signature Configurations for PDF Report -->
             <div style="margin-top: 1.5rem; border-top: 1px dashed var(--border-glass); padding-top: 1rem;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
