@@ -791,11 +791,11 @@ export function printSupervisorPlan(parentIndex) {
       <h2>แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</h2>
       
       <div class="header-section">
-        <strong>เรียน</strong> หน.ปณ.${postOffice}
+        <strong>(1) เรียน</strong> หน.ปณ.${postOffice}
       </div>
 
       <div class="body-text">
-        ข้าพเจ้า <strong>${item.name}</strong> ตำแหน่ง <strong>${item.position}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${m}</strong> พ.ศ. <strong>${y}</strong> ตามบันทึก ปณภ.ที่ ปณภ.รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าฯยานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${item.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
+        ข้าพเจ้า <strong>${item.name}</strong> <strong>${item.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${m}</strong> พ.ศ. <strong>${y}</strong> ตามบันทึก ปณภ.ที่ ปณภ.รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าฯยานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${item.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(2)}</strong> กม. โดยมีรายละเอียด ดังนี้
       </div>
 
       <table class="plan-table">
@@ -826,7 +826,7 @@ export function printSupervisorPlan(parentIndex) {
         <div class="sig-block">
           <p>ลงชื่อ..........................................................ผู้ขออนุมัติ</p>
           <p style="margin-top: 0.5rem; font-weight: bold;">( ${item.name} )</p>
-          <p>ตำแหน่ง ${item.position}</p>
+          <p>ตำแหน่ง ${item.duty || 'หัวหน้าโซนนำจ่าย'}</p>
           <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
         </div>
       </div>
