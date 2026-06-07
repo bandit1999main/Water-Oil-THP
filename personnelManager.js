@@ -2291,6 +2291,33 @@ async function exportAttendanceToExcel() {
             cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
             cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
           }
+          if (C >= 2 && C < colsCount - 1) {
+            const d = C - 1;
+            const ceYear = year - 543;
+            const dateObj = new Date(ceYear, month - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            let isRestDay = false;
+            const personIdx = R - 3;
+            if (personIdx < sorted.length) {
+              const person = sorted[personIdx];
+              if (person && person.restDays && person.restDays.includes(dayOfWeek)) {
+                isRestDay = true;
+              }
+            } else {
+              if (dayOfWeek === 0 || dayOfWeek === 6) {
+                isRestDay = true;
+              }
+            }
+            if (isRestDay) {
+              if (dayOfWeek === 0) {
+                cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
+              } else if (dayOfWeek === 6) {
+                cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
+              } else {
+                cell.s.fill = { fgColor: { rgb: 'EDEDED' } };
+              }
+            }
+          }
         }
       }
     }
@@ -2424,6 +2451,33 @@ async function downloadAttTemplateXlsx() {
           if (C === colsCount - 1) {
             cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
             cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
+          }
+          if (C >= 2 && C < colsCount - 1) {
+            const d = C - 1;
+            const ceYear = year - 543;
+            const dateObj = new Date(ceYear, month - 1, d);
+            const dayOfWeek = dateObj.getDay();
+            let isRestDay = false;
+            const personIdx = R - 3;
+            if (personIdx < sorted.length) {
+              const person = sorted[personIdx];
+              if (person && person.restDays && person.restDays.includes(dayOfWeek)) {
+                isRestDay = true;
+              }
+            } else {
+              if (dayOfWeek === 0 || dayOfWeek === 6) {
+                isRestDay = true;
+              }
+            }
+            if (isRestDay) {
+              if (dayOfWeek === 0) {
+                cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
+              } else if (dayOfWeek === 6) {
+                cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
+              } else {
+                cell.s.fill = { fgColor: { rgb: 'EDEDED' } };
+              }
+            }
           }
         }
       }
