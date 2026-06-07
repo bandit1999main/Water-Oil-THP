@@ -1217,7 +1217,7 @@ export function printFuelReport() {
           </div>
         </div>
 
-        <table class="print-table">
+        <table class="print-table standard-payee-table">
           <thead>
             <tr>
               <th style="width: 4%">ลำดับ</th>
@@ -1435,9 +1435,9 @@ export function printFuelReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid black !important;
-          padding: 2.2px 2px !important;
-          font-size: 6.8pt !important;
+          border: 1px solid #555 !important;
+          padding: 4px 3px !important;
+          font-size: 7.5pt !important;
           line-height: 1.15 !important;
           color: black !important;
           background: transparent !important;
@@ -1451,13 +1451,18 @@ export function printFuelReport() {
           height: 14px !important;
           vertical-align: middle !important;
         }
-        .print-table td:nth-child(2) {
+        .standard-payee-table td:nth-child(2) {
           text-align: left !important;
-          font-size: 11pt !important;
+          font-size: 8.5pt !important;
           font-weight: bold !important;
         }
-        .print-table td:nth-child(3) {
+        .standard-payee-table td:nth-child(3) {
           text-align: left !important;
+        }
+        .standard-payee-table td:nth-child(10) {
+          white-space: nowrap !important;
+          font-size: 7.8pt !important;
+          text-align: center !important;
         }
         .print-summary-section {
           display: flex;
@@ -1485,7 +1490,7 @@ export function printFuelReport() {
         .print-signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 0.3rem !important;
+          margin-top: 1.2rem !important;
           page-break-inside: avoid;
         }
         .sig-box {
