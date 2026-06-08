@@ -1638,7 +1638,7 @@ export function getPersonnelTemplate() {
 
       <div style="margin: 0.75rem 0; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0 0.5rem;">
         <p class="input-tip" style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">
-          * ช่องวันที่ 1-31: เลือก / = ทำงานปกติ, ป = ลาป่วย, ก = ลากิจ, พ = ลาพักผ่อน, ข = ขาดงาน (คำนวณเงินสะสมเฉพาะสัญลักษณ์ / เท่านั้น) ไฮไลต์สีส้ม/เทาคือวันหยุดประจำสัปดาห์
+          * ช่องวันที่ 1-31: เลือก / = ทำงานปกติ, ป = ลาป่วย, ก = ลากิจ, พ = ลาพักผ่อน, ข = ขาดงาน, ย = วันหยุด (คำนวณเงินสะสมเฉพาะสัญลักษณ์ / เท่านั้น) ไฮไลต์สีส้ม/เทาคือวันหยุดประจำสัปดาห์
         </p>
         <div style="position: relative; width: 250px;">
           <input type="text" id="attSearchInput" class="form-input" style="padding: 0.35rem 0.75rem 0.35rem 1.75rem; font-size: 0.85rem;" placeholder="ค้นหาชื่อพนักงาน..." />
@@ -2056,6 +2056,7 @@ function renderAttendanceTableRows() {
         else if (finalStatus === 'ก') statusBgClass = 'status-bg-personal';
         else if (finalStatus === 'พ') statusBgClass = 'status-bg-vacation';
         else if (finalStatus === 'ข') statusBgClass = 'status-bg-absent';
+        else if (finalStatus === 'ย') statusBgClass = 'status-bg-holiday';
       }
       
       rowHtml += `
@@ -2067,6 +2068,7 @@ function renderAttendanceTableRows() {
             <option value="ก" ${finalStatus === 'ก' ? 'selected' : ''}>ก</option>
             <option value="พ" ${finalStatus === 'พ' ? 'selected' : ''}>พ</option>
             <option value="ข" ${finalStatus === 'ข' ? 'selected' : ''}>ข</option>
+            <option value="ย" ${finalStatus === 'ย' ? 'selected' : ''}>ย</option>
           </select>
         </td>
       `;
@@ -2130,6 +2132,7 @@ function renderAttendanceTableRows() {
         else if (status === 'ก') statusBgClass = 'status-bg-personal';
         else if (status === 'พ') statusBgClass = 'status-bg-vacation';
         else if (status === 'ข') statusBgClass = 'status-bg-absent';
+        else if (status === 'ย') statusBgClass = 'status-bg-holiday';
         parentCell.classList.add(statusBgClass);
       }
       
@@ -2684,6 +2687,8 @@ function parseAttRows(rows) {
           dayStatuses[d] = 'พ';
         } else if (valStr === 'ข' || valLower.includes('ขาด') || valLower.includes('absent')) {
           dayStatuses[d] = 'ข';
+        } else if (valStr === 'ย' || valLower.includes('หยุด') || valLower.includes('off') || valLower.includes('rest') || valLower.includes('holiday')) {
+          dayStatuses[d] = 'ย';
         }
       }
     }
@@ -2691,7 +2696,7 @@ function parseAttRows(rows) {
     const exists = personnelNames.has(name);
     if (exists) matchCount++;
     
-    records.push({ name, checkedDays, exists });
+    records.push({ name, checkedDays, dayStatuses, exists });
   }
   
   tempParsedAttRecords = records;
