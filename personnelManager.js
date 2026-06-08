@@ -1680,7 +1680,7 @@ export function getPersonnelTemplate() {
             background: rgba(244, 63, 94, 0.12) !important;
           }
         </style>
-        <table class="data-table" style="width: 100%; min-width: 1300px; border-collapse: collapse;">
+        <table class="data-table" style="width: 100%; min-width: 1300px; border-collapse: separate; border-spacing: 4px 0px;">
           <thead>
             <tr id="attTableHeaderRow">
               <!-- Dynamically generated day headers in JS -->
