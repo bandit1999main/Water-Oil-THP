@@ -781,13 +781,13 @@ export async function fetchAttendanceList(year, month) {
   }
 }
 
-export async function saveAttendanceRecord(year, month, empName, checkedDays) {
+export async function saveAttendanceRecord(year, month, empName, checkedDays, dayStatuses = {}) {
   const collName = `attendance_${year}_${String(month).padStart(2, '0')}`;
   const localKey = `tp_${collName}`;
   
   const list = JSON.parse(localStorage.getItem(localKey)) || [];
   const idx = list.findIndex(item => item.name === empName);
-  const record = { name: empName, checkedDays };
+  const record = { name: empName, checkedDays, dayStatuses };
   if (idx !== -1) {
     list[idx] = record;
   } else {

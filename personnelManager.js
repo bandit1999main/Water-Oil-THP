@@ -1638,7 +1638,7 @@ export function getPersonnelTemplate() {
 
       <div style="margin: 0.75rem 0; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 0 0.5rem;">
         <p class="input-tip" style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">
-          * ตารางวันที่ 1-31 ช่องไฮไลต์สีส้ม/เทาคือวันหยุดประจำสัปดาห์ตามทะเบียนประวัติ จำนวนวันมาทำงานสะสมจะถูกซิงก์ไปที่หน้าคำนวณเบิกเงินอัตโนมัติ
+          * ช่องวันที่ 1-31: เลือก / = ทำงานปกติ, ป = ลาป่วย, ก = ลากิจ, พ = ลาพักผ่อน, ข = ขาดงาน (คำนวณเงินสะสมเฉพาะสัญลักษณ์ / เท่านั้น) ไฮไลต์สีส้ม/เทาคือวันหยุดประจำสัปดาห์
         </p>
         <div style="position: relative; width: 250px;">
           <input type="text" id="attSearchInput" class="form-input" style="padding: 0.35rem 0.75rem 0.35rem 1.75rem; font-size: 0.85rem;" placeholder="ค้นหาชื่อพนักงาน..." />
@@ -1652,7 +1652,7 @@ export function getPersonnelTemplate() {
           .att-sticky-col {
             position: sticky;
             left: 0;
-            background: #141724;
+            background: var(--bg-sticky-col, #141724) !important;
             z-index: 10;
             border-right: 2px solid var(--border-glass) !important;
           }
@@ -2027,8 +2027,8 @@ function renderAttendanceTableRows() {
     const checkedDaysSet = new Set(attRec.checkedDays);
     
     let rowHtml = `
-      <td class="att-sticky-col" style="text-align: center; background: #141724; color: var(--text-secondary);">${idx + 1}</td>
-      <td class="att-sticky-col" style="text-align: left; background: #141724; font-weight: bold; left: 40px;">
+      <td class="att-sticky-col" style="text-align: center; color: var(--text-secondary);">${idx + 1}</td>
+      <td class="att-sticky-col" style="text-align: left; font-weight: bold; left: 40px;">
         ${person.name}
       </td>
     `;
@@ -2040,11 +2040,28 @@ function renderAttendanceTableRows() {
       const dayOfWeek = dateObj.getDay();
       
       const isRestDay = restDays.includes(dayOfWeek);
-      const isChecked = checkedDaysSet.has(d);
+      const dayStatus = attRec.dayStatuses ? (attRec.dayStatuses[d] || '') : (checkedDaysSet.has(d) ? '/' : '');
+      const finalStatus = dayStatus === '' && checkedDaysSet.has(d) ? '/' : dayStatus;
+      
+      let statusBgClass = '';
+      if (finalStatus) {
+        if (finalStatus === '/') statusBgClass = 'status-bg-worked';
+        else if (finalStatus === 'ป') statusBgClass = 'status-bg-sick';
+        else if (finalStatus === 'ก') statusBgClass = 'status-bg-personal';
+        else if (finalStatus === 'พ') statusBgClass = 'status-bg-vacation';
+        else if (finalStatus === 'ข') statusBgClass = 'status-bg-absent';
+      }
       
       rowHtml += `
-        <td class="att-checkbox-cell ${isRestDay ? 'att-rest-day-cell' : ''}">
-          <input type="checkbox" data-name="${person.name}" data-day="${d}" ${isChecked ? 'checked' : ''} />
+        <td class="att-checkbox-cell ${isRestDay ? 'att-rest-day-cell' : ''} ${statusBgClass}">
+          <select class="att-select" data-name="${person.name}" data-day="${d}">
+            <option value=""></option>
+            <option value="/" ${finalStatus === '/' ? 'selected' : ''}>/</option>
+            <option value="ป" ${finalStatus === 'ป' ? 'selected' : ''}>ป</option>
+            <option value="ก" ${finalStatus === 'ก' ? 'selected' : ''}>ก</option>
+            <option value="พ" ${finalStatus === 'พ' ? 'selected' : ''}>พ</option>
+            <option value="ข" ${finalStatus === 'ข' ? 'selected' : ''}>ข</option>
+          </select>
         </td>
       `;
     }
@@ -2059,20 +2076,31 @@ function renderAttendanceTableRows() {
     tableBody.appendChild(tr);
   });
   
-  tableBody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', async (e) => {
+  tableBody.querySelectorAll('select.att-select').forEach(sel => {
+    sel.addEventListener('change', async (e) => {
       const name = e.target.getAttribute('data-name');
       const day = parseInt(e.target.getAttribute('data-day'));
-      const isChecked = e.target.checked;
+      const status = e.target.value;
       
       let attRec = attendanceList.find(item => item.name === name);
       if (!attRec) {
-        attRec = { name, checkedDays: [] };
+        attRec = { name, checkedDays: [], dayStatuses: {} };
         attendanceList.push(attRec);
       }
+      if (!attRec.dayStatuses) {
+        attRec.dayStatuses = {};
+      }
       
+      // Update status
+      if (status) {
+        attRec.dayStatuses[day] = status;
+      } else {
+        delete attRec.dayStatuses[day];
+      }
+      
+      // Update checkedDays (only '/' counts as worked!)
       const daySet = new Set(attRec.checkedDays);
-      if (isChecked) {
+      if (status === '/') {
         daySet.add(day);
       } else {
         daySet.delete(day);
@@ -2082,7 +2110,24 @@ function renderAttendanceTableRows() {
       const totalCell = document.getElementById(`att-total-${name}`);
       if (totalCell) totalCell.textContent = attRec.checkedDays.length;
       
-      await saveAttendanceRecord(year, month, name, attRec.checkedDays);
+      // Update cell styling class
+      const parentCell = e.target.closest('td');
+      parentCell.className = 'att-checkbox-cell'; // reset
+      const person = getPersonnel().find(p => p.name === name);
+      if (person && person.restDays && person.restDays.includes(new Date(ceYear, month - 1, day).getDay())) {
+        parentCell.classList.add('att-rest-day-cell');
+      }
+      if (status) {
+        let statusBgClass = '';
+        if (status === '/') statusBgClass = 'status-bg-worked';
+        else if (status === 'ป') statusBgClass = 'status-bg-sick';
+        else if (status === 'ก') statusBgClass = 'status-bg-personal';
+        else if (status === 'พ') statusBgClass = 'status-bg-vacation';
+        else if (status === 'ข') statusBgClass = 'status-bg-absent';
+        parentCell.classList.add(statusBgClass);
+      }
+      
+      await saveAttendanceRecord(year, month, name, attRec.checkedDays, attRec.dayStatuses);
       syncWorkDaysToCalculators(name, attRec.checkedDays.length);
     });
   });
@@ -2143,6 +2188,7 @@ async function toggleAllAttendanceDays(checkAll) {
       
       personnel.forEach(person => {
         let checkedDays = [];
+        let dayStatuses = {};
         if (checkAll) {
           const restDays = person.restDays || [];
           for (let d = 1; d <= daysCount; d++) {
@@ -2150,10 +2196,11 @@ async function toggleAllAttendanceDays(checkAll) {
             const dayOfWeek = dateObj.getDay();
             if (!restDays.includes(dayOfWeek)) {
               checkedDays.push(d);
+              dayStatuses[d] = '/';
             }
           }
         }
-        updatedList.push({ name: person.name, checkedDays });
+        updatedList.push({ name: person.name, checkedDays, dayStatuses });
       });
       
       attendanceList = updatedList;
@@ -2198,11 +2245,17 @@ async function exportAttendanceToExcel() {
     ];
     
     sorted.forEach((person, idx) => {
-      const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [] };
-      const checkedSet = new Set(attRec.checkedDays);
+      const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [], dayStatuses: {} };
       const row = [idx + 1, person.name];
+      const statuses = attRec.dayStatuses || {};
       for (let d = 1; d <= daysCount; d++) {
-        row.push(checkedSet.has(d) ? '/' : '');
+        let val = '';
+        if (statuses[d]) {
+          val = statuses[d];
+        } else if (attRec.checkedDays.includes(d)) {
+          val = '/';
+        }
+        row.push(val);
       }
       row.push(attRec.checkedDays.length);
       data.push(row);
@@ -2607,13 +2660,24 @@ function parseAttRows(rows) {
     if (!name || name === 'undefined' || name === 'ชื่อ-นามสกุล') continue;
     
     const checkedDays = [];
+    const dayStatuses = {};
     let dayColStart = nameColIdx + 1;
     for (let d = 1; d <= daysCount; d++) {
       const cellVal = row[dayColStart + d - 1];
       if (cellVal !== undefined) {
-        const valStr = String(cellVal).trim().toLowerCase();
-        if (valStr === '1' || valStr === 'x' || valStr === 'true' || valStr === '/' || valStr === '✓' || valStr === 't') {
+        const valStr = String(cellVal).trim();
+        const valLower = valStr.toLowerCase();
+        if (valLower === '1' || valLower === 'x' || valLower === 'true' || valLower === '/' || valLower === '✓' || valLower === 't') {
           checkedDays.push(d);
+          dayStatuses[d] = '/';
+        } else if (valStr === 'ป' || valLower.includes('ป่วย') || valLower.includes('sick')) {
+          dayStatuses[d] = 'ป';
+        } else if (valStr === 'ก' || valLower.includes('กิจ') || valLower.includes('leave') || valLower.includes('personal')) {
+          dayStatuses[d] = 'ก';
+        } else if (valStr === 'พ' || valLower.includes('พัก') || valLower.includes('vacation') || valLower.includes('holiday')) {
+          dayStatuses[d] = 'พ';
+        } else if (valStr === 'ข' || valLower.includes('ขาด') || valLower.includes('absent')) {
+          dayStatuses[d] = 'ข';
         }
       }
     }
@@ -2646,13 +2710,21 @@ function renderAttImportPreview(daysCount) {
   
   tempParsedAttRecords.forEach(rec => {
     const tr = document.createElement('tr');
+    const leaves = [];
+    const statuses = rec.dayStatuses || {};
+    Object.keys(statuses).forEach(d => {
+      if (statuses[d] !== '/') {
+        leaves.push(`${d}(${statuses[d]})`);
+      }
+    });
+    const leavesText = leaves.length > 0 ? ` (ลา: ${leaves.join(', ')})` : '';
     tr.innerHTML = `
       <td style="text-align: left;"><strong>${rec.name}</strong></td>
       <td style="text-align: left;">
         ${rec.exists ? '<span style="color: var(--post-emerald); font-weight: bold;">✔️ พบในระบบ</span>' : '<span style="color: var(--post-red);">❌ ไม่พบพนักงาน</span>'}
       </td>
       <td style="font-size: 0.75rem; text-align: left;">
-        ${rec.checkedDays.length > 0 ? rec.checkedDays.join(', ') : '-'}
+        ${rec.checkedDays.length > 0 ? rec.checkedDays.join(', ') : '-'}${leavesText}
       </td>
       <td style="font-weight: bold; color: var(--post-orange);">${rec.checkedDays.length} วัน</td>
     `;
@@ -2677,7 +2749,7 @@ async function handleConfirmAttImport() {
     const matchedRecords = tempParsedAttRecords.filter(r => r.exists);
     
     for (const rec of matchedRecords) {
-      await saveAttendanceRecord(year, month, rec.name, rec.checkedDays);
+      await saveAttendanceRecord(year, month, rec.name, rec.checkedDays, rec.dayStatuses || {});
       await syncWorkDaysToCalculators(rec.name, rec.checkedDays.length);
     }
     

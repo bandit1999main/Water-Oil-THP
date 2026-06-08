@@ -17,6 +17,7 @@
   --text-secondary: hsl(220, 15%, 45%);
   --text-highlight: hsl(16, 97%, 45%);
   --card-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  --bg-sticky-col: #ffffff;
   
   --font-main: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-title: 'Inter', 'Sarabun', sans-serif;
@@ -36,6 +37,7 @@
   --text-secondary: hsl(215, 20%, 70%);
   --text-highlight: hsl(16, 100%, 65%);
   --card-bg-gradient: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.4));
+  --bg-sticky-col: #141724;
 }
 
 /* --- DYNAMIC MODE STYLING (WATER THEME) --- */
@@ -1410,3 +1412,75 @@ tr:hover td {
 .welcome-hero-banner:hover {
   transform: scale(1.04) rotate(1deg);
 }
+
+/* --- ATTENDANCE GRID SELECT & STATUS CLASSES --- */
+.att-select {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  width: 100%;
+  height: 100%;
+  min-height: 28px;
+  text-align: center;
+  text-align-last: center;
+  font-family: var(--font-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+
+/* Status cell backgrounds */
+.status-bg-worked {
+  background: rgba(16, 185, 129, 0.12) !important;
+}
+.status-bg-worked select {
+  color: var(--post-emerald) !important;
+}
+
+.status-bg-sick {
+  background: rgba(249, 115, 22, 0.15) !important;
+}
+.status-bg-sick select {
+  color: #ea580c !important;
+}
+[data-theme="dark"] .status-bg-sick select {
+  color: #fb923c !important;
+}
+
+.status-bg-personal {
+  background: rgba(234, 179, 8, 0.15) !important;
+}
+.status-bg-personal select {
+  color: #b45309 !important;
+}
+[data-theme="dark"] .status-bg-personal select {
+  color: #facc15 !important;
+}
+
+.status-bg-vacation {
+  background: rgba(14, 165, 233, 0.15) !important;
+}
+.status-bg-vacation select {
+  color: #0369a1 !important;
+}
+[data-theme="dark"] .status-bg-vacation select {
+  color: #38bdf8 !important;
+}
+
+.status-bg-absent {
+  background: rgba(239, 68, 68, 0.15) !important;
+}
+.status-bg-absent select {
+  color: #dc2626 !important;
+}
+[data-theme="dark"] .status-bg-absent select {
+  color: #f87171 !important;
+}
+
