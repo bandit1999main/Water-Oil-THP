@@ -39,7 +39,10 @@ service cloud.firestore {
         collectionId == 'global_settings' ||
         collectionId.matches('attendance_[0-9]+_[0-9]+')
       );
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com' && (
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'bandit1999main@gmail.com' ||
+        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
+      ) && (
         collectionId == 'employees' ||
         collectionId.matches('employees_[0-9]+_[0-9]+') ||
         collectionId == 'water_employees' ||
@@ -56,14 +59,18 @@ service cloud.firestore {
       // Any logged-in user can read their own profile (needed for real-time approval listener)
       // Admin can read all user profiles
       allow read: if request.auth != null &&
-        (request.auth.uid == userId || request.auth.token.email == 'bandit1999main@gmail.com');
+        (request.auth.uid == userId ||
+         request.auth.token.email == 'bandit1999main@gmail.com' ||
+         get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin');
 
       // Any logged-in user can CREATE their own document (first-time registration)
       allow create: if request.auth != null && request.auth.uid == userId;
 
       // Only the user themselves OR admin can update/delete
       allow update, delete: if request.auth != null &&
-        (request.auth.uid == userId || request.auth.token.email == 'bandit1999main@gmail.com');
+        (request.auth.uid == userId ||
+         request.auth.token.email == 'bandit1999main@gmail.com' ||
+         get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin');
     }
   }
 }
