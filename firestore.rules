@@ -56,12 +56,8 @@ service cloud.firestore {
       );
     }
     match /app_users/{userId} {
-      // Any logged-in user can read their own profile (needed for real-time approval listener)
-      // Admin can read all user profiles
-      allow read: if request.auth != null &&
-        (request.auth.uid == userId ||
-         request.auth.token.email == 'bandit1999main@gmail.com' ||
-         get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin');
+      // Any logged-in user can read user profiles
+      allow read: if request.auth != null;
 
       // Any logged-in user can CREATE their own document (first-time registration)
       allow create: if request.auth != null && request.auth.uid == userId;
