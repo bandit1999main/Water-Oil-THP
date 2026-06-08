@@ -1436,6 +1436,12 @@ tr:hover td {
   display: block;
 }
 
+/* Ensure dropdown options have visible colors in both light and dark themes */
+.att-select option {
+  background: var(--bg-sticky-col, #ffffff);
+  color: var(--text-primary);
+}
+
 /* Status cell backgrounds */
 .status-bg-worked {
   background: rgba(16, 185, 129, 0.12) !important;
