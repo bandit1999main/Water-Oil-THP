@@ -877,11 +877,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    if (metadata.approved !== true && user.email !== 'bandit1999main@gmail.com') {
-      showPendingState(user);
-      return;
-    }
-
     listenToUserProfile(user.uid, (profileData) => {
       if (!profileData) return;
       if (profileData.approved !== true && user.email !== 'bandit1999main@gmail.com') {
