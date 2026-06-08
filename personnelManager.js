@@ -1660,10 +1660,16 @@ export function getPersonnelTemplate() {
             min-width: 35px;
             padding: 0.4rem 0.2rem;
             text-align: center;
+            border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
           }
           .att-checkbox-cell {
             text-align: center;
             padding: 0.25rem !important;
+            border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+          }
+          [data-theme="dark"] .data-table th.att-day-header,
+          [data-theme="dark"] .att-checkbox-cell {
+            border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
           }
           .att-checkbox-cell input {
             cursor: pointer;
