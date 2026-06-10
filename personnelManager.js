@@ -33,13 +33,22 @@ function populateRouteDropdowns() {
   const routeNums = routeKeys.length > 0 ? routeKeys.map(Number) : Array.from({ length: maxRoute }, (_, i) => i + 1);
 
   const routeOptionsHTML = routeNums.map(n => `<option value="${n}">ด้านที่ ${n}</option>`).join('');
+  const blankOption = `<option value="">-- เลือกด้านจ่าย (ถ้ามี) --</option>`;
 
   // Populate registration form route select
   const personRouteSelect = document.getElementById('personRoute');
   if (personRouteSelect) {
     const currentVal = personRouteSelect.value;
-    personRouteSelect.innerHTML = `<option value="">-- เลือกด้านจ่าย (ถ้ามี) --</option>${routeOptionsHTML}`;
+    personRouteSelect.innerHTML = blankOption + routeOptionsHTML;
     personRouteSelect.value = currentVal;
+  }
+
+  // Populate edit modal route select
+  const modalRouteSelect = document.getElementById('modalPersonRoute');
+  if (modalRouteSelect) {
+    const currentVal = modalRouteSelect.value;
+    modalRouteSelect.innerHTML = `<option value="">-- ไม่มีด้าน --</option>` + routeOptionsHTML;
+    modalRouteSelect.value = currentVal;
   }
 }
 
@@ -362,6 +371,8 @@ function editPersonnel(index) {
     cb.checked = personRestDays.includes(parseInt(cb.value));
   });
 
+  // Ensure modal route dropdown has all options populated before setting value
+  populateRouteDropdowns();
   document.getElementById('modalPersonRoute').value = person.route || '';
   document.getElementById('modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
   document.getElementById('modalPersonSignature').value = person.signature || '';
