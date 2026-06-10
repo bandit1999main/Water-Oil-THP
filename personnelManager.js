@@ -49,6 +49,29 @@ export function initPersonnelManager() {
     checkDuplicatesBtn.addEventListener('click', scanForDuplicateNames);
   }
 
+  // Bind close buttons for Duplicate Scan Modal
+  const closeDuplicateScanBtn = document.getElementById('closeDuplicateScanModalBtn');
+  const closeDuplicateScanFooterBtn = document.getElementById('closeDuplicateScanModalFooterBtn');
+  const duplicateScanModal = document.getElementById('duplicateScanModal');
+  if (closeDuplicateScanBtn && duplicateScanModal) {
+    closeDuplicateScanBtn.addEventListener('click', () => duplicateScanModal.classList.remove('active'));
+  }
+  if (closeDuplicateScanFooterBtn && duplicateScanModal) {
+    closeDuplicateScanFooterBtn.addEventListener('click', () => duplicateScanModal.classList.remove('active'));
+  }
+
+  // Bind close button for Import Duplicate Modal
+  const closeImportDuplicateBtn = document.getElementById('closeImportDuplicateModalBtn');
+  const cancelImportDuplicateBtn = document.getElementById('cancelImportDuplicateBtn');
+  const importDuplicateModal = document.getElementById('importDuplicateResolutionModal');
+  if (closeImportDuplicateBtn && importDuplicateModal) {
+    closeImportDuplicateBtn.addEventListener('click', () => importDuplicateModal.classList.remove('active'));
+  }
+  if (cancelImportDuplicateBtn && importDuplicateModal) {
+    cancelImportDuplicateBtn.addEventListener('click', () => importDuplicateModal.classList.remove('active'));
+  }
+
+
   // Bind Export, Print, and Clear Report Buttons for Personnel
   const exportPersonnelCsvBtn = document.getElementById('exportPersonnelCsvBtn');
   if (exportPersonnelCsvBtn) {
@@ -1825,6 +1848,125 @@ export function getPersonnelTemplate() {
           ✔️ ยืนยันนำเข้าการลงเวลา
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Registry Personnel (Popup) -->
+  <div id="editRegistryPersonnelModal" class="modal-overlay">
+    <div class="modal-content glass-modal animate-slide-in" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>✏️ แก้ไขข้อมูลบุคลากร</h3>
+        <button type="button" id="closeRegistryEditModalBtn" class="btn-close">&times;</button>
+      </div>
+      <form id="editRegistryPersonnelForm">
+        <input type="hidden" id="modalRegistryEditIndex" value="" />
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="modalPersonName">ชื่อ - นามสกุล</label>
+            <input type="text" id="modalPersonName" class="form-input" required />
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="modalPersonPosition">ตำแหน่ง</label>
+              <select id="modalPersonPosition" class="form-select">
+                <option value="หน.ปณ.">หน.ปณ.</option>
+                <option value="พนักงาน">พนักงาน</option>
+                <option value="ลูกจ้างประจำ">ลูกจ้างประจำ</option>
+                <option value="ลูกจ้าง">ลูกจ้าง</option>
+                <option value="ลูกจ้างเหมา">ลูกจ้างเหมา</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modalPersonDuty">หน้าที่</label>
+              <select id="modalPersonDuty" class="form-select">
+                <option value="เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ">เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ</option>
+                <option value="เจ้าหน้าที่ไขตู้ไปรษณีย์">เจ้าหน้าที่ไขตู้ไปรษณีย์</option>
+                <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
+                <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
+                <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="modalPersonSalary">เงินเดือน (บาท)</label>
+              <input type="number" id="modalPersonSalary" class="form-input" value="0" required />
+            </div>
+            <div class="form-group">
+              <label for="modalPersonDepartment">แผนก/กลุ่มงาน</label>
+              <select id="modalPersonDepartment" class="form-select">
+                <option value="นำจ่าย">นำจ่าย</option>
+                <option value="ไขตู้/ขนส่ง">ไขตู้/ขนส่ง</option>
+                <option value="รับฝาก">รับฝาก</option>
+                <option value="บริหาร/ธุรการ">บริหาร/ธุรการ</option>
+                <option value="custom">อื่นๆ (ระบุเอง)...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group hidden" id="modalPersonDepartmentCustomGroup" style="margin-bottom: 1rem;">
+            <label for="modalPersonDepartmentCustom">ระบุแผนก/กลุ่มงานเพิ่มเติม</label>
+            <input type="text" id="modalPersonDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="modalPersonRoute">ด้านจ่ายหลัก</label>
+              <select id="modalPersonRoute" class="form-select">
+                <option value="" selected>-- เลือกด้านจ่าย (ถ้ามี) --</option>
+                <!-- Dynamically filled in JS -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modalPersonVehicle">ประเภทพาหนะหลัก</label>
+              <select id="modalPersonVehicle" class="form-select">
+                <option value="รถจักรยานยนต์">รถจักรยานยนต์</option>
+                <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
+                <option value="เรือยนต์">เรือยนต์</option>
+                <option value="รถยนต์">รถยนต์</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="0" style="cursor: pointer;" /> อา.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="1" style="cursor: pointer;" /> จ.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="2" style="cursor: pointer;" /> อ.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="3" style="cursor: pointer;" /> พ.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="4" style="cursor: pointer;" /> พฤ.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="5" style="cursor: pointer;" /> ศ.
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" name="modalPersonRestDays" value="6" style="cursor: pointer;" /> ส.
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalPersonSignature">ลงนามรับเงินเริ่มต้น</label>
+            <input type="text" id="modalPersonSignature" class="form-input" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelRegistryEditModalBtn" class="btn btn-secondary">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">✔️ อัปเดตข้อมูล</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>`;
