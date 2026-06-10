@@ -24,9 +24,29 @@ function getActiveMode() {
   return window.activeMode || 'personnel';
 }
 
+function populateRouteDropdowns() {
+  const routeData = window.ROUTE_DATA || {};
+  const routeKeys = Object.keys(routeData).sort((a, b) => parseInt(a) - parseInt(b));
+  
+  // If no ROUTE_DATA, generate 1-40 as fallback
+  const maxRoute = routeKeys.length > 0 ? Math.max(...routeKeys.map(Number)) : 40;
+  const routeNums = routeKeys.length > 0 ? routeKeys.map(Number) : Array.from({ length: maxRoute }, (_, i) => i + 1);
+
+  const routeOptionsHTML = routeNums.map(n => `<option value="${n}">ด้านที่ ${n}</option>`).join('');
+
+  // Populate registration form route select
+  const personRouteSelect = document.getElementById('personRoute');
+  if (personRouteSelect) {
+    const currentVal = personRouteSelect.value;
+    personRouteSelect.innerHTML = `<option value="">-- เลือกด้านจ่าย (ถ้ามี) --</option>${routeOptionsHTML}`;
+    personRouteSelect.value = currentVal;
+  }
+}
+
 export function initPersonnelManager() {
   if (isInitialized) {
     renderPersonnelTable();
+    populateRouteDropdowns();
     // Re-bind search input since DOM is re-created on each mode switch
     const personnelSearchInputEarly = document.getElementById('personnelSearchInput');
     if (personnelSearchInputEarly) {
@@ -192,6 +212,9 @@ export function initPersonnelManager() {
       renderPersonnelTable();
     });
   }
+
+  // Populate route dropdowns (personRoute in registration form + modalPersonRoute in edit modal)
+  populateRouteDropdowns();
 
   // Tab Bar Switching
 
