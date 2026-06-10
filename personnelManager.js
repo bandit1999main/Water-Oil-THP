@@ -27,6 +27,14 @@ function getActiveMode() {
 export function initPersonnelManager() {
   if (isInitialized) {
     renderPersonnelTable();
+    // Re-bind search input since DOM is re-created on each mode switch
+    const personnelSearchInputEarly = document.getElementById('personnelSearchInput');
+    if (personnelSearchInputEarly) {
+      personnelSearchInputEarly.addEventListener('input', () => {
+        window.personnelSearchQuery = personnelSearchInputEarly.value;
+        renderPersonnelTable();
+      });
+    }
     return;
   }
   isInitialized = true;
@@ -176,7 +184,17 @@ export function initPersonnelManager() {
   // Initial render
   renderPersonnelTable();
 
+  // Bind search input
+  const personnelSearchInput = document.getElementById('personnelSearchInput');
+  if (personnelSearchInput) {
+    personnelSearchInput.addEventListener('input', () => {
+      window.personnelSearchQuery = personnelSearchInput.value;
+      renderPersonnelTable();
+    });
+  }
+
   // Tab Bar Switching
+
   const tabRegistryBtn = document.getElementById('tabRegistryBtn');
   const tabAttendanceBtn = document.getElementById('tabAttendanceBtn');
   const registryTabContent = document.getElementById('registryTabContent');
