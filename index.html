@@ -2,10 +2,28 @@
 <html lang="th" data-mode="fuel">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="ระบบคำนวณค่าน้ำมันและค่าบำรุงรักษาไปรษณีย์ไทย คำนวณราคาน้ำมันถัวเฉลี่ยถ่วงน้ำหนักตามระเบียบใหม่ล่าสุด" />
-    <title>ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษา | ไปรษณีย์ไทย</title>
+    <title>ระบบคำนวณค่าน้ำมัน &amp; ค่าบำรุงรักษา | ไปรษณีย์ไทย</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json" />
+
+    <!-- PWA Theme Colors -->
+    <meta name="theme-color" content="#fb5012" />
+    <meta name="background-color" content="#0f0f1a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="THP Fuel" />
+
+    <!-- iOS Safari PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="THP Fuel" />
+    <link rel="apple-touch-icon" href="./icon-512.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./icon-192.png" />
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,11 +85,17 @@
             <button id="logoutBtn" class="btn btn-secondary btn-small" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.3); color: hsl(0, 85%, 60%); background: transparent; margin-left: 0.25rem;">ออกระบบ</button>
           </div>
 
+          <!-- PWA Install Button (shown by JS when installable) -->
+          <button id="pwaInstallBtn" class="btn btn-small hidden" onclick="window.triggerPWAInstall()" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; border-radius: 8px; background: linear-gradient(135deg, #fb5012, #e11d48); color: white; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; box-shadow: 0 2px 8px rgba(251,80,18,0.3);">
+            📲 ติดตั้งแอป
+          </button>
+
           <button id="themeToggleBtn" class="btn btn-icon" aria-label="Toggle Dark/Light Mode">
             <svg id="sunIcon" class="theme-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
             <svg id="moonIcon" class="theme-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
           </button>
         </div>
+
       </div>
     </header>
 
@@ -431,5 +455,65 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script type="module" src="./main.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+              console.log('[PWA] Service Worker registered:', reg.scope);
+              // Check for updates every time app loads
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available — show update toast if showToast is ready
+                    setTimeout(() => {
+                      if (window.showToast) {
+                        window.showToast('🔄 มีการอัปเดตระบบ กรุณารีเฟรชหน้า', 'info', 8000);
+                      }
+                    }, 2000);
+                  }
+                });
+              });
+            })
+            .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
+        });
+      }
+    </script>
+
+    <!-- PWA Install Prompt Handler -->
+    <script>
+      let deferredInstallPrompt = null;
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+
+        // Show install button after app loads
+        setTimeout(() => {
+          const installBtn = document.getElementById('pwaInstallBtn');
+          if (installBtn) installBtn.classList.remove('hidden');
+        }, 3000);
+      });
+
+      window.triggerPWAInstall = async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        console.log('[PWA] Install outcome:', outcome);
+        deferredInstallPrompt = null;
+        const installBtn = document.getElementById('pwaInstallBtn');
+        if (installBtn) installBtn.classList.add('hidden');
+      };
+
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App installed successfully!');
+        if (window.showToast) {
+          window.showToast('✅ ติดตั้งแอปสำเร็จ! เปิดได้จากหน้าจอหลักแล้ว', 'success', 5000);
+        }
+      });
+    </script>
   </body>
 </html>

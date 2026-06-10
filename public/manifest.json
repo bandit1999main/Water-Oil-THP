@@ -1,0 +1,44 @@
+{
+  "name": "ไปรษณีย์ไทย — ระบบคำนวณค่าน้ำมัน",
+  "short_name": "THP Fuel",
+  "description": "ระบบคำนวณค่าน้ำมัน ค่าน้ำดื่ม และจัดการบุคลากร ไปรษณีย์ไทย",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f1a",
+  "theme_color": "#fb5012",
+  "lang": "th",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "คำนวณค่าน้ำมัน",
+      "short_name": "น้ำมัน",
+      "description": "คำนวณค่าน้ำมันพนักงาน",
+      "url": "./?mode=fuel",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "จัดการบุคลากร",
+      "short_name": "บุคลากร",
+      "description": "ระบบทะเบียนบุคลากร",
+      "url": "./?mode=personnel",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
