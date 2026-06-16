@@ -391,9 +391,11 @@ export function cloneRow(index) {
 
 export function deleteRow(index) {
   const employees = getEmployees();
+  const emp = employees[index];
+  const empName = emp ? emp.name : 'รายการนี้';
   window.showConfirm({
     title: 'ยืนยันการลบ',
-    message: 'คุณแน่ใจว่าต้องการลบรายการนี้ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    message: `คุณแน่ใจว่าต้องการลบรายการของ "${empName}" ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้`,
     icon: '🗑️',
     okText: 'ลบข้อมูล',
     onConfirm: async () => {

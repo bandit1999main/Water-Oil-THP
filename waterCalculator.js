@@ -132,9 +132,11 @@ export function editWaterEmployee(idx) {
 
 export function deleteWaterEmployee(idx) {
   const waterEmployees = getWaterEmployees();
+  const emp = waterEmployees[idx];
+  const empName = emp ? emp.name : 'รายชื่อนี้';
   window.showConfirm({
     title: 'ยืนยันการลบ',
-    message: 'คุณแน่ใจว่าต้องการลบรายชื่อนี้ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    message: `คุณแน่ใจว่าต้องการลบรายชื่อของ "${empName}" ใช่หรือไม่? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้`,
     icon: '🗑️',
     okText: 'ลบรายชื่อ',
     onConfirm: async () => {
