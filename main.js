@@ -360,6 +360,13 @@ function setupCalculatorDOMReferencesAndEvents() {
   globalFuelPriceInput = document.getElementById('globalFuelPrice');
   globalMonthSelect = document.getElementById('globalMonth');
   globalYearSelect = document.getElementById('globalYear');
+
+  // Default initially to current month and current Buddhist Era year
+  const currentDate = new Date();
+  const currentMonthStr = String(currentDate.getMonth() + 1);
+  const currentYearBEStr = String(currentDate.getFullYear() + 543);
+  if (globalMonthSelect) globalMonthSelect.value = currentMonthStr;
+  if (globalYearSelect) globalYearSelect.value = currentYearBEStr;
   copyFromPrevMonthBtn = document.getElementById('copyFromPrevMonthBtn');
   loadFromRegistryBtn = document.getElementById('loadFromRegistryBtn');
   globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
