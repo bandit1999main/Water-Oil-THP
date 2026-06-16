@@ -1694,6 +1694,7 @@ export function getPersonnelTemplate() {
           <button type="button" id="attClearAllBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem;">✕ ล้างทั้งหมด</button>
           <button type="button" id="importAttBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem; border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">📥 นำเข้าลงเวลา</button>
           <button type="button" id="exportAttBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">📤 ส่งออกตาราง</button>
+          <button type="button" id="printAttBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem; border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(251, 80, 18, 0.05);">🖨️ พิมพ์ใบลงเวลา</button>
         </div>
       </div>
 
@@ -2058,6 +2059,7 @@ function setupAttendanceEventsAndListeners() {
   const attClearAllBtn = document.getElementById('attClearAllBtn');
   const importAttBtn = document.getElementById('importAttBtn');
   const exportAttBtn = document.getElementById('exportAttBtn');
+  const printAttBtn = document.getElementById('printAttBtn');
   
   if (attMonthSelect) attMonthSelect.addEventListener('change', bindAttendanceDataListeners);
   if (attYearInput) attYearInput.addEventListener('change', bindAttendanceDataListeners);
@@ -2066,6 +2068,7 @@ function setupAttendanceEventsAndListeners() {
   if (attCheckAllBtn) attCheckAllBtn.addEventListener('click', () => toggleAllAttendanceDays(true));
   if (attClearAllBtn) attClearAllBtn.addEventListener('click', () => toggleAllAttendanceDays(false));
   if (exportAttBtn) exportAttBtn.addEventListener('click', exportAttendanceToExcel);
+  if (printAttBtn) printAttBtn.addEventListener('click', printAttendanceReport);
   
   // Modal bindings
   const attImportModal = document.getElementById('attendanceImportModal');
@@ -2584,6 +2587,295 @@ async function exportAttendanceToExcel() {
     console.error("Failed to export attendance:", error);
     window.showToast('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
   }
+}
+
+export function printAttendanceReport() {
+  const attMonthSelect = document.getElementById('attMonth');
+  const attYearInput = document.getElementById('attYear');
+  if (!attMonthSelect || !attYearInput) return;
+  
+  const month = parseInt(attMonthSelect.value);
+  const year = parseInt(attYearInput.value);
+  const daysCount = getDaysInMonth(year, month);
+  const ceYear = year - 543;
+  const monthText = attMonthSelect.options[attMonthSelect.selectedIndex].text;
+  
+  const personnel = getPersonnel();
+  if (personnel.length === 0) {
+    window.showToast('ไม่มีข้อมูลรายชื่อพนักงานที่จะพิมพ์!', 'warning');
+    return;
+  }
+  const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  
+  // Header row for days 1 to 31
+  let daysHeaderHtml = '';
+  for (let d = 1; d <= daysCount; d++) {
+    const dateObj = new Date(ceYear, month - 1, d);
+    const dayOfWeek = dateObj.getDay();
+    const dayName = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'][dayOfWeek];
+    const isSun = dayOfWeek === 0;
+    const isSat = dayOfWeek === 6;
+    let labelColor = '';
+    if (isSun) labelColor = 'color: #ef4444;';
+    else if (isSat) labelColor = 'color: #f97316;';
+    
+    daysHeaderHtml += `
+      <th style="${labelColor} font-size: 7.5pt; font-weight: bold; width: 22px; text-align: center; padding: 2px 0;">
+        <div>${d}</div>
+        <div style="font-size: 6.5pt; font-weight: normal; opacity: 0.8;">${dayName}</div>
+      </th>
+    `;
+  }
+  
+  let tableRowsHtml = '';
+  sorted.forEach((person, idx) => {
+    const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [], dayStatuses: {} };
+    const checkedDaysSet = new Set(attRec.checkedDays);
+    const restDays = person.restDays || [];
+    
+    let daysCellsHtml = '';
+    for (let d = 1; d <= daysCount; d++) {
+      const dateObj = new Date(ceYear, month - 1, d);
+      const dayOfWeek = dateObj.getDay();
+      const isRestDay = restDays.includes(dayOfWeek);
+      
+      const dayStatus = attRec.dayStatuses ? (attRec.dayStatuses[d] || '') : (checkedDaysSet.has(d) ? '/' : '');
+      const finalStatus = dayStatus === '' && checkedDaysSet.has(d) ? '/' : dayStatus;
+      
+      let cellClass = '';
+      if (isRestDay) {
+        if (dayOfWeek === 0) cellClass = 'sunday-cell';
+        else if (dayOfWeek === 6) cellClass = 'saturday-cell';
+        else cellClass = 'rest-cell';
+      }
+      
+      let statusClass = '';
+      if (finalStatus === '/') statusClass = 'status-worked';
+      else if (finalStatus === 'ป') statusClass = 'status-sick';
+      else if (finalStatus === 'ก') statusClass = 'status-personal';
+      else if (finalStatus === 'พ') statusClass = 'status-vacation';
+      else if (finalStatus === 'ข') statusClass = 'status-absent';
+      else if (finalStatus === 'ย') statusClass = 'status-holiday';
+      
+      daysCellsHtml += `<td class="day-cell ${cellClass} ${statusClass}">${finalStatus}</td>`;
+    }
+    
+    tableRowsHtml += `
+      <tr>
+        <td style="text-align: center; font-size: 8pt;">${idx + 1}</td>
+        <td style="text-align: left; font-weight: bold; padding-left: 6px; font-size: 8.5pt; white-space: nowrap;">${person.name}</td>
+        ${daysCellsHtml}
+        <td style="text-align: center; font-weight: bold; color: #f25012; font-size: 9.5pt;">${attRec.checkedDays ? attRec.checkedDays.length : 0}</td>
+      </tr>
+    `;
+  });
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>ใบลงเวลาทำงานพนักงาน - ${monthText} ${year}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        @page {
+          size: landscape;
+          margin: 0.4cm 0.4cm 0.4cm 0.4cm;
+        }
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.2cm !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .header-title-container {
+          text-align: center;
+          margin-bottom: 0.3cm;
+          border-bottom: 3px double #f15a22;
+          padding-bottom: 5px;
+        }
+        .header-title-container h2 {
+          font-size: 13pt;
+          font-weight: bold;
+          margin: 0 0 4px 0;
+          color: #f15a22;
+        }
+        .header-title-container p {
+          font-size: 9pt;
+          margin: 0;
+          color: #444;
+          font-weight: 500;
+        }
+        
+        /* Legend styling */
+        .legend-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 8pt;
+          margin-bottom: 0.2cm;
+          padding: 4px 8px;
+          background: #fdfdfd;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+        }
+        .legend-items {
+          display: flex;
+          gap: 12px;
+        }
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .legend-box {
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          border: 1px solid #bbb;
+          text-align: center;
+          line-height: 14px;
+          font-size: 7.5pt;
+          font-weight: bold;
+          border-radius: 2px;
+        }
+        
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 0.4cm;
+        }
+        .print-table th, 
+        .print-table td {
+          border: 1px solid #444444 !important;
+          padding: 3px 2px !important;
+          font-size: 7.5pt !important;
+          line-height: 1.15 !important;
+          color: black !important;
+          vertical-align: middle !important;
+        }
+        .print-table th {
+          font-weight: bold !important;
+          text-align: center !important;
+          background: #f2f2f2 !important;
+        }
+        .day-cell {
+          text-align: center;
+          width: 22px;
+          font-weight: bold;
+        }
+        
+        /* Pastel colors for statuses */
+        .status-worked { background-color: #e6f7ed !important; color: #15803d !important; }
+        .status-sick { background-color: #feebeb !important; color: #b91c1c !important; }
+        .status-personal { background-color: #fef3c7 !important; color: #b45309 !important; }
+        .status-vacation { background-color: #e0f2fe !important; color: #0369a1 !important; }
+        .status-absent { background-color: #fef2f2 !important; color: #dc2626 !important; }
+        .status-holiday { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+        
+        /* Rest days styling */
+        .sunday-cell { background-color: #ffeaea !important; }
+        .saturday-cell { background-color: #fff6eb !important; }
+        .rest-cell { background-color: #f5f5f5 !important; }
+        
+        /* Signatures block */
+        .signature-section {
+          margin-top: 0.5cm;
+          display: flex;
+          justify-content: space-between;
+          padding: 0 1.5cm;
+          page-break-inside: avoid;
+        }
+        .signature-block {
+          text-align: center;
+          font-size: 9pt;
+          width: 40%;
+        }
+        .signature-line {
+          margin-bottom: 30px;
+          border-bottom: 1px dotted #000;
+          width: 100%;
+          height: 25px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header-title-container">
+        <h2>แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)</h2>
+        <p>ประจำเดือน ${monthText} พ.ศ. ${year} • บริษัท ไปรษณีย์ไทย จำกัด</p>
+      </div>
+      
+      <div class="legend-container">
+        <div class="legend-items">
+          <div class="legend-item">
+            <span class="legend-box status-worked">/</span> มาทำงานปกติ
+          </div>
+          <div class="legend-item">
+            <span class="legend-box status-sick">ป</span> ลาป่วย
+          </div>
+          <div class="legend-item">
+            <span class="legend-box status-personal">ก</span> ลากิจ
+          </div>
+          <div class="legend-item">
+            <span class="legend-box status-vacation">พ</span> ลาพักผ่อน
+          </div>
+          <div class="legend-item">
+            <span class="legend-box status-absent">ข</span> ขาดงาน
+          </div>
+          <div class="legend-item">
+            <span class="legend-box status-holiday">ย</span> วันหยุด/นักขัตฤกษ์
+          </div>
+        </div>
+        <div>
+          *วันอาทิตย์ไฮไลต์แถบสีแดงอ่อน • วันเสาร์ไฮไลต์แถบสีส้มอ่อน
+        </div>
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 30px; padding: 4px 0;">ที่</th>
+            <th style="text-align: left; padding-left: 6px; width: 150px;">ชื่อ - นามสกุล</th>
+            ${daysHeaderHtml}
+            <th style="width: 60px; font-weight: bold; color: #f25012;">รวม (วัน)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <div class="signature-section">
+        <div class="signature-block">
+          <p>ลงชื่อ.................................................................. ผู้จัดทำ / หัวหน้าโซนนำจ่าย</p>
+          <p style="margin-top: 5px;">(..................................................................)</p>
+          <p style="margin-top: 5px; font-size: 8pt; color: #555;">วันที่ .........../.........../...........</p>
+        </div>
+        <div class="signature-block">
+          <p>ลงชื่อ.................................................................. ผู้ตรวจสอบ / หัวหน้าแผนก</p>
+          <p style="margin-top: 5px;">(..................................................................)</p>
+          <p style="margin-top: 5px; font-size: 8pt; color: #555;">วันที่ .........../.........../...........</p>
+        </div>
+      </div>
+
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 async function downloadAttTemplateXlsx() {
