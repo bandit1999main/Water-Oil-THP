@@ -45,7 +45,8 @@ import {
   listenToUsers,
   listenToUserProfile,
   fetchMonthLock,
-  saveMonthLock
+  saveMonthLock,
+  logActivity
 } from './database.js';
 
 // Helper Debounce Function for Performance Optimization
@@ -574,6 +575,12 @@ function setupCalculatorDOMReferencesAndEvents() {
         showToast('กำลังปรับปรุงสถานะการล็อก...', 'info');
         const success = await saveMonthLock(year, month, nextState);
         if (success) {
+          await logActivity(
+            nextState ? 'lock_month' : 'unlock_month',
+            nextState 
+              ? `ล็อกปิดยอดประจำเดือนรอบ ${month}/${year}`
+              : `ปลดล็อกยอดประจำเดือนรอบ ${month}/${year}`
+          );
           showToast(nextState ? '🔒 ปิดยอดประจำเดือนเรียบร้อยแล้ว!' : '🔓 ปลดล็อกรอบเดือนเรียบร้อยแล้ว!', 'success');
           await window.updateLockUI();
           // Force update locking state inside Personnel Manager if it is active

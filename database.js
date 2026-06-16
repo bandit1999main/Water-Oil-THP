@@ -11,7 +11,12 @@ import {
   setDoc, 
   deleteDoc, 
   writeBatch,
-  onSnapshot
+  onSnapshot,
+  addDoc,
+  query,
+  orderBy,
+  limit,
+  serverTimestamp
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -1075,4 +1080,58 @@ export async function saveMonthLock(year, month, isLocked) {
     return false;
   }
 }
+
+/**
+ * --- ACTIVITY AUDIT LOGS ---
+ */
+export async function logActivity(actionType, description) {
+  const auth = getFirebaseAuth();
+  const user = auth ? auth.currentUser : null;
+  const actorEmail = user ? user.email : 'Anonymous';
+  const actorName = user ? (user.displayName || user.email) : 'Anonymous';
+
+  if (!isCloudConnected()) {
+    console.warn("⚠️ Offline: Cannot write logActivity on cloud:", actionType, description);
+    return false;
+  }
+
+  try {
+    const colRef = collection(db, "activity_logs");
+    await addDoc(colRef, {
+      actorEmail,
+      actorName,
+      actionType,
+      description,
+      timestamp: serverTimestamp()
+    });
+    console.log(`📝 Logged activity: ${actionType} - ${description}`);
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to logActivity:", error);
+    return false;
+  }
+}
+
+export async function fetchActivityLogs(limitCount = 50) {
+  if (!isCloudConnected()) return [];
+  try {
+    const colRef = collection(db, "activity_logs");
+    const q = query(colRef, orderBy("timestamp", "desc"), limit(limitCount));
+    const snap = await getDocs(q);
+    const logs = [];
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      logs.push({
+        id: docSnap.id,
+        ...data,
+        timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+      });
+    });
+    return logs;
+  } catch (error) {
+    console.error("❌ Failed to fetchActivityLogs:", error);
+    return [];
+  }
+}
+
 

@@ -5,7 +5,9 @@ import {
   deleteUserMetadata,
   checkIsAdmin,
   fetchGlobalConfigs,
-  saveGlobalConfigs
+  saveGlobalConfigs,
+  logActivity,
+  fetchActivityLogs
 } from './database.js';
 
 let appUsersList = [];
@@ -361,6 +363,37 @@ export function getAdminPanelTemplate() {
                 📥 นำเข้าข้อมูลกู้คืน (JSON)
               </button>
               <input type="file" id="backupFileSelector" accept=".json" style="display: none;" />
+          </div>
+  </div>
+
+  <div class="panel-column full-width-column" style="width: 100%; margin-top: 1.5rem;">
+          <div id="adminActivityLogsCard" class="glass-card full-width" style="padding: 1.5rem;">
+            <div class="card-header" style="margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="card-icon">📜</span>
+                <h3 style="font-size: 1.1rem; font-weight: 700;">ประวัติกิจกรรมของระบบ (System Activity Logs)</h3>
+              </div>
+              <button id="refreshActivityLogsBtn" class="btn btn-secondary btn-small" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-color: var(--post-orange); color: var(--post-orange); cursor: pointer;">🔄 รีเฟรชข้อมูล</button>
+            </div>
+            
+            <div class="table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass); max-height: 300px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem;">
+                <thead>
+                  <tr>
+                    <th style="width: 20%; text-align: left; padding: 0.5rem;">วันเวลา</th>
+                    <th style="width: 20%; text-align: left; padding: 0.5rem;">ผู้ดำเนินการ</th>
+                    <th style="width: 20%; text-align: center; padding: 0.5rem;">กิจกรรม</th>
+                    <th style="width: 40%; text-align: left; padding: 0.5rem;">รายละเอียด</th>
+                  </tr>
+                </thead>
+                <tbody id="adminActivityLogsTableBody">
+                  <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-style: italic;">
+                      กำลังโหลดประวัติกิจกรรม...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
   </div>
@@ -537,6 +570,7 @@ export async function initAdminPanel() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        logActivity('backup_export', 'ส่งออกไฟล์สำรองข้อมูลของระบบ');
         window.showToast('📤 ส่งออกสำรองข้อมูลสำเร็จ!', 'success');
       } catch (err) {
         console.error("Backup export failed:", err);
@@ -612,6 +646,7 @@ export async function initAdminPanel() {
                 }
               }
 
+              await logActivity('backup_import', 'กู้คืนฐานข้อมูลและตั้งค่าของระบบสำเร็จผ่านไฟล์สำรองข้อมูล');
               window.showToast('📥 กู้คืนข้อมูลสำรองสำเร็จ! ระบบจะทำการรีโหลดการตั้งค่าใหม่', 'success');
               await window.loadAppConfigs();
               backupFileSelector.value = '';
@@ -628,5 +663,81 @@ export async function initAdminPanel() {
   }
 
   await renderAdminUsersTable();
+
+  // Load and bind System Activity Logs
+  const refreshLogsBtn = document.getElementById('refreshActivityLogsBtn');
+  if (refreshLogsBtn) {
+    refreshLogsBtn.addEventListener('click', renderActivityLogs);
+  }
+  renderActivityLogs();
 }
+
+export async function renderActivityLogs() {
+  const tbody = document.getElementById('adminActivityLogsTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-style: italic;">
+        กำลังโหลดประวัติกิจกรรม...
+      </td>
+    </tr>
+  `;
+
+  const logs = await fetchActivityLogs(50);
+  if (logs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-style: italic;">
+          ไม่พบประวัติการทำรายการในระบบคลาวด์ขณะนี้
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  let html = '';
+  logs.forEach(log => {
+    // Format timestamp
+    let timeText = '-';
+    if (log.timestamp) {
+      const date = new Date(log.timestamp);
+      // Format Thai style: DD/MM/YYYY HH:MM
+      const thYear = date.getFullYear() + 543;
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      timeText = `${day}/${month}/${thYear} ${hours}:${minutes}`;
+    }
+
+    // Action style maps
+    let typeBadge = '';
+    if (log.actionType.includes('lock')) {
+      typeBadge = `<span class="badge" style="background: rgba(251, 80, 18, 0.15); color: var(--post-orange); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">🔒 ปิดยอด/ปลดล็อก</span>`;
+    } else if (log.actionType.includes('backup')) {
+      typeBadge = `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--post-emerald); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">💾 สำรองข้อมูล</span>`;
+    } else if (log.actionType.includes('personnel')) {
+      typeBadge = `<span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">👤 จัดการบุคลากร</span>`;
+    } else if (log.actionType.includes('attendance')) {
+      typeBadge = `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--post-blue); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">📅 เวลาเข้างาน</span>`;
+    } else {
+      typeBadge = `<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">⚙️ อื่นๆ</span>`;
+    }
+
+    html += `
+      <tr>
+        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; color: var(--text-secondary);">${timeText}</td>
+        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; font-weight: 600;">
+          ${log.actorName}<br/>
+          <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">${log.actorEmail}</span>
+        </td>
+        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); text-align: center; vertical-align: middle;">${typeBadge}</td>
+        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; font-weight: 500;">${log.description}</td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
 

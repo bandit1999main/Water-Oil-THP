@@ -7,7 +7,8 @@ import {
   fetchAttendanceList,
   saveAttendanceRecord,
   saveAttendanceList,
-  listenToAttendanceList
+  listenToAttendanceList,
+  logActivity
 } from './database.js';
 
 let tempParsedPersonnelRecords = [];
@@ -395,6 +396,7 @@ function deletePersonnel(index) {
         window.updateEmployeeSelectDropdown();
       }
       savePersonnelList(personnel);
+      logActivity('personnel_delete', `ลบบุคลากรออกจากระบบ: ${person.name}`);
       window.showToast('ลบข้อมูลบุคลากรสำเร็จ!', 'success');
     }
   });
@@ -488,6 +490,10 @@ async function handlePersonnelFormSubmit(e) {
     window.updateEmployeeSelectDropdown();
   }
   savePersonnelList(personnel);
+  logActivity(
+    editIndexVal !== '' ? 'personnel_edit' : 'personnel_add',
+    editIndexVal !== '' ? `แก้ไขข้อมูลบุคลากร: ${name}` : `เพิ่มบุคลากรรายใหม่: ${name} (${position})`
+  );
   window.showToast(editIndexVal !== '' ? 'อัปเดตข้อมูลบุคลากรสำเร็จ!' : 'ลงทะเบียนบุคลากรสำเร็จ!', 'success');
 }
 
@@ -558,6 +564,7 @@ function openDuplicateResolutionModal(newItem, duplicates) {
         window.updateEmployeeSelectDropdown();
       }
       savePersonnelList(personnel);
+      logActivity('personnel_edit', `บันทึกทับข้อมูลบุคลากรเดิม (แก้รายชื่อซ้ำ): ${newItem.name}`);
       modal.classList.remove('active');
       window.showToast('บันทึกทับข้อมูลบุคลากรสำเร็จ!', 'success');
     });
@@ -581,6 +588,7 @@ function openDuplicateResolutionModal(newItem, duplicates) {
       window.updateEmployeeSelectDropdown();
     }
     savePersonnelList(personnel);
+    logActivity('personnel_add', `เพิ่มบุคลากรรายใหม่ (ชื่อซ้ำแต่แยกรายการ): ${newItem.name} (${newItem.position})`);
     modal.classList.remove('active');
     window.showToast('ลงทะเบียนบุคลากรใหม่สำเร็จ!', 'success');
   });
@@ -1150,6 +1158,7 @@ async function handleConfirmPersonnelImport() {
       window.updateEmployeeSelectDropdown();
     }
     savePersonnelList(personnel);
+    logActivity('personnel_import', `นำเข้าข้อมูลทะเบียนบุคลากรใหม่แบบกลุ่มสำเร็จจำนวน ${nonDuplicates.length} รายการ`);
     
     const modal = document.getElementById('personnelImportModal');
     if (modal) modal.classList.remove('active');
@@ -1272,6 +1281,7 @@ async function handleConfirmPersonnelImport() {
       window.updateEmployeeSelectDropdown();
     }
     savePersonnelList(personnel);
+    logActivity('personnel_import', `นำเข้าและปรับปรุงข้อมูลทะเบียนบุคลากรแบบกลุ่มสำเร็จ (รายใหม่: ${nonDuplicates.length}, เขียนทับ: ${overwritesCount}, คงของเดิม: ${keepCount})`);
 
     dupModal.classList.remove('active');
     const mainModal = document.getElementById('personnelImportModal');
@@ -2654,6 +2664,7 @@ async function exportAttendanceToExcel() {
     
     const filename = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`;
     XLSX.writeFile(wb, filename);
+    logActivity('attendance_export', `ส่งออกไฟล์ลงเวลาทำงาน Excel ประจำรอบ ${month}/${year}`);
     window.showToast('ส่งออกตารางลงเวลาสำเร็จ!', 'success');
   } catch (error) {
     console.error("Failed to export attendance:", error);
@@ -2668,6 +2679,7 @@ export function printAttendanceReport() {
   
   const month = parseInt(attMonthSelect.value);
   const year = parseInt(attYearInput.value);
+  logActivity('attendance_print', `พิมพ์รายงานสรุปการลงเวลาเข้างานประจำรอบ ${month}/${year}`);
   const daysCount = getDaysInMonth(year, month);
   const ceYear = year - 543;
   const monthText = attMonthSelect.options[attMonthSelect.selectedIndex].text;
