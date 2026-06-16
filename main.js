@@ -748,7 +748,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!cloudSyncStarted) {
       cloudSyncStarted = true;
-      initCloudSync();
+      switchAppMode(activeMode).then(() => {
+        initCloudSync();
+      });
     }
   }
 
