@@ -1215,7 +1215,7 @@ async function switchAppMode(mode) {
 
   const welcomeHeroBanner = document.getElementById('welcomeHeroBanner');
   if (welcomeHeroBanner) {
-    welcomeHeroBanner.src = `./${mode}_banner.png`;
+    welcomeHeroBanner.src = mode === 'history' ? './logistics_banner.png' : `./${mode}_banner.png`;
   }
   
   if (mode === 'admin') {
