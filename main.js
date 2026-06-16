@@ -832,6 +832,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   const modeHistoryBtn = document.getElementById('modeHistoryBtn');
   if (modeHistoryBtn) modeHistoryBtn.addEventListener('click', () => switchAppMode('history'));
+
+  // --- SCROLL-TO-TOP BUTTON ---
+  const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+  if (scrollToTopBtn) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 320) {
+        scrollToTopBtn.classList.add('visible');
+      } else {
+        scrollToTopBtn.classList.remove('visible');
+      }
+    }, { passive: true });
+
+    scrollToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // --- PAGE LOADING BAR ---
+  window._showLoadingBar = function() {
+    const bar = document.getElementById('pageLoadingBar');
+    if (!bar) return;
+    bar.style.opacity = '1';
+    bar.className = '';
+    bar.offsetWidth; // reflow
+    bar.classList.add('loading');
+  };
+  window._hideLoadingBar = function() {
+    const bar = document.getElementById('pageLoadingBar');
+    if (!bar) return;
+    bar.classList.remove('loading');
+    bar.classList.add('done');
+    setTimeout(() => {
+      bar.className = '';
+      bar.style.opacity = '1';
+    }, 700);
+  };
+
+  // --- BUTTON RIPPLE EFFECT ---
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-primary, .btn-secondary');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = e.clientX - rect.left - size / 2;
+    const y = e.clientY - rect.top - size / 2;
+    const wave = document.createElement('span');
+    wave.className = 'btn-ripple-wave';
+    wave.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+    btn.appendChild(wave);
+    wave.addEventListener('animationend', () => wave.remove());
+  }, { passive: true });
+
   // Firebase Auth Flow
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -1351,6 +1403,11 @@ async function switchAppMode(mode) {
   activeMode = mode;
   document.documentElement.setAttribute('data-mode', mode);
 
+  // Show loading bar
+  if (window._showLoadingBar) window._showLoadingBar();
+  // Scroll to top smoothly on mode switch
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
   const welcomeHeroBanner = document.getElementById('welcomeHeroBanner');
   if (welcomeHeroBanner) {
     welcomeHeroBanner.src = mode === 'history' ? './logistics_banner.png' : `./${mode}_banner.png`;
@@ -1359,18 +1416,16 @@ async function switchAppMode(mode) {
   if (mode === 'admin') {
     const { getAdminPanelTemplate } = await import('./adminPanel.js');
     renderDashboardView(getAdminPanelTemplate());
+    if (window._hideLoadingBar) window._hideLoadingBar();
+
 
     const modeAdminBtn = document.getElementById('modeAdminBtn');
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
     const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-    
-    if (modeAdminBtn) { modeAdminBtn.style.background = 'var(--post-orange)'; modeAdminBtn.style.color = 'white'; }
-    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
-    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
-    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
     const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
+    [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn].forEach(b => b && b.classList.remove('active'));
+    if (modeAdminBtn) modeAdminBtn.classList.add('active');
     
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
     const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
@@ -1389,13 +1444,9 @@ async function switchAppMode(mode) {
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
     const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-    
-    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'var(--post-orange)'; modePersonnelBtn.style.color = 'white'; }
-    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
-    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
-    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
     const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
+    [modeFuelBtn, modeWaterBtn, modeAdminBtn, modeHistoryBtn, modePersonnelBtn].forEach(b => b && b.classList.remove('active'));
+    if (modePersonnelBtn) modePersonnelBtn.classList.add('active');
     
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
     const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
@@ -1405,21 +1456,19 @@ async function switchAppMode(mode) {
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
     
     initPersonnelManager();
+    if (window._hideLoadingBar) window._hideLoadingBar();
   } else if (mode === 'history') {
     const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
     renderDashboardView(getHistoryTemplate());
+    if (window._hideLoadingBar) window._hideLoadingBar();
 
     const modeAdminBtn = document.getElementById('modeAdminBtn');
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
     const modePersonnelBtn = document.getElementById('modePersonnelBtn');
     const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-
-    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'var(--post-orange)'; modeHistoryBtn.style.color = 'white'; }
-    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
-    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
-    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
-    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
+    [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeAdminBtn, modeHistoryBtn].forEach(b => b && b.classList.remove('active'));
+    if (modeHistoryBtn) modeHistoryBtn.classList.add('active');
 
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
     const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
@@ -1430,11 +1479,13 @@ async function switchAppMode(mode) {
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'วิเคราะห์สรุปยอดการเบิกจ่ายรายปี สถิติความสิ้นเปลืองของยานพาหนะ และเรียกดูรายงานย้อนหลังในประวัติคลาวด์';
 
     initHistoryView();
+    if (window._hideLoadingBar) window._hideLoadingBar();
   } else {
     if (!document.getElementById('globalConfigsCard')) {
       const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
       renderDashboardView(getCalculatorsTemplate());
       setupCalculatorDOMReferencesAndEvents();
+      if (window._hideLoadingBar) window._hideLoadingBar();
     }
 
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
@@ -1449,17 +1500,16 @@ async function switchAppMode(mode) {
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
     const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-
-    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
-    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
+    if (modePersonnelBtn) modePersonnelBtn.classList.remove('active');
+    if (modeAdminBtn) modeAdminBtn.classList.remove('active');
     const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
+    if (modeHistoryBtn) modeHistoryBtn.classList.remove('active');
     
     updateEmployeeSelectDropdown();
     
     if (mode === 'fuel') {
-      if (modeFuelBtn) { modeFuelBtn.style.background = 'var(--post-orange)'; modeFuelBtn.style.color = 'white'; }
-      if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
+      if (modeFuelBtn) { modeFuelBtn.classList.add('active'); }
+      if (modeWaterBtn) { modeWaterBtn.classList.remove('active'); }
       
       if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Fuel Engine v2.5';
       if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำมัน & ค่าบำรุงรักษาประจำที่ทำการ / ปณ.';
@@ -1521,8 +1571,8 @@ async function switchAppMode(mode) {
       }
       if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
     } else {
-      if (modeWaterBtn) { modeWaterBtn.style.background = 'var(--post-orange)'; modeWaterBtn.style.color = 'white'; }
-      if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
+      if (modeWaterBtn) { modeWaterBtn.classList.add('active'); }
+      if (modeFuelBtn) { modeFuelBtn.classList.remove('active'); }
       
       if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Drinking Water Engine v1.0';
       if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบคำนวณค่าน้ำดื่มเจ้าหน้าที่ปฏิบัติงานภายนอกที่ทำการ';
