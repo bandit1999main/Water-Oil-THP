@@ -633,6 +633,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (document.getElementById('modeAdminBtn')) {
     document.getElementById('modeAdminBtn').addEventListener('click', () => switchAppMode('admin'));
   }
+  const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+  if (modeHistoryBtn) modeHistoryBtn.addEventListener('click', () => switchAppMode('history'));
   // Firebase Auth Flow
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
@@ -1145,6 +1147,8 @@ async function switchAppMode(mode) {
     if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
     if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
     if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
+    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
     
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
     const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
@@ -1168,6 +1172,8 @@ async function switchAppMode(mode) {
     if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
     if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
     if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
+    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
     
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
     const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
@@ -1177,6 +1183,31 @@ async function switchAppMode(mode) {
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
     
     initPersonnelManager();
+  } else if (mode === 'history') {
+    const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
+    document.getElementById('activeDashboardView').innerHTML = getHistoryTemplate();
+
+    const modeAdminBtn = document.getElementById('modeAdminBtn');
+    const modeFuelBtn = document.getElementById('modeFuelBtn');
+    const modeWaterBtn = document.getElementById('modeWaterBtn');
+    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+
+    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'var(--post-orange)'; modeHistoryBtn.style.color = 'white'; }
+    if (modeFuelBtn) { modeFuelBtn.style.background = 'transparent'; modeFuelBtn.style.color = 'var(--text-secondary)'; }
+    if (modeWaterBtn) { modeWaterBtn.style.background = 'transparent'; modeWaterBtn.style.color = 'var(--text-secondary)'; }
+    if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
+    if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
+
+    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+    const welcomeHeadingP = document.querySelector('.welcome-heading p');
+
+    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Financial Archive v1.0';
+    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ศูนย์รวมข้อมูลประวัติการเบิกจ่ายค่าน้ำมันและค่าน้ำดื่ม';
+    if (welcomeHeadingP) welcomeHeadingP.textContent = 'วิเคราะห์สรุปยอดการเบิกจ่ายรายปี สถิติความสิ้นเปลืองของยานพาหนะ และเรียกดูรายงานย้อนหลังในประวัติคลาวด์';
+
+    initHistoryView();
   } else {
     if (!document.getElementById('globalConfigsCard')) {
       const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
@@ -1199,6 +1230,8 @@ async function switchAppMode(mode) {
 
     if (modePersonnelBtn) { modePersonnelBtn.style.background = 'transparent'; modePersonnelBtn.style.color = 'var(--text-secondary)'; }
     if (modeAdminBtn) { modeAdminBtn.style.background = 'transparent'; modeAdminBtn.style.color = 'var(--text-secondary)'; }
+    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+    if (modeHistoryBtn) { modeHistoryBtn.style.background = 'transparent'; modeHistoryBtn.style.color = 'var(--text-secondary)'; }
     
     updateEmployeeSelectDropdown();
     
