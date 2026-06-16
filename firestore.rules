@@ -37,6 +37,7 @@ service cloud.firestore {
         collectionId == 'signatory_profiles' ||
         collectionId == 'route_data' ||
         collectionId == 'global_settings' ||
+        collectionId == 'configs' ||
         collectionId.matches('attendance_[0-9]+_[0-9]+')
       );
       allow write: if request.auth != null && (
@@ -52,6 +53,7 @@ service cloud.firestore {
         collectionId == 'signatory_profiles' ||
         collectionId == 'route_data' ||
         collectionId == 'global_settings' ||
+        collectionId == 'configs' ||
         collectionId.matches('attendance_[0-9]+_[0-9]+')
       );
     }
