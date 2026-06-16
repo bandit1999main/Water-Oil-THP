@@ -6,6 +6,93 @@ import {
 
 export function getHistoryTemplate() {
   return `
+  <style>
+    /* Premium Grid Lines Background for Chart */
+    .chart-grid-bg {
+      position: absolute;
+      top: 25px;
+      left: 0;
+      right: 0;
+      bottom: 35px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .chart-grid-line {
+      width: 100%;
+      height: 1px;
+      border-bottom: 1px dashed var(--border-glass);
+      opacity: 0.35;
+    }
+    
+    /* Interactive Custom Tooltip */
+    .chart-tooltip {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -100%) scale(0.9);
+      transition: opacity 0.15s ease, transform 0.15s ease, left 0.1s ease, top 0.1s ease;
+      z-index: 10;
+      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .chart-tooltip.active {
+      opacity: 1;
+      transform: translate(-50%, -115%) scale(1);
+    }
+    .chart-tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px 6px 0;
+      border-style: solid;
+      border-color: rgba(15, 23, 42, 0.95) transparent;
+      display: block;
+      width: 0;
+    }
+
+    /* Bar styles & Hover effects */
+    .chart-bar {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+    .chart-bar:hover {
+      transform: scaleY(1.05) translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+      filter: brightness(1.15);
+    }
+    
+    /* Responsive adjustment for chart labels */
+    @media (max-width: 640px) {
+      .chart-bar-column {
+        width: 42px !important;
+      }
+      .chart-bar {
+        width: 11px !important;
+      }
+      .chart-container-wrapper {
+        height: 220px !important;
+      }
+    }
+  </style>
+
   <div class="dashboard-grid animate-fade-in" style="grid-template-columns: 1fr;">
     <div class="panel-column" style="width: 100%;">
       
@@ -48,8 +135,18 @@ export function getHistoryTemplate() {
           <h3 style="font-size: 1.1rem; font-weight: 700;">กราฟแสดงแนวโน้มค่าใช้จ่ายรายเดือน (ค่าน้ำมัน vs ค่าน้ำดื่ม)</h3>
         </div>
         <div class="chart-container-wrapper" style="width: 100%; height: 260px; display: flex; align-items: flex-end; justify-content: space-between; padding: 1.5rem 1rem 0.5rem 1rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid var(--border-glass); position: relative;">
+          <!-- Grid lines background -->
+          <div class="chart-grid-bg">
+            <div class="chart-grid-line"></div>
+            <div class="chart-grid-line"></div>
+            <div class="chart-grid-line"></div>
+            <div class="chart-grid-line"></div>
+          </div>
+          <!-- Dynamic Tooltip -->
+          <div id="chartTooltip" class="chart-tooltip"></div>
+
           <!-- Left Axis labels -->
-          <div style="position: absolute; left: 8px; top: 8px; font-size: 0.65rem; color: var(--text-secondary); pointer-events: none;">(บาท)</div>
+          <div style="position: absolute; left: 8px; top: 8px; font-size: 0.65rem; color: var(--text-secondary); pointer-events: none; z-index: 2;">(บาท)</div>
           
           <div id="chartBarsContainer" style="display: flex; align-items: flex-end; justify-content: space-around; width: 100%; height: 100%;">
             <div style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; width: 100%; margin-bottom: 50px;">
@@ -290,12 +387,12 @@ function renderSummariesDashboard() {
       const labelBar = `${labelMonthShort} ${String(s.year).slice(-2)}`;
 
       chartBarsHtml += `
-        <div class="chart-bar-column" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 50px;">
+        <div class="chart-bar-column" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 50px; z-index: 2;">
           <div style="display: flex; align-items: flex-end; gap: 4px; height: 100%; width: 100%; justify-content: center;">
             <!-- Fuel Bar -->
-            <div style="height: ${fuelPercent}%; width: 14px; background: linear-gradient(to top, var(--post-orange), hsl(16, 97%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" title="ค่าน้ำมัน: ${fuelCost.toLocaleString()} บาท"></div>
+            <div class="chart-bar" style="height: ${fuelPercent}%; width: 14px; background: linear-gradient(to top, var(--post-orange), hsl(16, 97%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" data-tooltip="<strong>⛽ ค่าน้ำมันเชื้อเพลิง</strong><br/>ประจำเดือน ${labelBar}<br/>ยอดเงิน: ${fuelCost.toLocaleString(undefined, {minimumFractionDigits: 2})} บาท"></div>
             <!-- Water Bar -->
-            <div style="height: ${waterPercent}%; width: 14px; background: linear-gradient(to top, var(--post-blue), hsl(210, 85%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" title="ค่าน้ำดื่ม: ${waterCost.toLocaleString()} บาท"></div>
+            <div class="chart-bar" style="height: ${waterPercent}%; width: 14px; background: linear-gradient(to top, var(--post-blue), hsl(210, 85%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" data-tooltip="<strong>🥤 ค่าน้ำดื่มพนักงาน</strong><br/>ประจำเดือน ${labelBar}<br/>ยอดเงิน: ${waterCost.toLocaleString(undefined, {minimumFractionDigits: 2})} บาท"></div>
           </div>
           
           <!-- X Axis label -->
@@ -306,6 +403,31 @@ function renderSummariesDashboard() {
       `;
     });
     chartContainer.innerHTML = chartBarsHtml;
+
+    // Set up dynamic tooltip tracking
+    const tooltipEl = document.getElementById('chartTooltip');
+    const chartWrapper = document.querySelector('.chart-container-wrapper');
+    if (tooltipEl && chartWrapper) {
+      chartContainer.querySelectorAll('.chart-bar').forEach(bar => {
+        bar.addEventListener('mouseenter', (e) => {
+          const text = e.target.getAttribute('data-tooltip');
+          tooltipEl.innerHTML = text;
+          tooltipEl.classList.add('active');
+        });
+        
+        bar.addEventListener('mousemove', (e) => {
+          const rect = chartWrapper.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          tooltipEl.style.left = `${x}px`;
+          tooltipEl.style.top = `${y}px`;
+        });
+        
+        bar.addEventListener('mouseleave', () => {
+          tooltipEl.classList.remove('active');
+        });
+      });
+    }
   }
 }
 
