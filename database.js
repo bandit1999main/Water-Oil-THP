@@ -173,6 +173,11 @@ export async function saveEmployees(employeesList) {
   // Always update local storage first
   localStorage.setItem(localKey, JSON.stringify(employeesList));
 
+  const match = collName.match(/employees_(\d{4})_(\d{2})/);
+  if (match) {
+    updateMonthlySummaryAfterSave(parseInt(match[1]), parseInt(match[2])).catch(err => console.error("Summary update failed:", err));
+  }
+
   if (!isCloudConnected()) return false;
 
   try {
@@ -238,6 +243,11 @@ export async function saveWaterEmployees(employeesList) {
   });
 
   localStorage.setItem(localKey, JSON.stringify(employeesList));
+
+  const match = collName.match(/water_employees_(\d{4})_(\d{2})/);
+  if (match) {
+    updateMonthlySummaryAfterSave(parseInt(match[1]), parseInt(match[2])).catch(err => console.error("Summary update failed:", err));
+  }
 
   if (!isCloudConnected()) return false;
 
@@ -853,6 +863,113 @@ export function listenToAttendanceList(year, month, callback) {
   }, (error) => {
     console.error(`❌ Firestore listenToAttendanceList failed for ${collName}:`, error);
   });
+}
+
+/**
+ * --- MONTHLY SUMMARY Snapshots ---
+ */
+export async function fetchMonthlySummaries() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_monthly_summaries')) || [];
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, "monthly_summaries"));
+    const list = [];
+    querySnapshot.forEach((doc) => {
+      list.push({ ...doc.data(), id: doc.id });
+    });
+    localStorage.setItem('tp_monthly_summaries', JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error("❌ Firestore fetchMonthlySummaries failed. Falling back to local storage.", error);
+    return JSON.parse(localStorage.getItem('tp_monthly_summaries')) || [];
+  }
+}
+
+export async function saveMonthlySummary(year, month, summaryData) {
+  const docId = `${year}_${String(month).padStart(2, '0')}`;
+  
+  const list = JSON.parse(localStorage.getItem('tp_monthly_summaries')) || [];
+  const idx = list.findIndex(item => item.id === docId);
+  const record = { ...summaryData, id: docId, year, month, updatedAt: Date.now() };
+  if (idx !== -1) {
+    list[idx] = record;
+  } else {
+    list.push(record);
+  }
+  localStorage.setItem('tp_monthly_summaries', JSON.stringify(list));
+
+  if (!isCloudConnected()) return false;
+  try {
+    const docRef = doc(db, "monthly_summaries", docId);
+    await setDoc(docRef, record, { merge: true });
+    console.log(`✅ Saved monthly summary snapshot for ${docId}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Firestore saveMonthlySummary failed for ${docId}:`, error);
+    return false;
+  }
+}
+
+function calculateWaterTaxInternal(salary, totalAllowance) {
+  if (salary <= 25833) return 0;
+  if (salary >= 25834 && salary <= 38333) return totalAllowance * 0.05;
+  if (salary >= 38334 && salary <= 55000) return totalAllowance * 0.10;
+  if (salary >= 55001 && salary <= 75833) return totalAllowance * 0.15;
+  if (salary >= 75834 && salary <= 96666) return totalAllowance * 0.20;
+  if (salary >= 96667) return totalAllowance * 0.25;
+  return 0;
+}
+
+export async function updateMonthlySummaryAfterSave(year, month) {
+  const monthStr = String(month).padStart(2, '0');
+  const fuelColl = `employees_${year}_${monthStr}`;
+  const waterColl = `water_employees_${year}_${monthStr}`;
+  
+  const fuelList = await fetchEmployeesFromCollection(fuelColl);
+  const waterList = await fetchEmployeesFromCollection(waterColl);
+  
+  let fuelTotalCost = 0;
+  let maintTotalCost = 0;
+  let fuelTotalNet = 0;
+  let fuelLiters = 0;
+  
+  fuelList.forEach(emp => {
+    fuelTotalCost += (emp.fuelCost || 0);
+    maintTotalCost += (emp.maintCost || 0);
+    fuelTotalNet += (emp.sumTotal || 0);
+    fuelLiters += (emp.liters || 0);
+  });
+  
+  let waterTotalCost = 0;
+  let waterTotalTax = 0;
+  let waterTotalNet = 0;
+  
+  waterList.forEach(emp => {
+    const allowance = (emp.workDays || 0) * 30;
+    const tax = calculateWaterTaxInternal(emp.salary || 0, allowance);
+    const net = allowance - tax;
+    waterTotalCost += allowance;
+    waterTotalTax += tax;
+    waterTotalNet += net;
+  });
+  
+  const personnelNames = new Set();
+  fuelList.forEach(e => personnelNames.add(e.name));
+  waterList.forEach(e => personnelNames.add(e.name));
+  
+  const summaryData = {
+    fuelTotalCost,
+    maintTotalCost,
+    fuelTotalNet,
+    fuelLiters,
+    waterTotalCost,
+    waterTotalTax,
+    waterTotalNet,
+    totalPersonnelCount: personnelNames.size
+  };
+  
+  await saveMonthlySummary(year, month, summaryData);
 }
 
 
