@@ -1,29 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Projects collection: everyone can read, only admin can write
-    match /projects/{project} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    
-    // About (Resume) collection: everyone can read, only admin can write
-    match /about/{document} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.email == 'bandit1999main@gmail.com';
-    }
-    
-    // Favorites collection: user can only read/write their own favorites
-    match /favorites/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Comments collection: everyone can read, logged in users can write, owner/admin can delete
-    match /comments/{comment} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (request.auth.token.email == 'bandit1999main@gmail.com' || request.auth.uid == resource.data.uid);
-    }
 
     // --- Thailand Post Oil, Water, & Attendance Collections (dynamic & static) ---
     match /{collectionId}/{document} {
@@ -59,18 +36,30 @@ service cloud.firestore {
         collectionId.matches('attendance_[0-9]+_[0-9]+')
       );
     }
+
     match /app_users/{userId} {
       // Any logged-in user can read user profiles
       allow read: if request.auth != null;
 
       // Any logged-in user can CREATE their own document (first-time registration)
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Enforce that new users must have the default 'user' role
+      allow create: if request.auth != null && 
+                    request.auth.uid == userId && 
+                    request.resource.data.role == 'user';
 
-      // Only the user themselves OR admin can update/delete
-      allow update, delete: if request.auth != null &&
-        (request.auth.uid == userId ||
-         request.auth.token.email == 'bandit1999main@gmail.com' ||
-         get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin');
+      // Only the user themselves (without changing their role) OR admin can update
+      allow update: if request.auth != null && (
+        (request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
+        request.auth.token.email == 'bandit1999main@gmail.com' ||
+        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
+      );
+
+      // Only the user themselves OR admin can delete
+      allow delete: if request.auth != null && (
+        request.auth.uid == userId ||
+        request.auth.token.email == 'bandit1999main@gmail.com' ||
+        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
   }
 }
