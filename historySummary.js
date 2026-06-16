@@ -95,7 +95,40 @@ export function getHistoryTemplate() {
 
   <div class="dashboard-grid animate-fade-in" style="grid-template-columns: 1fr;">
     <div class="panel-column" style="width: 100%;">
-      
+
+      <!-- ===== ANALYTICS DASHBOARD ===== -->
+      <div class="glass-card" id="analyticsDashboardCard" style="margin-bottom: 1rem; padding: 1.5rem;">
+        <!-- Dashboard Header + Year Filter -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.6rem;">📊</span>
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0;">ภาพรวมค่าใช้จ่ายประจำปี</h3>
+              <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0;">สรุปยอดเบิกจ่ายค่าน้ำมันและค่าน้ำดื่มรายเดือน</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">เลือกปี (พ.ศ.):</label>
+            <select id="analyticsYearSelect" class="form-select" style="width: auto; min-width: 110px; padding: 0.4rem 0.7rem; font-size: 0.9rem; font-weight: 700; border-radius: 10px;">
+              <option value="">กำลังโหลด...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI Cards Row -->
+        <div id="analyticsKpiGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin-bottom: 1.25rem;">
+          <!-- Rendered by JS -->
+          <div class="skeleton-card" style="padding: 1rem; height: 80px;"><div class="skeleton-line full"></div><div class="skeleton-line medium"></div></div>
+          <div class="skeleton-card" style="padding: 1rem; height: 80px;"><div class="skeleton-line full"></div><div class="skeleton-line medium"></div></div>
+          <div class="skeleton-card" style="padding: 1rem; height: 80px;"><div class="skeleton-line full"></div><div class="skeleton-line medium"></div></div>
+        </div>
+
+        <!-- 12-Month Bar Chart -->
+        <div style="width: 100%; height: 300px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px solid var(--border-glass); padding: 0.75rem; position: relative;">
+          <canvas id="analyticsYearlyChart" style="width: 100%; height: 100%;"></canvas>
+        </div>
+      </div>
+
       <!-- Metrics Row -->
       <div class="metrics-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
         <div class="metric-card bg-orange-glow">
@@ -260,9 +293,214 @@ export async function initHistoryView() {
     return keyB.localeCompare(keyA); // Newest first for list, but oldest first for chart
   });
 
+  renderAnalyticsDashboard();
   renderSummariesDashboard();
 }
 
+// ─────────────────────────────────────────────
+// ANALYTICS DASHBOARD
+// ─────────────────────────────────────────────
+let analyticsChartInstance = null;
+
+function renderAnalyticsDashboard() {
+  if (!summariesList || summariesList.length === 0) return;
+
+  // Collect unique years from summariesList (sorted descending)
+  const allYears = [...new Set(summariesList.map(s => s.year))].sort((a, b) => b - a);
+  const currentThaiYear = new Date().getFullYear() + 543;
+  const defaultYear = allYears.includes(currentThaiYear) ? currentThaiYear : allYears[0];
+
+  // Populate year dropdown
+  const yearSelect = document.getElementById('analyticsYearSelect');
+  if (yearSelect) {
+    yearSelect.innerHTML = allYears
+      .map(y => `<option value="${y}" ${y === defaultYear ? 'selected' : ''}>${y}</option>`)
+      .join('');
+    yearSelect.addEventListener('change', () => {
+      renderAnalyticsForYear(parseInt(yearSelect.value));
+    });
+  }
+
+  renderAnalyticsForYear(defaultYear);
+}
+
+function renderAnalyticsForYear(selectedYear) {
+  const monthNames = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  // Filter summaries to selected year
+  const yearData = summariesList.filter(s => s.year === selectedYear);
+
+  // Compute yearly KPIs
+  let yearFuel = 0;
+  let yearWater = 0;
+  yearData.forEach(s => {
+    yearFuel  += (s.fuelTotalNet  || 0);
+    yearWater += (s.waterTotalNet || 0);
+  });
+  const yearTotal = yearFuel + yearWater;
+
+  // Render KPI cards
+  const fmt = (n) => n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const kpiGrid = document.getElementById('analyticsKpiGrid');
+  if (kpiGrid) {
+    kpiGrid.innerHTML = `
+      <div class="metric-card bg-orange-glow tab-content-enter" style="padding: 1rem 1.25rem;">
+        <div class="metric-info">
+          <h3 style="font-size: 0.78rem;">⛽ ค่าน้ำมันรวมปี ${selectedYear}</h3>
+          <p class="metric-value counting" style="font-size: 1.3rem; font-weight: 800;">${fmt(yearFuel)} <span class="unit">บาท</span></p>
+        </div>
+      </div>
+      <div class="metric-card bg-blue-glow tab-content-enter" style="padding: 1rem 1.25rem; animation-delay: 0.07s;">
+        <div class="metric-info">
+          <h3 style="font-size: 0.78rem;">💧 ค่าน้ำดื่มรวมปี ${selectedYear}</h3>
+          <p class="metric-value counting" style="font-size: 1.3rem; font-weight: 800;">${fmt(yearWater)} <span class="unit">บาท</span></p>
+        </div>
+      </div>
+      <div class="metric-card bg-emerald-glow tab-content-enter" style="padding: 1rem 1.25rem; animation-delay: 0.14s;">
+        <div class="metric-info">
+          <h3 style="font-size: 0.78rem;">📊 รวมทั้งสิ้นปี ${selectedYear}</h3>
+          <p class="metric-value highlight counting" style="font-size: 1.3rem; font-weight: 800;">${fmt(yearTotal)} <span class="unit">บาท</span></p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Build 12-month arrays
+  const fuelByMonth  = Array(12).fill(0);
+  const waterByMonth = Array(12).fill(0);
+  yearData.forEach(s => {
+    const idx = (s.month || 1) - 1;
+    if (idx >= 0 && idx < 12) {
+      fuelByMonth[idx]  += (s.fuelTotalNet  || 0);
+      waterByMonth[idx] += (s.waterTotalNet || 0);
+    }
+  });
+
+  renderYearlyChart(monthNames, fuelByMonth, waterByMonth, selectedYear);
+}
+
+function renderYearlyChart(labels, fuelData, waterData, year) {
+  const ctx = document.getElementById('analyticsYearlyChart');
+  if (!ctx || !window.Chart) return;
+
+  if (analyticsChartInstance) {
+    analyticsChartInstance.destroy();
+    analyticsChartInstance = null;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const postOrange  = 'hsl(16, 97%, 53%)';
+  const postBlue    = 'hsl(199, 89%, 48%)';
+  const textColor   = styles.getPropertyValue('--text-primary').trim()  || '#1e293b';
+  const borderColor = styles.getPropertyValue('--border-glass').trim()  || 'rgba(0,0,0,0.1)';
+
+  // Check dark mode for slightly muted alpha
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const fuelBg   = isDark ? 'hsla(16, 97%, 53%, 0.75)'  : 'hsla(16, 97%, 53%, 0.85)';
+  const waterBg  = isDark ? 'hsla(199, 89%, 48%, 0.75)' : 'hsla(199, 89%, 48%, 0.85)';
+
+  analyticsChartInstance = new window.Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '⛽ ค่าน้ำมัน (บาท)',
+          data: fuelData,
+          backgroundColor: fuelBg,
+          borderColor: postOrange,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          order: 2
+        },
+        {
+          label: '💧 ค่าน้ำดื่ม (บาท)',
+          data: waterData,
+          backgroundColor: waterBg,
+          borderColor: postBlue,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          order: 2
+        },
+        {
+          label: '📈 ยอดรวมสุทธิ',
+          data: fuelData.map((f, i) => f + waterData[i]),
+          type: 'line',
+          borderColor: 'hsl(142, 70%, 40%)',
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointBackgroundColor: 'hsl(142, 70%, 40%)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          tension: 0.35,
+          order: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: 600,
+        easing: 'easeOutQuart'
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            color: textColor,
+            font: { family: 'Sarabun, sans-serif', size: 11, weight: 'bold' },
+            padding: 16,
+            usePointStyle: true
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: isDark ? 'rgba(15, 22, 42, 0.97)' : 'rgba(15, 23, 42, 0.95)',
+          titleColor: '#fff',
+          bodyColor: 'rgba(255,255,255,0.85)',
+          borderColor: 'rgba(255,255,255,0.12)',
+          borderWidth: 1,
+          padding: 12,
+          bodyFont: { family: 'Sarabun, sans-serif', size: 12 },
+          titleFont: { family: 'Sarabun, sans-serif', size: 12, weight: 'bold' },
+          callbacks: {
+            title: (items) => `${items[0].label} ปี ${year}`,
+            label: (context) => {
+              const label = context.dataset.label || '';
+              const val = context.parsed.y;
+              return ` ${label}: ${val.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: textColor,
+            font: { family: 'Sarabun, sans-serif', size: 11 }
+          }
+        },
+        y: {
+          grid: { color: borderColor, drawBorder: false },
+          ticks: {
+            color: textColor,
+            font: { family: 'Sarabun, sans-serif', size: 10 },
+            callback: (v) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────
 function renderSummariesDashboard() {
   const fuelSumSpan = document.getElementById('histFuelSum');
   const waterSumSpan = document.getElementById('histWaterSum');
