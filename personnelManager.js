@@ -1722,8 +1722,18 @@ export function getPersonnelTemplate() {
       </div>
 
       <!-- Responsive table container with overflow and sticky name -->
-      <div class="attendance-table-wrapper" style="width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass);">
+      <div class="attendance-table-wrapper" style="width: 100%; overflow-x: auto; overflow-y: auto; max-height: 65vh; border-radius: 8px; border: 1px solid var(--border-glass);">
         <style>
+          .attendance-table-wrapper thead th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-sticky-col, #141724) !important;
+            z-index: 15;
+            border-bottom: 2px solid var(--border-glass) !important;
+          }
+          .attendance-table-wrapper thead th.att-sticky-col {
+            z-index: 25;
+          }
           .att-sticky-col {
             position: sticky;
             left: 0;
