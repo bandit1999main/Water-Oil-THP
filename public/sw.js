@@ -39,6 +39,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: Network-first for API/Firebase, Cache-first for static assets
 self.addEventListener('fetch', (event) => {
+  // Only intercept HTTP/HTTPS schemes to avoid browser extension schema errors
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
   const url = new URL(event.request.url);
 
   // Skip Firebase, Google APIs, and non-GET requests
