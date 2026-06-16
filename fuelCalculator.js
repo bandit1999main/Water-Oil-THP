@@ -161,7 +161,7 @@ export function renderFuelTable() {
   const sumMaintenanceCostSpan = document.getElementById('sumMaintenanceCost');
   const sumTotalCostSpan = document.getElementById('sumTotalCost');
 
-  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : 38.50) || 38.50;
+  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : (window.defaultFuelPrice || 35.00)) || (window.defaultFuelPrice || 35.00);
   const ROUTE_DATA = getRouteData();
   const employees = getEmployees();
 
@@ -972,7 +972,7 @@ export function exportFuelCsv() {
   }
 
   const globalFuelPriceInput = document.getElementById('globalFuelPrice');
-  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : 38.50) || 38.50;
+  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : (window.defaultFuelPrice || 35.00)) || (window.defaultFuelPrice || 35.00);
   let csvContent = "\uFEFF";
   
   csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง/บทบาท,รายละเอียดด้านจ่าย/ภารกิจ,วันทำงาน,ปริมาณน้ำมัน (ลิตร),ค่าน้ำมัน (บาท),ค่าบำรุงรักษา (บาท),รวมเบิกจ่าย (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
@@ -1086,7 +1086,7 @@ export function printFuelReport() {
   employees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
   const globalFuelPriceInput = document.getElementById('globalFuelPrice');
-  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : 38.50) || 38.50;
+  const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : (window.defaultFuelPrice || 35.00)) || (window.defaultFuelPrice || 35.00);
   
   const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
   const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
@@ -1631,12 +1631,12 @@ export function getCalculatorsTemplate() {
             <div class="form-row-2" style="margin-top: 1rem;">
               <div class="form-group">
                 <label for="globalPostOfficeName">ชื่อที่ทำการไปรษณีย์ / ปณ.</label>
-                <input type="text" id="globalPostOfficeName" class="form-input" placeholder="เช่น มาบตาพุด" value="มาบตาพุด" />
+                <input type="text" id="globalPostOfficeName" class="form-input" placeholder="เช่น มาบตาพุด" value="${window.postOfficeName || 'มาบตาพุด'}" disabled />
               </div>
               <div class="form-group">
                 <label for="globalFuelPrice">ราคาน้ำมันอ้างอิง (บาท/ลิตร)</label>
                 <div class="input-with-action">
-                  <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="38.50" step="0.01" />
+                  <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="${window.defaultFuelPrice !== undefined ? window.defaultFuelPrice : '35.00'}" step="0.01" />
                   <button type="button" id="openAvgCalcBtn" class="btn btn-secondary btn-small" style="white-space: nowrap; padding: 0.5rem 0.6rem;">
                     🧮 คำนวณถัวเฉลี่ย
                   </button>

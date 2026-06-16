@@ -12,18 +12,18 @@ function setWaterEmployees(val) {
 }
 
 export function calculateWaterTax(salary, totalAllowance) {
-  if (salary <= 25833) {
-    return 0;
-  } else if (salary >= 25834 && salary <= 38333) {
-    return totalAllowance * 0.05;
-  } else if (salary >= 38334 && salary <= 55000) {
-    return totalAllowance * 0.10;
-  } else if (salary >= 55001 && salary <= 75833) {
-    return totalAllowance * 0.15;
-  } else if (salary >= 75834 && salary <= 96666) {
-    return totalAllowance * 0.20;
-  } else if (salary >= 96667) {
-    return totalAllowance * 0.25;
+  const brackets = window.waterTaxBrackets || [
+    { minSalary: 0, maxSalary: 25833, rate: 0.00 },
+    { minSalary: 25834, maxSalary: 38333, rate: 0.05 },
+    { minSalary: 38334, maxSalary: 55000, rate: 0.10 },
+    { minSalary: 55001, maxSalary: 75833, rate: 0.15 },
+    { minSalary: 75834, maxSalary: 96666, rate: 0.20 },
+    { minSalary: 96667, maxSalary: 9999999, rate: 0.25 }
+  ];
+  for (const b of brackets) {
+    if (salary >= b.minSalary && salary <= b.maxSalary) {
+      return totalAllowance * (b.rate || 0);
+    }
   }
   return 0;
 }

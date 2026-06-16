@@ -286,17 +286,57 @@ export function getAdminPanelTemplate() {
 
   <div class="panel-column full-width-column" style="width: 100%;">
           <div id="adminConfigCard" class="glass-card full-width" style="padding: 1.5rem;">
-            <div class="card-header" style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+            <div class="card-header" style="margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
               <span class="card-icon">⚙️</span>
               <h3 style="font-size: 1.1rem; font-weight: 700;">การตั้งค่าตัวแปรกลางของระบบ (System Configuration)</h3>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 1.2rem;">
-              <div class="form-group" style="max-width: 400px; display: flex; flex-direction: column; gap: 0.4rem;">
-                <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
-                <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
-                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">* อัตรานี้จะนำไปใช้คำนวณเงินค่าน้ำดื่มพนักงาน: วันทำงานจริง × อัตราค่าน้ำดื่มต่อวัน</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+              
+              <!-- Core Global Vars -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label for="adminPostOfficeName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ชื่อที่ทำการไปรษณีย์ / หน่วยงาน:</label>
+                  <input type="text" id="adminPostOfficeName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น ไปรษณีย์ไทย มาบตาพุด" />
+                </div>
+                
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
+                  <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label for="adminDefaultFuelPrice" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ราคาน้ำมันอ้างอิงเริ่มต้น (บาท / ลิตร):</label>
+                  <input type="number" id="adminDefaultFuelPrice" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="0.01" value="35.00" />
+                </div>
               </div>
-              <button id="saveAdminConfigBtn" class="btn btn-primary" style="align-self: flex-start; padding: 0.5rem 1.5rem; font-weight: 700; border-radius: 8px; background: var(--post-orange); color: white; border: none; cursor: pointer;">💾 บันทึกการตั้งค่า</button>
+
+              <!-- Water Tax Brackets Table Editor -->
+              <div style="margin-top: 0.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+                  <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary); margin: 0;">โครงสร้างฐานภาษีหัก ณ ที่จ่ายค่าน้ำดื่ม (Water Tax Brackets)</h4>
+                  <button type="button" id="adminAddBracketBtn" class="btn btn-secondary btn-small" style="padding: 0.35rem 0.8rem; font-size: 0.78rem; border-color: var(--post-orange); color: var(--post-orange);">➕ เพิ่มช่วงฐานภาษี</button>
+                </div>
+                
+                <div class="table-container" style="max-height: 280px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-glass);">
+                  <table style="width: 100%; font-size: 0.85rem; border-collapse: separate; border-spacing: 0;">
+                    <thead>
+                      <tr>
+                        <th style="width: 10%; text-align: center;">ลำดับ</th>
+                        <th style="width: 35%; text-align: right;">เงินเดือนเริ่มต้น (บาท)</th>
+                        <th style="width: 35%; text-align: right;">เงินเดือนสิ้นสุด (บาท)</th>
+                        <th style="width: 12%; text-align: center;">อัตราภาษี (%)</th>
+                        <th style="width: 8%; text-align: center;">ลบ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminBracketsTableBody">
+                      <!-- Dynamically rendered via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <button id="saveAdminConfigBtn" class="btn btn-primary" style="align-self: flex-start; padding: 0.6rem 2rem; font-weight: 700; border-radius: 8px; background: var(--post-orange); color: white; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(251,80,18,0.2);">💾 บันทึกการตั้งค่าระบบ</button>
             </div>
           </div>
   </div>
@@ -304,28 +344,144 @@ export function getAdminPanelTemplate() {
 }
 
 export async function initAdminPanel() {
+  const officeInput = document.getElementById('adminPostOfficeName');
   const allowanceInput = document.getElementById('adminWaterAllowance');
+  const fuelInput = document.getElementById('adminDefaultFuelPrice');
+  const addBracketBtn = document.getElementById('adminAddBracketBtn');
+  const bracketsTableBody = document.getElementById('adminBracketsTableBody');
   const saveConfigBtn = document.getElementById('saveAdminConfigBtn');
 
-  if (allowanceInput && saveConfigBtn) {
-    const configs = await fetchGlobalConfigs();
-    allowanceInput.value = configs.waterAllowancePerDay || 30;
+  if (!saveConfigBtn) return;
 
-    saveConfigBtn.addEventListener('click', async () => {
-      const rate = parseInt(allowanceInput.value);
-      if (isNaN(rate) || rate <= 0) {
-        window.showToast('กรุณาระบุตัวเลขค่าน้ำดื่มต่อวันที่ถูกต้อง!', 'error');
-        return;
-      }
-      window.showToast('กำลังบันทึกการตั้งค่า...', 'info');
-      const success = await saveGlobalConfigs({ waterAllowancePerDay: rate });
-      if (success) {
-        window.showToast('บันทึกการตั้งค่าตัวแปรระบบสำเร็จ!', 'success');
-      } else {
-        window.showToast('บันทึกการตั้งค่าล้มเหลว!', 'error');
-      }
+  const configs = await fetchGlobalConfigs();
+  
+  if (officeInput) officeInput.value = configs.postOfficeName || "ไปรษณีย์ไทย";
+  if (allowanceInput) allowanceInput.value = configs.waterAllowancePerDay || 30;
+  if (fuelInput) fuelInput.value = configs.defaultFuelPrice !== undefined ? configs.defaultFuelPrice : 35.00;
+
+  let localBrackets = Array.isArray(configs.waterTaxBrackets) 
+    ? [...configs.waterTaxBrackets] 
+    : [
+        { minSalary: 0, maxSalary: 25833, rate: 0.00 },
+        { minSalary: 25834, maxSalary: 38333, rate: 0.05 },
+        { minSalary: 38334, maxSalary: 55000, rate: 0.10 },
+        { minSalary: 55001, maxSalary: 75833, rate: 0.15 },
+        { minSalary: 75834, maxSalary: 96666, rate: 0.20 },
+        { minSalary: 96667, maxSalary: 9999999, rate: 0.25 }
+      ];
+
+  function renderBracketsTable() {
+    if (!bracketsTableBody) return;
+    bracketsTableBody.innerHTML = '';
+    localBrackets.forEach((b, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align: center; font-weight: bold; vertical-align: middle;">${idx + 1}</td>
+        <td>
+          <input type="number" class="bracket-min-salary align-right" data-index="${idx}" style="width: 100%; border: none; background: transparent; padding: 0.35rem 0.5rem; text-align: right; color: var(--text-primary);" value="${b.minSalary}" />
+        </td>
+        <td>
+          <input type="number" class="bracket-max-salary align-right" data-index="${idx}" style="width: 100%; border: none; background: transparent; padding: 0.35rem 0.5rem; text-align: right; color: var(--text-primary);" value="${b.maxSalary}" />
+        </td>
+        <td>
+          <input type="number" class="bracket-rate align-center" data-index="${idx}" style="width: 100%; border: none; background: transparent; padding: 0.35rem 0.5rem; text-align: center; font-weight: bold; color: var(--text-primary);" step="0.1" value="${(b.rate * 100).toFixed(1)}" />
+        </td>
+        <td style="text-align: center; vertical-align: middle;">
+          <button type="button" class="btn-delete-bracket" data-index="${idx}" style="background: none; border: none; color: var(--post-red); cursor: pointer; font-size: 1.1rem;" title="ลบช่วงภาษี">🗑️</button>
+        </td>
+      `;
+      bracketsTableBody.appendChild(tr);
+    });
+
+    // Bind local inputs
+    bracketsTableBody.querySelectorAll('.bracket-min-salary').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        localBrackets[index].minSalary = parseInt(e.target.value) || 0;
+      });
+    });
+
+    bracketsTableBody.querySelectorAll('.bracket-max-salary').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        localBrackets[index].maxSalary = parseInt(e.target.value) || 0;
+      });
+    });
+
+    bracketsTableBody.querySelectorAll('.bracket-rate').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        localBrackets[index].rate = (parseFloat(e.target.value) || 0) / 100;
+      });
+    });
+
+    bracketsTableBody.querySelectorAll('.btn-delete-bracket').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.getAttribute('data-index'));
+        localBrackets.splice(index, 1);
+        renderBracketsTable();
+      });
     });
   }
+
+  if (addBracketBtn) {
+    addBracketBtn.onclick = () => {
+      const lastBracket = localBrackets[localBrackets.length - 1];
+      const nextMin = lastBracket ? lastBracket.maxSalary + 1 : 0;
+      localBrackets.push({ minSalary: nextMin, maxSalary: nextMin + 10000, rate: 0.05 });
+      renderBracketsTable();
+    };
+  }
+
+  renderBracketsTable();
+
+  saveConfigBtn.addEventListener('click', async () => {
+    const allowance = parseInt(allowanceInput.value);
+    const officeName = officeInput.value.trim();
+    const fuelPrice = parseFloat(fuelInput.value);
+
+    if (isNaN(allowance) || allowance <= 0) {
+      window.showToast('กรุณาระบุตัวเลขค่าน้ำดื่มต่อวันที่ถูกต้อง!', 'error');
+      return;
+    }
+    if (!officeName) {
+      window.showToast('กรุณาระบุชื่อที่ทำการไปรษณีย์!', 'error');
+      return;
+    }
+    if (isNaN(fuelPrice) || fuelPrice <= 0) {
+      window.showToast('กรุณาระบุราคาน้ำมันอ้างอิงเริ่มต้นที่ถูกต้อง!', 'error');
+      return;
+    }
+
+    for (let i = 0; i < localBrackets.length; i++) {
+      const b = localBrackets[i];
+      if (b.minSalary > b.maxSalary) {
+        window.showToast(`ระดับภาษีที่ ${i+1}: เงินเดือนเริ่มต้นห้ามมากกว่าสิ้นสุด!`, 'error');
+        return;
+      }
+      if (b.rate < 0 || b.rate > 1.0) {
+        window.showToast(`ระดับภาษีที่ ${i+1}: อัตราภาษี (%) ต้องอยู่ในช่วง 0% - 100%`, 'error');
+        return;
+      }
+    }
+
+    localBrackets.sort((a, b) => a.minSalary - b.minSalary);
+
+    window.showToast('กำลังบันทึกการตั้งค่า...', 'info');
+    const success = await saveGlobalConfigs({
+      waterAllowancePerDay: allowance,
+      postOfficeName: officeName,
+      defaultFuelPrice: fuelPrice,
+      waterTaxBrackets: localBrackets
+    });
+
+    if (success) {
+      window.showToast('บันทึกการตั้งค่าระบบสำเร็จ!', 'success');
+      await window.loadAppConfigs();
+    } else {
+      window.showToast('บันทึกการตั้งค่าล้มเหลว!', 'error');
+    }
+  });
 
   await renderAdminUsersTable();
 }

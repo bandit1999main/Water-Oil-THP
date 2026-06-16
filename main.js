@@ -240,13 +240,41 @@ Object.defineProperty(window, 'personnelSearchQuery', {
 window.getXLSX = getXLSX;
 window.updateEmployeeSelectDropdown = updateEmployeeSelectDropdown;
 window.waterAllowancePerDay = 30;
+window.postOfficeName = "ไปรษณีย์ไทย";
+window.defaultFuelPrice = 35.00;
+window.waterTaxBrackets = [
+  { minSalary: 0, maxSalary: 25833, rate: 0.00 },
+  { minSalary: 25834, maxSalary: 38333, rate: 0.05 },
+  { minSalary: 38334, maxSalary: 55000, rate: 0.10 },
+  { minSalary: 55001, maxSalary: 75833, rate: 0.15 },
+  { minSalary: 75834, maxSalary: 96666, rate: 0.20 },
+  { minSalary: 96667, maxSalary: 9999999, rate: 0.25 }
+];
+
 window.loadAppConfigs = async function() {
   try {
     const configs = await fetchGlobalConfigs();
     window.waterAllowancePerDay = configs.waterAllowancePerDay || 30;
+    window.postOfficeName = configs.postOfficeName || "ไปรษณีย์ไทย";
+    window.defaultFuelPrice = configs.defaultFuelPrice !== undefined ? configs.defaultFuelPrice : 35.00;
+    window.waterTaxBrackets = configs.waterTaxBrackets || [
+      { minSalary: 0, maxSalary: 25833, rate: 0.00 },
+      { minSalary: 25834, maxSalary: 38333, rate: 0.05 },
+      { minSalary: 38334, maxSalary: 55000, rate: 0.10 },
+      { minSalary: 55001, maxSalary: 75833, rate: 0.15 },
+      { minSalary: 75834, maxSalary: 96666, rate: 0.20 },
+      { minSalary: 96667, maxSalary: 9999999, rate: 0.25 }
+    ];
+
+    // Auto-apply to header and DOM elements
+    const headerTitle = document.getElementById('headerBrandTitle');
+    if (headerTitle) headerTitle.textContent = window.postOfficeName;
+    const postOfficeInput = document.getElementById('globalPostOfficeName');
+    if (postOfficeInput) {
+      postOfficeInput.value = window.postOfficeName;
+    }
   } catch (e) {
     console.error("Error loading app configs:", e);
-    window.waterAllowancePerDay = 30;
   }
 };
 
