@@ -172,7 +172,7 @@ export function renderFuelTable() {
     if (employeeTableBody) {
       employeeTableBody.innerHTML = `
         <tr>
-          <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+          <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคัดลอกรายชื่อจากเดือนก่อน</td>
         </tr>
       `;
     }
@@ -1936,9 +1936,6 @@ export function getCalculatorsTemplate() {
                 <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
                   📥 นำเข้าวันทำงานจาก Excel
                 </button>
-                <button type="button" id="loadDemoBtn" class="btn btn-secondary btn-small">
-                  🌟 โหลดข้อมูลตัวอย่าง
-                </button>
                 <button type="button" id="exportCsvBtn" class="btn btn-secondary btn-small">
                   📊 ส่งออก Excel (CSV)
                 </button>
@@ -1996,7 +1993,7 @@ export function getCalculatorsTemplate() {
                 </thead>
                 <tbody id="employeeTableBody">
                   <tr>
-                    <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+                    <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคัดลอกรายชื่อจากเดือนก่อน</td>
                   </tr>
                 </tbody>
               </table>

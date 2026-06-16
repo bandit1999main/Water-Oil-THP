@@ -44,7 +44,7 @@ export function renderWaterTable() {
   if (waterEmployees.length === 0) {
     employeeTableBody.innerHTML = `
       <tr>
-        <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคลิก "โหลดข้อมูลตัวอย่าง"</td>
+        <td colspan="10" class="no-data">ยังไม่มีข้อมูลในตาราง กรุณากรอกข้อมูลด้านซ้าย หรือคัดลอกรายชื่อจากเดือนก่อน</td>
       </tr>
     `;
     if (sumFuelCostSpan) sumFuelCostSpan.textContent = '0.00';
