@@ -487,6 +487,7 @@ function setupCalculatorDOMReferencesAndEvents() {
   });
   
   employeeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.handleFuelFormSubmit(e));
     } else if (activeMode === 'water') {
