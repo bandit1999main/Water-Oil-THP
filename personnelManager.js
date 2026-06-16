@@ -2050,8 +2050,11 @@ function initAttendanceGrid() {
   const globalMonth = document.getElementById('globalMonth');
   const globalYear = document.getElementById('globalYear');
   
-  if (attMonthSelect && globalMonth) attMonthSelect.value = globalMonth.value;
-  if (attYearInput && globalYear) attYearInput.value = globalYear.value;
+  const activeMonthVal = (globalMonth && globalMonth.value) || window.activeMonth;
+  const activeYearVal = (globalYear && globalYear.value) || window.activeYear;
+  
+  if (attMonthSelect && activeMonthVal) attMonthSelect.value = activeMonthVal;
+  if (attYearInput && activeYearVal) attYearInput.value = activeYearVal;
   
   setupAttendanceEventsAndListeners();
   bindAttendanceDataListeners();
@@ -2071,8 +2074,39 @@ function setupAttendanceEventsAndListeners() {
   const exportAttBtn = document.getElementById('exportAttBtn');
   const printAttBtn = document.getElementById('printAttBtn');
   
-  if (attMonthSelect) attMonthSelect.addEventListener('change', bindAttendanceDataListeners);
-  if (attYearInput) attYearInput.addEventListener('change', bindAttendanceDataListeners);
+  if (attMonthSelect) {
+    attMonthSelect.addEventListener('change', (e) => {
+      const val = e.target.value;
+      window.activeMonth = val;
+      
+      const globalMonth = document.getElementById('globalMonth');
+      if (globalMonth) {
+        globalMonth.value = val;
+        globalMonth.dispatchEvent(new Event('change'));
+      } else if (typeof window.saveGlobalSetting === 'function') {
+        const mode = window.activeMode || 'fuel';
+        window.saveGlobalSetting(mode === 'water' ? 'waterMonth' : 'fuelMonth', { value: val });
+      }
+      bindAttendanceDataListeners();
+    });
+  }
+  
+  if (attYearInput) {
+    attYearInput.addEventListener('change', (e) => {
+      const val = e.target.value;
+      window.activeYear = val;
+      
+      const globalYear = document.getElementById('globalYear');
+      if (globalYear) {
+        globalYear.value = val;
+        globalYear.dispatchEvent(new Event('change'));
+      } else if (typeof window.saveGlobalSetting === 'function') {
+        const mode = window.activeMode || 'fuel';
+        window.saveGlobalSetting(mode === 'water' ? 'waterYear' : 'fuelYear', { value: val });
+      }
+      bindAttendanceDataListeners();
+    });
+  }
   if (attSearchInput) attSearchInput.addEventListener('input', () => renderAttendanceTableRows());
   
   if (attCheckAllBtn) attCheckAllBtn.addEventListener('click', () => toggleAllAttendanceDays(true));

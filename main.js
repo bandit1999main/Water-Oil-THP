@@ -365,11 +365,16 @@ function setupCalculatorDOMReferencesAndEvents() {
   const currentDate = new Date();
   const currentMonthStr = String(currentDate.getMonth() + 1);
   const currentYearBEStr = String(currentDate.getFullYear() + 543);
-  if (globalMonthSelect) globalMonthSelect.value = currentMonthStr;
-  if (globalYearSelect) globalYearSelect.value = currentYearBEStr;
+  
+  if (!window.activeMonth) window.activeMonth = currentMonthStr;
+  if (!window.activeYear) window.activeYear = currentYearBEStr;
+
+  if (globalMonthSelect) globalMonthSelect.value = window.activeMonth;
+  if (globalYearSelect) globalYearSelect.value = window.activeYear;
   copyFromPrevMonthBtn = document.getElementById('copyFromPrevMonthBtn');
   loadFromRegistryBtn = document.getElementById('loadFromRegistryBtn');
   globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
+
   deliveryRouteSelect = document.getElementById('deliveryRoute');
   empPositionSelect = document.getElementById('empPosition');
   empDutySelect = document.getElementById('empDuty');
@@ -479,6 +484,7 @@ function setupCalculatorDOMReferencesAndEvents() {
   if (globalMonthSelect) {
     globalMonthSelect.addEventListener('change', () => {
       const val = globalMonthSelect.value;
+      window.activeMonth = val;
       if (activeMode === 'fuel') {
         saveGlobalSetting('fuelMonth', { value: val });
       } else if (activeMode === 'water') {
@@ -491,6 +497,7 @@ function setupCalculatorDOMReferencesAndEvents() {
   if (globalYearSelect) {
     globalYearSelect.addEventListener('change', () => {
       const val = globalYearSelect.value;
+      window.activeYear = val;
       if (activeMode === 'fuel') {
         saveGlobalSetting('fuelYear', { value: val });
       } else if (activeMode === 'water') {
@@ -658,8 +665,16 @@ function setupCalculatorDOMReferencesAndEvents() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
+  window.saveGlobalSetting = saveGlobalSetting;
+  
+  // Set default activeMonth and activeYear globally
+  const currentDate = new Date();
+  window.activeMonth = String(currentDate.getMonth() + 1);
+  window.activeYear = String(currentDate.getFullYear() + 543);
+  
   // Load App Configs (local fallback first)
   await window.loadAppConfigs();
+
   
   // Load Saved Theme
   if (localStorage.getItem('tp_theme') === 'dark') {
@@ -973,17 +988,25 @@ function applyGlobalSettingsToDOM() {
       globalFuelPriceInput.value = globalSettings.fuelPrice.value !== undefined ? globalSettings.fuelPrice.value : (globalSettings.fuelPrice || '');
     }
     if (globalSettings.fuelMonth && globalMonthSelect) {
-      globalMonthSelect.value = globalSettings.fuelMonth.value !== undefined ? globalSettings.fuelMonth.value : (globalSettings.fuelMonth || '');
+      const val = globalSettings.fuelMonth.value !== undefined ? globalSettings.fuelMonth.value : (globalSettings.fuelMonth || '');
+      globalMonthSelect.value = val;
+      window.activeMonth = val;
     }
     if (globalSettings.fuelYear && globalYearSelect) {
-      globalYearSelect.value = globalSettings.fuelYear.value !== undefined ? globalSettings.fuelYear.value : (globalSettings.fuelYear || '');
+      const val = globalSettings.fuelYear.value !== undefined ? globalSettings.fuelYear.value : (globalSettings.fuelYear || '');
+      globalYearSelect.value = val;
+      window.activeYear = val;
     }
   } else if (activeMode === 'water') {
     if (globalSettings.waterMonth && globalMonthSelect) {
-      globalMonthSelect.value = globalSettings.waterMonth.value !== undefined ? globalSettings.waterMonth.value : (globalSettings.waterMonth || '');
+      const val = globalSettings.waterMonth.value !== undefined ? globalSettings.waterMonth.value : (globalSettings.waterMonth || '');
+      globalMonthSelect.value = val;
+      window.activeMonth = val;
     }
     if (globalSettings.waterYear && globalYearSelect) {
-      globalYearSelect.value = globalSettings.waterYear.value !== undefined ? globalSettings.waterYear.value : (globalSettings.waterYear || '');
+      const val = globalSettings.waterYear.value !== undefined ? globalSettings.waterYear.value : (globalSettings.waterYear || '');
+      globalYearSelect.value = val;
+      window.activeYear = val;
     }
   }
 
