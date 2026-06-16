@@ -165,6 +165,7 @@ let printReportBtn = null;
 let clearAllBtn = null;
 
 let importExcelAttendanceBtn = null;
+let pullAttendanceDaysBtn = null;
 let attendanceImportModal = null;
 let closeImportModalBtn = null;
 let cancelImportBtn = null;
@@ -361,6 +362,7 @@ function setupCalculatorDOMReferencesAndEvents() {
   clearAllBtn = document.getElementById('clearAllBtn');
 
   importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
+  pullAttendanceDaysBtn = document.getElementById('pullAttendanceDaysBtn');
   attendanceImportModal = document.getElementById('attendanceImportModal');
   closeImportModalBtn = document.getElementById('closeImportModalBtn');
   cancelImportBtn = document.getElementById('cancelImportBtn');
@@ -557,6 +559,9 @@ function setupCalculatorDOMReferencesAndEvents() {
   if (closeSigProfilesBtn) closeSigProfilesBtn.addEventListener('click', () => sigProfilesModal.classList.remove('active'));
 
   importExcelAttendanceBtn.addEventListener('click', openAttendanceImportModal);
+  if (pullAttendanceDaysBtn) {
+    pullAttendanceDaysBtn.addEventListener('click', handlePullAttendanceDays);
+  }
   closeImportModalBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
   cancelImportBtn.addEventListener('click', () => attendanceImportModal.classList.remove('active'));
   importPastedText.addEventListener('input', handleAttendancePaste);
@@ -1657,6 +1662,72 @@ async function saveCurrentListAsTemplate() {
   templateNameInput.value = '';
   updateTemplateSelectDropdown();
   showToast(`บันทึกชุดรายชื่อ "${name}" (${activeMode === 'fuel' ? 'ค่าน้ำมัน' : 'ค่าน้ำดื่ม'}) เรียบร้อยแล้ว!`, 'success');
+}
+
+async function handlePullAttendanceDays() {
+  const year = parseInt(globalYearSelect?.value) || 2569;
+  const month = parseInt(globalMonthSelect?.value) || 5;
+
+  // Check if we have any employees to update
+  const currentList = activeMode === 'fuel' ? (window.employees || []) : (window.waterEmployees || []);
+  if (currentList.length === 0) {
+    showToast('ไม่มีข้อมูลพนักงานในตารางเพื่อทำการอัปเดต!', 'warning');
+    return;
+  }
+
+  const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+
+  window.showConfirm({
+    title: 'ยืนยันการดึงวันทำงาน',
+    message: `คุณต้องการดึงข้อมูลจำนวนวันปฏิบัติงานจากตารางลงเวลาประจำเดือน ${monthText} พ.ศ. ${year} มาบันทึกแทนที่ข้อมูลปัจจุบันสำหรับพนักงานทุกคนที่มีชื่อในตารางคำนวณขณะนี้ใช่หรือไม่?`,
+    icon: '⚡',
+    okText: 'ดึงข้อมูล',
+    onConfirm: async () => {
+      try {
+        showToast('กำลังดึงข้อมูลวันทำงาน...', 'info');
+        const attList = await fetchAttendanceList(year, month);
+        
+        let matchCount = 0;
+        const updatedList = currentList.map(emp => {
+          const attRec = attList.find(att => att.name === emp.name);
+          if (attRec) {
+            const totalWorked = attRec.checkedDays ? attRec.checkedDays.length : 0;
+            
+            // For fuel calculator, only update standard employees, not supervisor missions
+            if (activeMode === 'fuel') {
+              if (emp.formMode !== 'supervisor') {
+                emp.workDays = totalWorked;
+                matchCount++;
+              }
+            } else {
+              emp.workDays = totalWorked;
+              matchCount++;
+            }
+          }
+          return emp;
+        });
+
+        if (matchCount === 0) {
+          showToast('ไม่พบข้อมูลการลงเวลาของพนักงานที่มีรายชื่อในตารางในเดือนนี้', 'warning');
+          return;
+        }
+
+        if (activeMode === 'fuel') {
+          window.employees = updatedList;
+          await saveEmployees(window.employees);
+        } else {
+          window.waterEmployees = updatedList;
+          await saveWaterEmployees(window.waterEmployees);
+        }
+
+        renderEmployeeTable();
+        showToast(`ดึงข้อมูลสำเร็จ! อัปเดตวันทำงานพนักงานจำนวน ${matchCount} คน`, 'success');
+      } catch (err) {
+        console.error("Failed to pull attendance days:", err);
+        showToast('เกิดข้อผิดพลาดในการดึงข้อมูล!', 'error');
+      }
+    }
+  });
 }
 
 async function loadSelectedTemplate() {

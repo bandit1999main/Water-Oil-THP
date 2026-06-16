@@ -1930,6 +1930,9 @@ export function getCalculatorsTemplate() {
                 <button type="button" id="openRouteEditorBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange);">
                   ⚙️ ตั้งค่าระยะทาง/น้ำมัน
                 </button>
+                <button type="button" id="pullAttendanceDaysBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(251, 80, 18, 0.05); font-weight: bold;">
+                  ⚡ ดึงวันทำงานจากระบบลงเวลา
+                </button>
                 <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
                   📥 นำเข้าวันทำงานจาก Excel
                 </button>
