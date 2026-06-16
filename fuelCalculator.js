@@ -744,7 +744,7 @@ export function printSupervisorPlan(parentIndex) {
           margin-bottom: 1.5rem;
         }
         .plan-table th, .plan-table td {
-          border: 1px solid #888;
+          border: 1px solid #000;
           padding: 6px;
           text-align: center;
           font-size: 10pt;
@@ -1494,7 +1494,7 @@ export function printFuelReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid #888 !important;
+          border: 1px solid #000 !important;
           padding: 4px 3px !important;
           font-size: 8pt !important;
           line-height: 1.25 !important;

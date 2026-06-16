@@ -344,7 +344,7 @@ export function printWaterReport() {
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid #888 !important;
+          border: 1px solid #000 !important;
           padding: 4px 3px !important;
           font-size: 8pt !important;
           line-height: 1.25 !important;

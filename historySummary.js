@@ -633,13 +633,57 @@ function printHistoricalFuelReport(year, month, list) {
     <html>
     <head>
       <title>พิมพ์รายงานประวัติค่าน้ำมัน_${monthText}_${year}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Sarabun', sans-serif; padding: 0.5cm; }
-        .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .print-table th, .print-table td { border: 1px solid #000; padding: 4px; font-size: 8.5pt; text-align: center; }
-        .print-table td:nth-child(2), .print-table td:nth-child(3) { text-align: left; }
-        th { background: #f2f2f2; font-weight: bold; }
-        .print-header { text-align: center; border-bottom: 2px double #000; padding-bottom: 5px; }
+        body {
+          font-family: 'Sarabun', sans-serif;
+          padding: 0.5cm;
+          background: white;
+          color: black;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 1cm;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          margin-bottom: 15px;
+        }
+        .print-table th, .print-table td {
+          border: 1px solid #000;
+          padding: 5px 4px;
+          font-size: 8.5pt;
+          text-align: center;
+        }
+        .print-table td:nth-child(2), .print-table td:nth-child(3) {
+          text-align: left;
+        }
+        th {
+          background: #f2f2f2 !important;
+          font-weight: bold;
+        }
+        .print-header {
+          text-align: center;
+          border-bottom: 2px double #000;
+          padding-bottom: 5px;
+          margin-bottom: 10px;
+        }
+        .print-signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 1.5cm;
+          page-break-inside: avoid;
+        }
+        .sig-box {
+          text-align: center;
+          width: 32%;
+          font-size: 8.5pt;
+          line-height: 1.4;
+        }
       </style>
     </head>
     <body>
@@ -667,11 +711,30 @@ function printHistoricalFuelReport(year, month, list) {
           ${rows}
         </tbody>
       </table>
-      <div style="margin-top: 15px; text-align: right; font-weight: bold; font-size: 10pt;">
+      <div style="margin-top: 15px; text-align: right; font-weight: bold; font-size: 10pt; border-bottom: 3px double #000; padding-bottom: 4px;">
         ยอดค่าน้ำมันรวม: ${totalFuel.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท | 
         ยอดค่าบำรุงรักษารวม: ${totalMaint.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท | 
         ยอดจ่ายรวมสุทธิ: ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท
       </div>
+      
+      <div class="print-signatures">
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้จัดทำ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้ตรวจสอบ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+      </div>
+
       <script>window.onload = function() { window.print(); };</script>
     </body>
     </html>
@@ -722,13 +785,57 @@ function printHistoricalWaterReport(year, month, list) {
     <html>
     <head>
       <title>พิมพ์รายงานประวัติค่าน้ำดื่ม_${monthText}_${year}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Sarabun', sans-serif; padding: 0.5cm; }
-        .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .print-table th, .print-table td { border: 1px solid #000; padding: 4px; font-size: 8.5pt; text-align: center; }
-        .print-table td:nth-child(2), .print-table td:nth-child(3) { text-align: left; }
-        th { background: #f2f2f2; font-weight: bold; }
-        .print-header { text-align: center; border-bottom: 2px double #000; padding-bottom: 5px; }
+        body {
+          font-family: 'Sarabun', sans-serif;
+          padding: 0.5cm;
+          background: white;
+          color: black;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 1.2cm 1cm;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          margin-bottom: 15px;
+        }
+        .print-table th, .print-table td {
+          border: 1px solid #000;
+          padding: 5px 4px;
+          font-size: 8.5pt;
+          text-align: center;
+        }
+        .print-table td:nth-child(2), .print-table td:nth-child(3) {
+          text-align: left;
+        }
+        th {
+          background: #f2f2f2 !important;
+          font-weight: bold;
+        }
+        .print-header {
+          text-align: center;
+          border-bottom: 2px double #000;
+          padding-bottom: 5px;
+          margin-bottom: 10px;
+        }
+        .print-signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 1.5cm;
+          page-break-inside: avoid;
+        }
+        .sig-box {
+          text-align: center;
+          width: 32%;
+          font-size: 8.5pt;
+          line-height: 1.4;
+        }
       </style>
     </head>
     <body>
@@ -754,11 +861,30 @@ function printHistoricalWaterReport(year, month, list) {
           ${rows}
         </tbody>
       </table>
-      <div style="margin-top: 15px; text-align: right; font-weight: bold; font-size: 10pt;">
+      <div style="margin-top: 15px; text-align: right; font-weight: bold; font-size: 10pt; border-bottom: 3px double #000; padding-bottom: 4px;">
         ยอดค่าน้ำดื่มรวม: ${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท | 
         ยอดภาษีหักรวม: ${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท | 
         ยอดสุทธิรวม: ${totalNet.toLocaleString(undefined, { minimumFractionDigits: 2 })} บาท
       </div>
+      
+      <div class="print-signatures">
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้จัดทำ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้ตรวจสอบ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+        <div class="sig-box">
+          <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+          <p style="margin-top: 6px;">(..........................................................)</p>
+          <p>ตำแหน่ง..........................................................</p>
+        </div>
+      </div>
+
       <script>window.onload = function() { window.print(); };</script>
     </body>
     </html>
