@@ -1167,6 +1167,17 @@ function toggleTheme() {
   }
 }
 
+/* --- APP VIEW RENDERER WITH TRANSITION --- */
+function renderDashboardView(html) {
+  const container = document.getElementById('activeDashboardView');
+  if (container) {
+    container.innerHTML = html;
+    container.classList.remove('tab-fade-in');
+    void container.offsetWidth; // trigger reflow
+    container.classList.add('tab-fade-in');
+  }
+}
+
 /* --- APP MODE SWITCHER (FUEL vs WATER vs PERSONNEL vs ADMIN) --- */
 async function switchAppMode(mode) {
   activeMode = mode;
@@ -1179,7 +1190,7 @@ async function switchAppMode(mode) {
   
   if (mode === 'admin') {
     const { getAdminPanelTemplate } = await import('./adminPanel.js');
-    document.getElementById('activeDashboardView').innerHTML = getAdminPanelTemplate();
+    renderDashboardView(getAdminPanelTemplate());
 
     const modeAdminBtn = document.getElementById('modeAdminBtn');
     const modeFuelBtn = document.getElementById('modeFuelBtn');
@@ -1204,7 +1215,7 @@ async function switchAppMode(mode) {
     initAdminPanel();
   } else if (mode === 'personnel') {
     const { getPersonnelTemplate, initPersonnelManager } = await import('./personnelManager.js');
-    document.getElementById('activeDashboardView').innerHTML = getPersonnelTemplate();
+    renderDashboardView(getPersonnelTemplate());
 
     const modeAdminBtn = document.getElementById('modeAdminBtn');
     const modeFuelBtn = document.getElementById('modeFuelBtn');
@@ -1228,7 +1239,7 @@ async function switchAppMode(mode) {
     initPersonnelManager();
   } else if (mode === 'history') {
     const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
-    document.getElementById('activeDashboardView').innerHTML = getHistoryTemplate();
+    renderDashboardView(getHistoryTemplate());
 
     const modeAdminBtn = document.getElementById('modeAdminBtn');
     const modeFuelBtn = document.getElementById('modeFuelBtn');
@@ -1254,7 +1265,7 @@ async function switchAppMode(mode) {
   } else {
     if (!document.getElementById('globalConfigsCard')) {
       const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
-      document.getElementById('activeDashboardView').innerHTML = getCalculatorsTemplate();
+      renderDashboardView(getCalculatorsTemplate());
       setupCalculatorDOMReferencesAndEvents();
     }
 

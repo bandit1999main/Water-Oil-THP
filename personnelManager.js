@@ -224,6 +224,11 @@ export function initPersonnelManager() {
       tabAttendanceBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
       registryTabContent.style.display = 'block';
       attendanceTabContent.style.display = 'none';
+      
+      registryTabContent.classList.remove('tab-fade-in');
+      void registryTabContent.offsetWidth; // trigger reflow
+      registryTabContent.classList.add('tab-fade-in');
+      
       renderPersonnelTable();
     });
 
@@ -232,6 +237,11 @@ export function initPersonnelManager() {
       tabRegistryBtn.setAttribute('style', 'padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; background: var(--border-glass) !important; color: var(--text-primary) !important; border: 1px solid var(--border-glass) !important; cursor: pointer;');
       registryTabContent.style.display = 'none';
       attendanceTabContent.style.display = 'block';
+      
+      attendanceTabContent.classList.remove('tab-fade-in');
+      void attendanceTabContent.offsetWidth; // trigger reflow
+      attendanceTabContent.classList.add('tab-fade-in');
+      
       initAttendanceGrid();
     });
   }
