@@ -28,6 +28,7 @@ import {
   fetchGlobalSettings,
   saveGlobalSetting,
   listenToGlobalSettings,
+  fetchGlobalConfigs,
   fetchPersonnelList,
   savePersonnelList,
   listenToPersonnel,
@@ -238,6 +239,16 @@ Object.defineProperty(window, 'personnelSearchQuery', {
 });
 window.getXLSX = getXLSX;
 window.updateEmployeeSelectDropdown = updateEmployeeSelectDropdown;
+window.waterAllowancePerDay = 30;
+window.loadAppConfigs = async function() {
+  try {
+    const configs = await fetchGlobalConfigs();
+    window.waterAllowancePerDay = configs.waterAllowancePerDay || 30;
+  } catch (e) {
+    console.error("Error loading app configs:", e);
+    window.waterAllowancePerDay = 30;
+  }
+};
 
 /* --- UI UTILITIES: TOAST & CONFIRM --- */
 function showToast(message, type = 'info', duration = 3000) {
@@ -612,6 +623,9 @@ function setupCalculatorDOMReferencesAndEvents() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
+  // Load App Configs (local fallback first)
+  await window.loadAppConfigs();
+  
   // Load Saved Theme
   if (localStorage.getItem('tp_theme') === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
@@ -1016,6 +1030,7 @@ async function initCloudSync() {
       badge.querySelector('.status-text').textContent = '⚡ เชื่อมต่อคลาวด์';
 
       // Load initial config setting details
+      await window.loadAppConfigs();
       cachedGlobalSettings = await fetchGlobalSettings();
       applyGlobalSettingsToDOM();
 
@@ -1157,8 +1172,8 @@ async function switchAppMode(mode) {
     if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ส่วนการจัดการและดูแลสิทธิ์ผู้ใช้งานระบบคลาวด์';
     if (welcomeHeadingP) welcomeHeadingP.textContent = 'กำหนดสิทธิ์ แก้ไขข้อมูลพนักงาน และควบคุมการเข้าถึงระบบจากฐานข้อมูลกลาง';
     
-    const { renderAdminUsersTable } = await import('./adminPanel.js');
-    renderAdminUsersTable();
+    const { initAdminPanel } = await import('./adminPanel.js');
+    initAdminPanel();
   } else if (mode === 'personnel') {
     const { getPersonnelTemplate, initPersonnelManager } = await import('./personnelManager.js');
     document.getElementById('activeDashboardView').innerHTML = getPersonnelTemplate();

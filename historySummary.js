@@ -555,7 +555,7 @@ function renderHistoricalWaterTable() {
 
   let html = '';
   list.forEach((item, index) => {
-    const allowance = (item.workDays || 0) * 30;
+    const allowance = (item.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(item.salary || 0, allowance);
     const net = allowance - tax;
     
@@ -686,7 +686,7 @@ function printHistoricalWaterReport(year, month, list) {
   let totalNet = 0;
 
   const rows = list.map((item, idx) => {
-    const allowance = (item.workDays || 0) * 30;
+    const allowance = (item.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(item.salary || 0, allowance);
     const net = allowance - tax;
 

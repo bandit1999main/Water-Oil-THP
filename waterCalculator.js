@@ -57,7 +57,7 @@ export function renderWaterTable() {
   let totalTaxVal = 0;
   let totalNetVal = 0;
   waterEmployees.forEach((item) => {
-    const allowance = item.workDays * 30;
+    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
     const net = allowance - tax;
     totalAllowance += allowance;
@@ -92,7 +92,7 @@ export function renderWaterTable() {
   }
 
   filtered.forEach(({ item, originalIdx }, index) => {
-    const allowance = item.workDays * 30;
+    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
     const net = allowance - tax;
 
@@ -211,7 +211,7 @@ export function exportWaterCsv() {
   csvContent += "ลำดับ,ชื่อ-นามสกุล,ปฏิบัติหน้าที่,เงินเดือน (บาท),จำนวนวันทำงาน,รวมค่าน้ำดื่ม (บาท),ภาษีหัก ณ ที่จ่าย (บาท),ยอดเงินจ่ายสุทธิ (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
   
   waterEmployees.forEach((item, index) => {
-    const allowance = item.workDays * 30;
+    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
     const net = allowance - tax;
     csvContent += `${index + 1},"${item.name}","${item.position} / ${item.duty || '-'}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
@@ -253,7 +253,7 @@ export function printWaterReport() {
   let tableRowsHtml = '';
   
   waterEmployees.forEach((item, index) => {
-    const allowance = item.workDays * 30;
+    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
     const net = allowance - tax;
     

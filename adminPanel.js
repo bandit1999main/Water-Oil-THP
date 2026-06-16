@@ -3,7 +3,9 @@ import {
   fetchUsersList,
   saveUserRole,
   deleteUserMetadata,
-  checkIsAdmin
+  checkIsAdmin,
+  fetchGlobalConfigs,
+  saveGlobalConfigs
 } from './database.js';
 
 let appUsersList = [];
@@ -246,8 +248,8 @@ async function handleUserRejectClick(e) {
 
 
 export function getAdminPanelTemplate() {
-  return `<div class="dashboard-grid animate-fade-in">
-  <div class="panel-column full-width-column" style="grid-column: span 2;">
+  return `<div class="dashboard-grid animate-fade-in" style="grid-template-columns: 1fr; gap: 1.5rem;">
+  <div class="panel-column full-width-column" style="width: 100%;">
           <div id="adminTableCard" class="glass-card full-width">
             <div class="card-header table-header-flex">
               <div class="header-left">
@@ -270,7 +272,6 @@ export function getAdminPanelTemplate() {
                     <th style="width: 14%;">หน้าที่จัดทำ</th>
                     <th style="width: 16%;">บทบาทหน้าที่</th>
                     <th style="width: 14%;">การดำเนินการ</th>
-
                   </tr>
                 </thead>
                 <tbody id="adminUsersTableBody">
@@ -281,7 +282,51 @@ export function getAdminPanelTemplate() {
               </table>
             </div>
           </div>
+  </div>
 
+  <div class="panel-column full-width-column" style="width: 100%;">
+          <div id="adminConfigCard" class="glass-card full-width" style="padding: 1.5rem;">
+            <div class="card-header" style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+              <span class="card-icon">⚙️</span>
+              <h3 style="font-size: 1.1rem; font-weight: 700;">การตั้งค่าตัวแปรกลางของระบบ (System Configuration)</h3>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+              <div class="form-group" style="max-width: 400px; display: flex; flex-direction: column; gap: 0.4rem;">
+                <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
+                <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">* อัตรานี้จะนำไปใช้คำนวณเงินค่าน้ำดื่มพนักงาน: วันทำงานจริง × อัตราค่าน้ำดื่มต่อวัน</p>
+              </div>
+              <button id="saveAdminConfigBtn" class="btn btn-primary" style="align-self: flex-start; padding: 0.5rem 1.5rem; font-weight: 700; border-radius: 8px; background: var(--post-orange); color: white; border: none; cursor: pointer;">💾 บันทึกการตั้งค่า</button>
+            </div>
+          </div>
   </div>
 </div>`;
 }
+
+export async function initAdminPanel() {
+  const allowanceInput = document.getElementById('adminWaterAllowance');
+  const saveConfigBtn = document.getElementById('saveAdminConfigBtn');
+
+  if (allowanceInput && saveConfigBtn) {
+    const configs = await fetchGlobalConfigs();
+    allowanceInput.value = configs.waterAllowancePerDay || 30;
+
+    saveConfigBtn.addEventListener('click', async () => {
+      const rate = parseInt(allowanceInput.value);
+      if (isNaN(rate) || rate <= 0) {
+        window.showToast('กรุณาระบุตัวเลขค่าน้ำดื่มต่อวันที่ถูกต้อง!', 'error');
+        return;
+      }
+      window.showToast('กำลังบันทึกการตั้งค่า...', 'info');
+      const success = await saveGlobalConfigs({ waterAllowancePerDay: rate });
+      if (success) {
+        window.showToast('บันทึกการตั้งค่าตัวแปรระบบสำเร็จ!', 'success');
+      } else {
+        window.showToast('บันทึกการตั้งค่าล้มเหลว!', 'error');
+      }
+    });
+  }
+
+  await renderAdminUsersTable();
+}
+

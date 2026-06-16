@@ -946,7 +946,7 @@ export async function updateMonthlySummaryAfterSave(year, month) {
   let waterTotalNet = 0;
   
   waterList.forEach(emp => {
-    const allowance = (emp.workDays || 0) * 30;
+    const allowance = (emp.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(emp.salary || 0, allowance);
     const net = allowance - tax;
     waterTotalCost += allowance;
@@ -971,9 +971,50 @@ export async function updateMonthlySummaryAfterSave(year, month) {
   
   await saveMonthlySummary(year, month, summaryData);
 }
+/**
+ * --- GLOBAL CONFIGS ---
+ */
+export async function fetchGlobalConfigs() {
+  const defaultConfigs = { waterAllowancePerDay: 30 };
+  if (!isCloudConnected()) {
+    try {
+      return JSON.parse(localStorage.getItem('tp_global_configs')) || defaultConfigs;
+    } catch (e) {
+      return defaultConfigs;
+    }
+  }
+  try {
+    const docRef = doc(db, "configs", "global_variables");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      localStorage.setItem('tp_global_configs', JSON.stringify(data));
+      return data;
+    } else {
+      await setDoc(docRef, defaultConfigs);
+      localStorage.setItem('tp_global_configs', JSON.stringify(defaultConfigs));
+      return defaultConfigs;
+    }
+  } catch (error) {
+    console.error("❌ Firestore fetchGlobalConfigs failed. Falling back to local storage.", error);
+    try {
+      return JSON.parse(localStorage.getItem('tp_global_configs')) || defaultConfigs;
+    } catch (e) {
+      return defaultConfigs;
+    }
+  }
+}
 
-
-
-
-
-
+export async function saveGlobalConfigs(configs) {
+  localStorage.setItem('tp_global_configs', JSON.stringify(configs));
+  if (!isCloudConnected()) return false;
+  try {
+    const docRef = doc(db, "configs", "global_variables");
+    await setDoc(docRef, configs, { merge: true });
+    console.log("✅ Saved global configs successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Firestore saveGlobalConfigs failed:", error);
+    return false;
+  }
+}
