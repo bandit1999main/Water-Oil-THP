@@ -53,20 +53,6 @@ function populateRouteDropdowns() {
 }
 
 export function initPersonnelManager() {
-  if (isInitialized) {
-    renderPersonnelTable();
-    populateRouteDropdowns();
-    // Re-bind search input since DOM is re-created on each mode switch
-    const personnelSearchInputEarly = document.getElementById('personnelSearchInput');
-    if (personnelSearchInputEarly) {
-      personnelSearchInputEarly.addEventListener('input', () => {
-        window.personnelSearchQuery = personnelSearchInputEarly.value;
-        renderPersonnelTable();
-      });
-    }
-    return;
-  }
-  isInitialized = true;
 
   // Bind personnel Form submit
   const personnelForm = document.getElementById('personnelForm');
