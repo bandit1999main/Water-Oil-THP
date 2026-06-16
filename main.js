@@ -43,7 +43,9 @@ import {
   deleteUserMetadata,
   registerUserMetadata,
   listenToUsers,
-  listenToUserProfile
+  listenToUserProfile,
+  fetchMonthLock,
+  saveMonthLock
 } from './database.js';
 
 // Helper Debounce Function for Performance Optimization
@@ -507,12 +509,116 @@ function setupCalculatorDOMReferencesAndEvents() {
     });
   }
 
+  // Month Lock Logic & Listeners
+  window.isCurrentMonthLocked = false;
+  window.updateLockUI = async function() {
+    const year = parseInt(globalYearSelect?.value) || 2569;
+    const month = parseInt(globalMonthSelect?.value) || 5;
+    window.isCurrentMonthLocked = await fetchMonthLock(year, month);
+    
+    // Update badge in fuelCalculator template
+    const badge = document.getElementById('monthLockBadge');
+    if (badge) {
+      if (window.isCurrentMonthLocked) {
+        badge.innerHTML = '🔒 ล็อกแล้ว (ปิดยอด)';
+        badge.style.background = 'rgba(239, 68, 68, 0.15)';
+        badge.style.color = '#ef4444';
+        badge.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      } else {
+        badge.innerHTML = '🔓 ปลดล็อกอยู่';
+        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+        badge.style.color = '#10b981';
+        badge.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+      }
+    }
+
+    // Update badge in personnelManager template if exists
+    const attBadge = document.getElementById('attMonthLockBadge');
+    if (attBadge) {
+      if (window.isCurrentMonthLocked) {
+        attBadge.innerHTML = '🔒 ปิดยอดประจำเดือนแล้ว (ล็อกข้อมูล)';
+        attBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+        attBadge.style.color = '#ef4444';
+        attBadge.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      } else {
+        attBadge.innerHTML = '🔓 ตารางลงเวลาเปิดอยู่ (แก้ไขได้)';
+        attBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        attBadge.style.color = '#10b981';
+        attBadge.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+      }
+    }
+  };
+
+  window.handleLockToggle = function() {
+    // Only administrators or main admin can toggle
+    const userRole = document.getElementById('userRoleBadge')?.textContent || '';
+    const isAdmin = userRole.includes('Admin') || userRole.includes('Main Admin');
+    if (!isAdmin) {
+      showToast('🔒 เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถล็อกหรือปลดล็อกยอดประจำเดือนได้', 'error');
+      return;
+    }
+
+    const year = parseInt(globalYearSelect?.value) || 2569;
+    const month = parseInt(globalMonthSelect?.value) || 5;
+    const nextState = !window.isCurrentMonthLocked;
+
+    showConfirm({
+      title: nextState ? '🔒 ยืนยันการล็อกปิดยอดประจำเดือน' : '🔓 ยืนยันการปลดล็อกรอบประจำเดือน',
+      message: nextState 
+        ? `คุณต้องการล็อกและปิดยอดการเบิกจ่ายของเดือนนี้ใช่หรือไม่? เมื่อล็อกแล้วจะไม่สามารถแก้ไข เพิ่ม หรือลบข้อมูลใดๆ ได้จนกว่าจะปลดล็อก`
+        : `คุณต้องการเปิดรอบการทำงานในเดือนนี้เพื่อให้สามารถแก้ไขข้อมูลได้อีกครั้งใช่หรือไม่?`,
+      icon: nextState ? '🔒' : '🔓',
+      okText: nextState ? 'ล็อกปิดยอด' : 'ปลดล็อกรอบเดือน',
+      okClass: nextState ? 'btn-danger' : 'btn-primary',
+      onConfirm: async () => {
+        showToast('กำลังปรับปรุงสถานะการล็อก...', 'info');
+        const success = await saveMonthLock(year, month, nextState);
+        if (success) {
+          showToast(nextState ? '🔒 ปิดยอดประจำเดือนเรียบร้อยแล้ว!' : '🔓 ปลดล็อกรอบเดือนเรียบร้อยแล้ว!', 'success');
+          await window.updateLockUI();
+          // Force update locking state inside Personnel Manager if it is active
+          const attMonth = document.getElementById('attMonth');
+          const attYear = document.getElementById('attYear');
+          if (attMonth && attYear) {
+            attMonth.value = String(month);
+            attYear.value = String(year);
+            // Trigger local refresh or listener reload
+            if (typeof window.bindAttendanceDataListeners === 'function') {
+              window.bindAttendanceDataListeners();
+            }
+          }
+        } else {
+          showToast('ไม่สามารถอัปเดตสถานะล็อกได้', 'error');
+        }
+      }
+    });
+  };
+
+  // Bind lock badge triggers on body click delegation since badge is dynamically replaced
+  document.body.addEventListener('click', (e) => {
+    if (e.target.id === 'monthLockBadge' || e.target.id === 'attMonthLockBadge' || e.target.closest('#monthLockBadge') || e.target.closest('#attMonthLockBadge')) {
+      window.handleLockToggle();
+    }
+  });
+
   if (copyFromPrevMonthBtn) {
-    copyFromPrevMonthBtn.addEventListener('click', handleCopyFromPrevMonth);
+    copyFromPrevMonthBtn.addEventListener('click', () => {
+      if (window.isCurrentMonthLocked) {
+        showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        return;
+      }
+      handleCopyFromPrevMonth();
+    });
   }
 
   if (loadFromRegistryBtn) {
-    loadFromRegistryBtn.addEventListener('click', handleLoadFromRegistry);
+    loadFromRegistryBtn.addEventListener('click', () => {
+      if (window.isCurrentMonthLocked) {
+        showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        return;
+      }
+      handleLoadFromRegistry();
+    });
   }
 
   deliveryRouteSelect.addEventListener('change', () => {
@@ -541,6 +647,10 @@ function setupCalculatorDOMReferencesAndEvents() {
   
   employeeForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (window.isCurrentMonthLocked) {
+      showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.handleFuelFormSubmit(e));
     } else if (activeMode === 'water') {
@@ -565,6 +675,10 @@ function setupCalculatorDOMReferencesAndEvents() {
   tabSupervisor.addEventListener('click', () => switchFormMode('supervisor'));
 
   addMissionBtn.addEventListener('click', () => {
+    if (window.isCurrentMonthLocked) {
+      showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
     import('./fuelCalculator.js').then(m => m.addSupervisorMission());
   });
 
@@ -583,6 +697,10 @@ function setupCalculatorDOMReferencesAndEvents() {
     }
   });
   clearAllBtn.addEventListener('click', () => {
+    if (window.isCurrentMonthLocked) {
+      showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.clearFuelData());
     } else if (activeMode === 'water') {
@@ -590,8 +708,16 @@ function setupCalculatorDOMReferencesAndEvents() {
     }
   });
 
-  saveTemplateBtn.addEventListener('click', saveCurrentListAsTemplate);
-  loadTemplateBtn.addEventListener('click', loadSelectedTemplate);
+  saveTemplateBtn.addEventListener('click', () => {
+    saveCurrentListAsTemplate();
+  });
+  loadTemplateBtn.addEventListener('click', () => {
+    if (window.isCurrentMonthLocked) {
+      showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
+    loadSelectedTemplate();
+  });
   deleteTemplateBtn.addEventListener('click', deleteSelectedTemplate);
 
   openRouteEditorBtn.addEventListener('click', openRouteEditor);
@@ -1047,6 +1173,11 @@ function bindMonthlyDataListeners() {
   if (unsubscribeWaterEmployees) {
     unsubscribeWaterEmployees();
     unsubscribeWaterEmployees = null;
+  }
+
+  // Update month lock state
+  if (typeof window.updateLockUI === 'function') {
+    window.updateLockUI();
   }
 
   // Quick offline load
@@ -1705,6 +1836,10 @@ function wireEditModal() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (window.isCurrentMonthLocked) {
+      showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
     const isWater = modal.dataset.isWater === '1';
     const idx = parseInt(document.getElementById('modalEditIndex').value);
     const name = document.getElementById('modalEmpName').value.trim();

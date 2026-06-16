@@ -1037,3 +1037,42 @@ export async function saveGlobalConfigs(configs) {
     return false;
   }
 }
+
+/**
+ * --- MONTH LOCK ---
+ */
+export async function fetchMonthLock(year, month) {
+  const docId = `lock_${year}_${String(month).padStart(2, '0')}`;
+  if (!isCloudConnected()) {
+    return localStorage.getItem(`tp_${docId}`) === 'true';
+  }
+  try {
+    const docRef = doc(db, "configs", docId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const isLocked = docSnap.data().isLocked || false;
+      localStorage.setItem(`tp_${docId}`, String(isLocked));
+      return isLocked;
+    }
+    return false;
+  } catch (error) {
+    console.error("❌ fetchMonthLock failed:", error);
+    return localStorage.getItem(`tp_${docId}`) === 'true';
+  }
+}
+
+export async function saveMonthLock(year, month, isLocked) {
+  const docId = `lock_${year}_${String(month).padStart(2, '0')}`;
+  localStorage.setItem(`tp_${docId}`, String(isLocked));
+  if (!isCloudConnected()) return false;
+  try {
+    const docRef = doc(db, "configs", docId);
+    await setDoc(docRef, { isLocked });
+    console.log(`✅ Set lock for ${docId} to ${isLocked}`);
+    return true;
+  } catch (error) {
+    console.error("❌ saveMonthLock failed:", error);
+    return false;
+  }
+}
+

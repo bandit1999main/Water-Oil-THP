@@ -134,37 +134,8 @@ export function getHistoryTemplate() {
           <span class="card-icon">📈</span>
           <h3 style="font-size: 1.1rem; font-weight: 700;">กราฟแสดงแนวโน้มค่าใช้จ่ายรายเดือน (ค่าน้ำมัน vs ค่าน้ำดื่ม)</h3>
         </div>
-        <div class="chart-container-wrapper" style="width: 100%; height: 260px; display: flex; align-items: flex-end; justify-content: space-between; padding: 1.5rem 1rem 0.5rem 1rem; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid var(--border-glass); position: relative;">
-          <!-- Grid lines background -->
-          <div class="chart-grid-bg">
-            <div class="chart-grid-line"></div>
-            <div class="chart-grid-line"></div>
-            <div class="chart-grid-line"></div>
-            <div class="chart-grid-line"></div>
-          </div>
-          <!-- Dynamic Tooltip -->
-          <div id="chartTooltip" class="chart-tooltip"></div>
-
-          <!-- Left Axis labels -->
-          <div style="position: absolute; left: 8px; top: 8px; font-size: 0.65rem; color: var(--text-secondary); pointer-events: none; z-index: 2;">(บาท)</div>
-          
-          <div id="chartBarsContainer" style="display: flex; align-items: flex-end; justify-content: space-around; width: 100%; height: 100%;">
-            <div style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; width: 100%; margin-bottom: 50px;">
-              ไม่มีข้อมูลประวัติสำหรับนำมาวิเคราะห์เปรียบเทียบในกราฟ
-            </div>
-          </div>
-        </div>
-        
-        <!-- Chart Legend -->
-        <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1rem; font-size: 0.8rem; font-weight: 600;">
-          <div style="display: flex; align-items: center; gap: 0.4rem;">
-            <span style="display: inline-block; width: 12px; height: 12px; background: var(--post-orange); border-radius: 3px;"></span>
-            <span>ค่าน้ำมันเชื้อเพลิง</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 0.4rem;">
-            <span style="display: inline-block; width: 12px; height: 12px; background: var(--post-blue); border-radius: 3px;"></span>
-            <span>ค่าน้ำดื่มพนักงาน</span>
-          </div>
+        <div class="chart-container-wrapper" style="width: 100%; height: 260px; background: rgba(0,0,0,0.02); border-radius: 8px; border: 1px solid var(--border-glass); position: relative; padding: 0.5rem;">
+          <canvas id="financialChart" style="width: 100%; height: 100%;"></canvas>
         </div>
       </div>
 
@@ -244,6 +215,7 @@ export function getHistoryTemplate() {
 let summariesList = [];
 let currentViewingSnapshot = { year: null, month: null, fuelList: [], waterList: [] };
 let activeModalCategory = 'fuel'; // 'fuel' or 'water'
+let financialChartInstance = null;
 
 export async function initHistoryView() {
   const tableBody = document.getElementById('historyTableBody');
@@ -297,7 +269,6 @@ function renderSummariesDashboard() {
   const totalSumSpan = document.getElementById('histTotalSum');
   const peopleSumSpan = document.getElementById('histPeopleSum');
   const tableBody = document.getElementById('historyTableBody');
-  const chartContainer = document.getElementById('chartBarsContainer');
 
   if (!tableBody) return;
 
@@ -367,65 +338,141 @@ function renderSummariesDashboard() {
     });
   });
 
-  // Render Charts (Chronological order - oldest to newest)
-  if (chartContainer) {
+  // Render Chart using Chart.js
+  const ctx = document.getElementById('financialChart');
+  if (financialChartInstance) {
+    financialChartInstance.destroy();
+    financialChartInstance = null;
+  }
+
+  if (ctx) {
     const chartList = [...summariesList].reverse().slice(-12); // Last 12 records oldest to newest
-    let maxCost = 1000;
-    chartList.forEach(s => {
-      const sum = (s.fuelTotalNet || 0) + (s.waterTotalNet || 0);
-      if (sum > maxCost) maxCost = sum;
-    });
-
-    let chartBarsHtml = '';
-    chartList.forEach(s => {
-      const fuelCost = s.fuelTotalNet || 0;
-      const waterCost = s.waterTotalNet || 0;
-      const fuelPercent = (fuelCost / maxCost) * 90; // scale to max 90% height
-      const waterPercent = (waterCost / maxCost) * 90;
-      
+    const labels = chartList.map(s => {
       const labelMonthShort = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][s.month - 1] || s.month;
-      const labelBar = `${labelMonthShort} ${String(s.year).slice(-2)}`;
-
-      chartBarsHtml += `
-        <div class="chart-bar-column" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; width: 50px; z-index: 2;">
-          <div style="display: flex; align-items: flex-end; gap: 4px; height: 100%; width: 100%; justify-content: center;">
-            <!-- Fuel Bar -->
-            <div class="chart-bar" style="height: ${fuelPercent}%; width: 14px; background: linear-gradient(to top, var(--post-orange), hsl(16, 97%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" data-tooltip="<strong>⛽ ค่าน้ำมันเชื้อเพลิง</strong><br/>ประจำเดือน ${labelBar}<br/>ยอดเงิน: ${fuelCost.toLocaleString(undefined, {minimumFractionDigits: 2})} บาท"></div>
-            <!-- Water Bar -->
-            <div class="chart-bar" style="height: ${waterPercent}%; width: 14px; background: linear-gradient(to top, var(--post-blue), hsl(210, 85%, 65%)); border-radius: 4px 4px 0 0; transition: height 0.5s ease; cursor: pointer;" data-tooltip="<strong>🥤 ค่าน้ำดื่มพนักงาน</strong><br/>ประจำเดือน ${labelBar}<br/>ยอดเงิน: ${waterCost.toLocaleString(undefined, {minimumFractionDigits: 2})} บาท"></div>
-          </div>
-          
-          <!-- X Axis label -->
-          <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: bold; margin-top: 8px; border-top: 1px solid var(--border-glass); width: 100%; padding-top: 4px; text-align: center;">
-            ${labelBar}
-          </div>
-        </div>
-      `;
+      return `${labelMonthShort} ${String(s.year).slice(-2)}`;
     });
-    chartContainer.innerHTML = chartBarsHtml;
+    const fuelData = chartList.map(s => s.fuelTotalNet || 0);
+    const waterData = chartList.map(s => s.waterTotalNet || 0);
+    const totalData = chartList.map(s => (s.fuelTotalNet || 0) + (s.waterTotalNet || 0));
 
-    // Set up dynamic tooltip tracking
-    const tooltipEl = document.getElementById('chartTooltip');
-    const chartWrapper = document.querySelector('.chart-container-wrapper');
-    if (tooltipEl && chartWrapper) {
-      chartContainer.querySelectorAll('.chart-bar').forEach(bar => {
-        bar.addEventListener('mouseenter', (e) => {
-          const text = e.target.getAttribute('data-tooltip');
-          tooltipEl.innerHTML = text;
-          tooltipEl.classList.add('active');
-        });
-        
-        bar.addEventListener('mousemove', (e) => {
-          const rect = chartWrapper.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-          tooltipEl.style.left = `${x}px`;
-          tooltipEl.style.top = `${y}px`;
-        });
-        
-        bar.addEventListener('mouseleave', () => {
-          tooltipEl.classList.remove('active');
-        });
+    const styles = getComputedStyle(document.documentElement);
+    const postOrange = styles.getPropertyValue('--post-orange').trim() || 'hsl(16, 97%, 53%)';
+    const postBlue = styles.getPropertyValue('--post-blue').trim() || 'hsl(210, 85%, 45%)';
+    const postEmerald = styles.getPropertyValue('--post-emerald').trim() || 'hsl(142, 70%, 40%)';
+    const textPrimary = styles.getPropertyValue('--text-primary').trim() || '#1e293b';
+    const borderGlass = styles.getPropertyValue('--border-glass').trim() || 'rgba(0, 0, 0, 0.1)';
+
+    if (window.Chart) {
+      financialChartInstance = new window.Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '⛽ ค่าน้ำมันเชื้อเพลิง',
+              data: fuelData,
+              backgroundColor: postOrange,
+              borderColor: postOrange,
+              borderWidth: 1,
+              borderRadius: 4,
+              order: 2
+            },
+            {
+              label: '🥤 ค่าน้ำดื่มพนักงาน',
+              data: waterData,
+              backgroundColor: postBlue,
+              borderColor: postBlue,
+              borderWidth: 1,
+              borderRadius: 4,
+              order: 2
+            },
+            {
+              label: '📈 ยอดรวมสุทธิ',
+              data: totalData,
+              type: 'line',
+              borderColor: postEmerald,
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointBackgroundColor: postEmerald,
+              pointBorderColor: '#fff',
+              pointHoverRadius: 6,
+              tension: 0.3,
+              order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: textPrimary,
+                font: {
+                  family: 'Sarabun, sans-serif',
+                  size: 11,
+                  weight: 'bold'
+                }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              bodyFont: {
+                family: 'Sarabun, sans-serif'
+              },
+              titleFont: {
+                family: 'Sarabun, sans-serif',
+                weight: 'bold'
+              },
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  if (context.parsed.y !== null) {
+                    label += new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(context.parsed.y);
+                  }
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: textPrimary,
+                font: {
+                  family: 'Sarabun, sans-serif',
+                  size: 10
+                }
+              }
+            },
+            y: {
+              grid: {
+                color: borderGlass
+              },
+              ticks: {
+                color: textPrimary,
+                font: {
+                  family: 'Sarabun, sans-serif',
+                  size: 10
+                },
+                callback: function(value) {
+                  return value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
       });
     }
   }

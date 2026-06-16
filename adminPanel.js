@@ -340,6 +340,30 @@ export function getAdminPanelTemplate() {
             </div>
           </div>
   </div>
+
+  <div class="panel-column full-width-column" style="width: 100%;">
+          <div id="adminBackupCard" class="glass-card full-width" style="padding: 1.5rem;">
+            <div class="card-header" style="margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+              <span class="card-icon">💾</span>
+              <h3 style="font-size: 1.1rem; font-weight: 700;">ระบบจัดการสำรองและกู้คืนข้อมูล (Local Backup &amp; Restore)</h3>
+            </div>
+            
+            <div style="padding: 1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small); margin-bottom: 1.2rem;">
+              ⚠️ <strong>ข้อควรระวัง:</strong> การกู้คืนข้อมูลสำรอง (Restore) จะเขียนข้อมูลทับลงบนฐานข้อมูลปัจจุบันทั้งหมด กรุณาสำรองข้อมูลปัจจุบันไว้ก่อนดำเนินการนำเข้าข้อมูลใดๆ เพื่อความปลอดภัย
+            </div>
+            
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+              <button id="exportBackupBtn" class="btn btn-primary" style="padding: 0.6rem 1.5rem; font-weight: 700; border-radius: 8px; background: var(--post-orange); color: white; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(251,80,18,0.15);">
+                📤 ส่งออกสำรองข้อมูล (JSON)
+              </button>
+              
+              <button id="importBackupBtn" class="btn btn-secondary" style="padding: 0.6rem 1.5rem; font-weight: 700; border-radius: 8px; border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05); cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
+                📥 นำเข้าข้อมูลกู้คืน (JSON)
+              </button>
+              <input type="file" id="backupFileSelector" accept=".json" style="display: none;" />
+            </div>
+          </div>
+  </div>
 </div>`;
 }
 
@@ -482,6 +506,126 @@ export async function initAdminPanel() {
       window.showToast('บันทึกการตั้งค่าล้มเหลว!', 'error');
     }
   });
+
+  // Local Backup & Restore Logic
+  const exportBackupBtn = document.getElementById('exportBackupBtn');
+  const importBackupBtn = document.getElementById('importBackupBtn');
+  const backupFileSelector = document.getElementById('backupFileSelector');
+
+  if (exportBackupBtn) {
+    exportBackupBtn.addEventListener('click', () => {
+      window.showToast('กำลังเตรียมไฟล์สำรองข้อมูล...', 'info');
+      try {
+        const backupData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith('tp_')) {
+            try {
+              backupData[key] = JSON.parse(localStorage.getItem(key));
+            } catch (e) {
+              backupData[key] = localStorage.getItem(key);
+            }
+          }
+        }
+        
+        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `thp_system_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        window.showToast('📤 ส่งออกสำรองข้อมูลสำเร็จ!', 'success');
+      } catch (err) {
+        console.error("Backup export failed:", err);
+        window.showToast('ส่งออกสำรองข้อมูลล้มเหลว', 'error');
+      }
+    });
+  }
+
+  if (importBackupBtn && backupFileSelector) {
+    importBackupBtn.addEventListener('click', () => backupFileSelector.click());
+    
+    backupFileSelector.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const backupData = JSON.parse(event.target.result);
+          
+          // Basic validation checking if keys are system configs
+          const keys = Object.keys(backupData);
+          const hasSystemKeys = keys.some(k => k.startsWith('tp_'));
+          if (!hasSystemKeys) {
+            window.showToast('❌ รูปแบบไฟล์สำรองข้อมูลไม่ถูกต้อง!', 'error');
+            return;
+          }
+
+          window.showConfirm({
+            title: '📥 ยืนยันการกู้คืนข้อมูลสำรอง',
+            message: `ระบบตรวจพบข้อมูลสำรองจำนวน ${keys.length} ตาราง/การตั้งค่า คุณต้องการกู้คืนข้อมูลทั้งหมดใช่หรือไม่? (ข้อมูลปัจจุบันจะถูกเขียนทับ)`,
+            icon: '⚠️',
+            okText: 'กู้คืนข้อมูล',
+            okClass: 'btn-danger',
+            onConfirm: async () => {
+              window.showToast('กำลังกู้คืนข้อมูล...', 'info');
+              
+              // Restore to localStorage
+              keys.forEach(key => {
+                const val = backupData[key];
+                if (typeof val === 'object') {
+                  localStorage.setItem(key, JSON.stringify(val));
+                } else {
+                  localStorage.setItem(key, String(val));
+                }
+              });
+
+              // Write back collections to Firestore in background if online
+              if (isCloudConnected()) {
+                try {
+                  const dbMod = await import('./database.js');
+                  
+                  // Restore personnel
+                  if (backupData['tp_personnel']) {
+                    await dbMod.savePersonnelList(backupData['tp_personnel']);
+                  }
+                  // Restore global configs
+                  if (backupData['tp_global_configs']) {
+                    await dbMod.saveGlobalConfigs(backupData['tp_global_configs']);
+                  }
+                  
+                  // Sync current lists back to Firestore
+                  const activeFuelKey = dbMod.getActiveEmployeesCollectionName();
+                  if (backupData[`tp_${activeFuelKey}`]) {
+                    await dbMod.saveEmployees(backupData[`tp_${activeFuelKey}`]);
+                  }
+                  const activeWaterKey = dbMod.getActiveWaterEmployeesCollectionName();
+                  if (backupData[`tp_${activeWaterKey}`]) {
+                    await dbMod.saveWaterEmployees(backupData[`tp_${activeWaterKey}`]);
+                  }
+                } catch (dbErr) {
+                  console.error("Firestore batch restore failed:", dbErr);
+                }
+              }
+
+              window.showToast('📥 กู้คืนข้อมูลสำรองสำเร็จ! ระบบจะทำการรีโหลดการตั้งค่าใหม่', 'success');
+              await window.loadAppConfigs();
+              backupFileSelector.value = '';
+              setTimeout(() => window.location.reload(), 1500);
+            }
+          });
+        } catch (jsonErr) {
+          console.error("JSON Parse error:", jsonErr);
+          window.showToast('ไฟล์ชำรุดหรือไม่สามารถถอดรหัสได้!', 'error');
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
 
   await renderAdminUsersTable();
 }

@@ -1698,6 +1698,8 @@ export function getPersonnelTemplate() {
             <label for="attYear" style="font-size: 0.8rem; font-weight: bold; color: var(--text-secondary); margin-left: 0.4rem;">ปี พ.ศ.:</label>
             <input type="number" id="attYear" class="form-input" style="padding: 0.2rem 0.4rem; font-size: 0.8rem; background: transparent; border: none; color: var(--text-primary); width: 60px; font-weight: bold; font-family: inherit;" value="2569" min="2500" max="3000" />
           </div>
+          <span id="attMonthLockBadge" style="font-size: 0.72rem; font-weight: bold; cursor: pointer; padding: 0.35rem 0.6rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 0.15rem; transition: all 0.2s ease; user-select: none;"></span>
+
 
           <!-- Quick Actions -->
           <button type="button" id="attCheckAllBtn" class="btn btn-secondary btn-small" style="padding: 0.4rem 0.6rem;">✔️ ติ๊กทั้งหมด</button>
@@ -2109,8 +2111,24 @@ function setupAttendanceEventsAndListeners() {
   }
   if (attSearchInput) attSearchInput.addEventListener('input', () => renderAttendanceTableRows());
   
-  if (attCheckAllBtn) attCheckAllBtn.addEventListener('click', () => toggleAllAttendanceDays(true));
-  if (attClearAllBtn) attClearAllBtn.addEventListener('click', () => toggleAllAttendanceDays(false));
+  if (attCheckAllBtn) {
+    attCheckAllBtn.addEventListener('click', () => {
+      if (window.isCurrentMonthLocked) {
+        window.showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        return;
+      }
+      toggleAllAttendanceDays(true);
+    });
+  }
+  if (attClearAllBtn) {
+    attClearAllBtn.addEventListener('click', () => {
+      if (window.isCurrentMonthLocked) {
+        window.showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        return;
+      }
+      toggleAllAttendanceDays(false);
+    });
+  }
   if (exportAttBtn) exportAttBtn.addEventListener('click', exportAttendanceToExcel);
   if (printAttBtn) printAttBtn.addEventListener('click', printAttendanceReport);
   
@@ -2323,6 +2341,16 @@ function renderAttendanceTableRows() {
   
   tableBody.querySelectorAll('select.att-select').forEach(sel => {
     sel.addEventListener('change', async (e) => {
+      if (window.isCurrentMonthLocked) {
+        window.showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        // Revert selection
+        const name = e.target.getAttribute('data-name');
+        const day = parseInt(e.target.getAttribute('data-day'));
+        const attRec = attendanceList.find(item => item.name === name) || { checkedDays: [], dayStatuses: {} };
+        const originalStatus = attRec.dayStatuses ? (attRec.dayStatuses[day] || '') : (attRec.checkedDays.includes(day) ? '/' : '');
+        e.target.value = originalStatus;
+        return;
+      }
       const name = e.target.getAttribute('data-name');
       const day = parseInt(e.target.getAttribute('data-day'));
       const status = e.target.value;

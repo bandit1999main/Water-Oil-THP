@@ -1606,7 +1606,10 @@ export function getCalculatorsTemplate() {
             
             <div class="form-row-2">
               <div class="form-group">
-                <label for="globalMonth">รอบประจำเดือน</label>
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 0.25rem;">
+                  <label for="globalMonth" style="margin: 0;">รอบประจำเดือน</label>
+                  <span id="monthLockBadge" style="font-size: 0.72rem; font-weight: bold; cursor: pointer; padding: 0.1rem 0.35rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.15rem; transition: all 0.2s ease; user-select: none;"></span>
+                </div>
                 <select id="globalMonth" class="form-select">
                   <option value="1">มกราคม</option>
                   <option value="2">กุมภาพันธ์</option>
