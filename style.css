@@ -669,7 +669,8 @@ body {
 .table-container {
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 650px;
+  max-height: calc(100vh - 320px);
+  min-height: 350px;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
   content-visibility: auto;
