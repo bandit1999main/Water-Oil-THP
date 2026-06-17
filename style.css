@@ -672,8 +672,6 @@ body {
   max-height: 65vh;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
-  content-visibility: auto;
-  contain-intrinsic-size: auto 400px;
 }
 
 table {
@@ -1472,7 +1470,7 @@ tr:hover td {
 }
 
 /* Off-screen rendering optimizations for long tables and dashboard panels */
-.dashboard-grid, .table-responsive, #personnelTableCard, #mainTableCard, #adminTableCard {
+.table-responsive {
   content-visibility: auto;
   contain-intrinsic-size: 100px 500px;
 }
