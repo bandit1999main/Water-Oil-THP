@@ -667,7 +667,9 @@ body {
 }
 
 .table-container {
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 65vh;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
   content-visibility: auto;
@@ -685,16 +687,16 @@ table {
 th {
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: var(--bg-sticky-col);
+  z-index: 15;
+  background: var(--bg-sticky-col) !important;
   padding: 0.9rem 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  border-bottom: 2px solid var(--border-glass);
+  border-bottom: 2px solid var(--border-glass) !important;
 }
 
 [data-theme="dark"] th {
-  background: var(--bg-sticky-col);
+  background: var(--bg-sticky-col) !important;
 }
 
 td {
