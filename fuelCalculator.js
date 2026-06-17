@@ -887,6 +887,12 @@ export function renderPeriodTable() {
     if (avgCalcTotalDays) avgCalcTotalDays.textContent = '0';
     if (avgCalcTotalSum) avgCalcTotalSum.textContent = '0.00';
     if (avgCalcResultPrice) avgCalcResultPrice.textContent = '0.00';
+    
+    const applyAvgPriceBtn = document.getElementById('applyAvgPriceBtn');
+    if (applyAvgPriceBtn) {
+      applyAvgPriceBtn.disabled = true;
+      applyAvgPriceBtn.textContent = '✔️ นำราคานี้ไปใช้เป็นค่าราคากลาง';
+    }
     return;
   }
 
@@ -920,6 +926,33 @@ export function renderPeriodTable() {
   if (avgCalcTotalDays) avgCalcTotalDays.textContent = sumDays;
   if (avgCalcTotalSum) avgCalcTotalSum.textContent = sumWeight.toFixed(2);
   if (avgCalcResultPrice) avgCalcResultPrice.textContent = avgPrice.toFixed(4);
+
+  // Auto-apply to global fuel price input and database
+  const globalFuelPriceInput = document.getElementById('globalFuelPrice');
+  const applyAvgPriceBtn = document.getElementById('applyAvgPriceBtn');
+  
+  if (sumDays > 0 && avgPrice > 0) {
+    if (globalFuelPriceInput) {
+      globalFuelPriceInput.value = avgPrice.toFixed(4);
+    }
+    if (typeof window.saveGlobalSetting === 'function') {
+      window.saveGlobalSetting('fuelPrice', { value: parseFloat(avgPrice.toFixed(4)) });
+    }
+    // Re-render main table with new price
+    setTimeout(() => {
+      renderFuelTable();
+    }, 0);
+    
+    if (applyAvgPriceBtn) {
+      applyAvgPriceBtn.disabled = false;
+      applyAvgPriceBtn.textContent = '✔️ นำราคานี้ไปใช้งานแล้ว (อัตโนมัติ)';
+    }
+  } else {
+    if (applyAvgPriceBtn) {
+      applyAvgPriceBtn.disabled = true;
+      applyAvgPriceBtn.textContent = '✔️ นำราคานี้ไปใช้เป็นค่าราคากลาง';
+    }
+  }
 }
 
 export function addPricePeriod() {
@@ -943,25 +976,9 @@ export function addPricePeriod() {
 }
 
 export function applyAvgPriceToGlobal() {
-  const avgCalcResultPrice = document.getElementById('avgCalcResultPrice');
-  const globalFuelPriceInput = document.getElementById('globalFuelPrice');
   const avgCalcModal = document.getElementById('avgCalcModal');
-
-  if (!avgCalcResultPrice || !globalFuelPriceInput) return;
-
-  const finalPrice = parseFloat(avgCalcResultPrice.textContent) || 0;
-  if (finalPrice <= 0) {
-    window.showToast('กรุณาคำนวณราคาน้ำมันเฉลี่ยก่อนนำไปใช้งาน!', 'warning');
-    return;
-  }
-
-  globalFuelPriceInput.value = finalPrice.toFixed(4);
-  
   if (avgCalcModal) avgCalcModal.classList.remove('active');
-  
-  // Recalculate
-  renderFuelTable();
-  window.showToast(`นำราคาน้ำมันเฉลี่ยถ่วงน้ำหนัก ${finalPrice.toFixed(4)} บาท ไปใช้งานเรียบร้อย!`, 'success');
+  window.showToast('บันทึกและเปิดใช้งานราคาน้ำมันเฉลี่ยเรียบร้อยแล้ว!', 'success');
 }
 
 export function exportFuelCsv() {

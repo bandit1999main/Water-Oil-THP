@@ -510,6 +510,14 @@ function setupCalculatorDOMReferencesAndEvents() {
     });
   }
 
+  if (globalFuelPriceInput) {
+    globalFuelPriceInput.addEventListener('change', () => {
+      const val = parseFloat(globalFuelPriceInput.value) || 0;
+      saveGlobalSetting('fuelPrice', { value: val });
+      import('./fuelCalculator.js').then(m => m.renderFuelTable());
+    });
+  }
+
   // Month Lock Logic & Listeners
   window.isCurrentMonthLocked = false;
   window.updateLockUI = async function() {
