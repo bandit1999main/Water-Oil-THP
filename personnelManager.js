@@ -1348,7 +1348,7 @@ export function printPersonnelReport() {
         <td>${item.route ? 'ด้านจ่ายที่ ' + item.route : '-'}</td>
         <td>${item.vehicle || '-'}</td>
         <td>${restDaysStr}</td>
-        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #bbb; font-weight: 300;">${item.signature || item.name}</span></td>
+        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #e8e8e8; font-weight: 300;">${item.signature || item.name}</span></td>
       </tr>
     `;
   });
