@@ -667,10 +667,7 @@ body {
 }
 
 .table-container {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 320px);
-  min-height: 350px;
+  overflow: visible;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
   content-visibility: auto;
@@ -679,7 +676,8 @@ body {
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: left;
   font-size: 0.95rem;
 }
