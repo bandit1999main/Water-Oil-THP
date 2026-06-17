@@ -668,6 +668,8 @@ body {
 
 .table-container {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 650px;
   border-radius: var(--radius-small);
   border: 1px solid var(--border-glass);
   content-visibility: auto;
@@ -682,7 +684,10 @@ table {
 }
 
 th {
-  background: rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-sticky-col);
   padding: 0.9rem 1rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -690,7 +695,7 @@ th {
 }
 
 [data-theme="dark"] th {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-sticky-col);
 }
 
 td {
