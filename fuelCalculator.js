@@ -1269,7 +1269,7 @@ export function printFuelReport() {
           <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td><strong>${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #e8e8e8; font-weight: 300;">${row.signature}</span></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #f7f4f4; font-weight: 300;">${row.signature}</span></td>
           <td><span style="font-size: 8pt; color: #444;">${row.remarks}</span></td>
         </tr>
       `;
