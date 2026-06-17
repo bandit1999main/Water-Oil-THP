@@ -2121,5 +2121,10 @@ tbody tr:hover td:first-child {
               0 0 20px rgba(var(--post-orange-rgb), 0.1);
 }
 
+/* Fix vertical sticky table headers by disabling will-change on parent cards */
+#mainTableCard, #personnelTableCard, #adminTableCard {
+  will-change: auto !important;
+}
+
 
 
