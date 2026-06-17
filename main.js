@@ -1162,7 +1162,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   wireEditModal();
+
+  // Set initial connectivity status
+  updateConnectivityStatus();
+
+  // Listen to connectivity changes
+  window.addEventListener('online', () => {
+    updateConnectivityStatus();
+    showToast('📶 เชื่อมต่ออินเทอร์เน็ตแล้ว - กำลังซิงค์ข้อมูลกับคลาวด์', 'success');
+  });
+  window.addEventListener('offline', () => {
+    updateConnectivityStatus();
+    showToast('📴 ออฟไลน์ - ระบบจะสลับไปบันทึกข้อมูลในเครื่องโดยอัตโนมัติ', 'warning');
+  });
+
+  // Pre-fetch dynamic modules in the background after 3 seconds
+  setTimeout(() => {
+    console.log('[PWA] Starting background pre-fetch of dynamic modules...');
+    const modules = [
+      () => import('./fuelCalculator.js'),
+      () => import('./waterCalculator.js'),
+      () => import('./personnelManager.js'),
+      () => import('./adminPanel.js'),
+      () => import('./historySummary.js'),
+      () => import('./database.js')
+    ];
+    modules.forEach(preload => {
+      preload().then(() => {
+        console.log('[PWA] Dynamic module pre-fetched successfully.');
+      }).catch(err => {
+        console.warn('[PWA] Dynamic module pre-fetch failed/deferred:', err);
+      });
+    });
+  }, 3000);
 });
+
+function showModuleLoadError(containerId, moduleName, retryCallback) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = `
+    <div class="module-load-error" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; background: var(--card-bg-gradient); border: 1px solid var(--border-glass); border-radius: var(--radius-normal); text-align: center; box-shadow: 0 8px 32px var(--shadow-glass); margin: 2rem 0;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+      <h3 style="font-family: var(--font-title); font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">ไม่สามารถโหลดโมดูล ${moduleName} ได้</h3>
+      <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem; max-width: 380px; line-height: 1.6;">
+        โมดูลนี้ยังไม่ได้รับการแคชสำหรับใช้งานออฟไลน์ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง
+      </p>
+      <button class="btn btn-primary" id="retryLoadModuleBtn" style="padding: 0.6rem 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px;">
+        🔄 ลองใหม่อีกครั้ง
+      </button>
+    </div>
+  `;
+  const btn = document.getElementById('retryLoadModuleBtn');
+  if (btn) {
+    btn.addEventListener('click', retryCallback);
+  }
+}
 
 function applyGlobalSettingsToDOM() {
   if (!cachedGlobalSettings) return;
@@ -1268,15 +1322,25 @@ function bindMonthlyDataListeners() {
   }
 }
 
-async function initCloudSync() {
+function updateConnectivityStatus() {
   const badge = document.getElementById('dbStatusBadge');
   if (!badge) return;
+  const text = badge.querySelector('.status-text');
+
+  if (navigator.onLine && isCloudConnected()) {
+    badge.className = 'db-status-badge connected';
+    if (text) text.textContent = '🟢 เชื่อมต่อคลาวด์แล้ว';
+  } else {
+    badge.className = 'db-status-badge offline';
+    if (text) text.textContent = '⚫ ออฟไลน์ (บันทึกข้อมูลในเครื่อง)';
+  }
+}
+
+async function initCloudSync() {
+  updateConnectivityStatus();
 
   try {
     if (isCloudConnected()) {
-      badge.className = 'db-status-badge online';
-      badge.querySelector('.status-text').textContent = '⚡ เชื่อมต่อคลาวด์';
-
       // Load initial config setting details
       await window.loadAppConfigs();
       cachedGlobalSettings = await fetchGlobalSettings();
@@ -1361,13 +1425,11 @@ async function initCloudSync() {
         }
       });
     } else {
-      badge.className = 'db-status-badge offline';
-      badge.querySelector('.status-text').textContent = '⚠️ โหมดออฟไลน์';
+      updateConnectivityStatus();
     }
   } catch (err) {
     console.error("Cloud connection failed:", err);
-    badge.className = 'db-status-badge offline';
-    badge.querySelector('.status-text').textContent = '⚠️ โหมดออฟไลน์';
+    updateConnectivityStatus();
   }
 }
 
@@ -1414,78 +1476,105 @@ async function switchAppMode(mode) {
   }
   
   if (mode === 'admin') {
-    const { getAdminPanelTemplate } = await import('./adminPanel.js');
-    renderDashboardView(getAdminPanelTemplate());
-    if (window._hideLoadingBar) window._hideLoadingBar();
+    try {
+      const { getAdminPanelTemplate } = await import('./adminPanel.js');
+      renderDashboardView(getAdminPanelTemplate());
+      if (window._hideLoadingBar) window._hideLoadingBar();
 
-
-    const modeAdminBtn = document.getElementById('modeAdminBtn');
-    const modeFuelBtn = document.getElementById('modeFuelBtn');
-    const modeWaterBtn = document.getElementById('modeWaterBtn');
-    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn].forEach(b => b && b.classList.remove('active'));
-    if (modeAdminBtn) modeAdminBtn.classList.add('active');
-    
-    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
-    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
-    const welcomeHeadingP = document.querySelector('.welcome-heading p');
-    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Admin Control Room v1.0';
-    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ส่วนการจัดการและดูแลสิทธิ์ผู้ใช้งานระบบคลาวด์';
-    if (welcomeHeadingP) welcomeHeadingP.textContent = 'กำหนดสิทธิ์ แก้ไขข้อมูลพนักงาน และควบคุมการเข้าถึงระบบจากฐานข้อมูลกลาง';
-    
-    const { initAdminPanel } = await import('./adminPanel.js');
-    initAdminPanel();
+      const modeAdminBtn = document.getElementById('modeAdminBtn');
+      const modeFuelBtn = document.getElementById('modeFuelBtn');
+      const modeWaterBtn = document.getElementById('modeWaterBtn');
+      const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn].forEach(b => b && b.classList.remove('active'));
+      if (modeAdminBtn) modeAdminBtn.classList.add('active');
+      
+      const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+      const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+      const welcomeHeadingP = document.querySelector('.welcome-heading p');
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Admin Control Room v1.0';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ส่วนการจัดการและดูแลสิทธิ์ผู้ใช้งานระบบคลาวด์';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'กำหนดสิทธิ์ แก้ไขข้อมูลพนักงาน และควบคุมการเข้าถึงระบบจากฐานข้อมูลกลาง';
+      
+      const { initAdminPanel } = await import('./adminPanel.js');
+      initAdminPanel();
+    } catch (err) {
+      console.error("Failed to load admin module:", err);
+      showModuleLoadError('activeDashboardView', 'ดูแลระบบ (Admin Panel)', () => switchAppMode('admin'));
+      if (window._hideLoadingBar) window._hideLoadingBar();
+      return;
+    }
   } else if (mode === 'personnel') {
-    const { getPersonnelTemplate, initPersonnelManager } = await import('./personnelManager.js');
-    renderDashboardView(getPersonnelTemplate());
+    try {
+      const { getPersonnelTemplate, initPersonnelManager } = await import('./personnelManager.js');
+      renderDashboardView(getPersonnelTemplate());
 
-    const modeAdminBtn = document.getElementById('modeAdminBtn');
-    const modeFuelBtn = document.getElementById('modeFuelBtn');
-    const modeWaterBtn = document.getElementById('modeWaterBtn');
-    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    [modeFuelBtn, modeWaterBtn, modeAdminBtn, modeHistoryBtn, modePersonnelBtn].forEach(b => b && b.classList.remove('active'));
-    if (modePersonnelBtn) modePersonnelBtn.classList.add('active');
-    
-    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
-    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
-    const welcomeHeadingP = document.querySelector('.welcome-heading p');
-    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Personnel Registry v1.0';
-    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบจัดการข้อมูลบุคลากรประจำที่ทำการ / ปณ.';
-    if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
-    
-    initPersonnelManager();
-    if (window._hideLoadingBar) window._hideLoadingBar();
+      const modeAdminBtn = document.getElementById('modeAdminBtn');
+      const modeFuelBtn = document.getElementById('modeFuelBtn');
+      const modeWaterBtn = document.getElementById('modeWaterBtn');
+      const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+      [modeFuelBtn, modeWaterBtn, modeAdminBtn, modeHistoryBtn, modePersonnelBtn].forEach(b => b && b.classList.remove('active'));
+      if (modePersonnelBtn) modePersonnelBtn.classList.add('active');
+      
+      const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+      const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+      const welcomeHeadingP = document.querySelector('.welcome-heading p');
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Personnel Registry v1.0';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบจัดการข้อมูลบุคลากรประจำที่ทำการ / ปณ.';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกรายชื่อ ตำแหน่ง เงินเดือน และข้อมูลหลักสำหรับใช้ในการคำนวณเบิกค่าน้ำมันและค่าน้ำดื่ม';
+      
+      initPersonnelManager();
+      if (window._hideLoadingBar) window._hideLoadingBar();
+    } catch (err) {
+      console.error("Failed to load personnel module:", err);
+      showModuleLoadError('activeDashboardView', 'จัดการบุคลากร (Personnel Registry)', () => switchAppMode('personnel'));
+      if (window._hideLoadingBar) window._hideLoadingBar();
+      return;
+    }
   } else if (mode === 'history') {
-    const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
-    renderDashboardView(getHistoryTemplate());
-    if (window._hideLoadingBar) window._hideLoadingBar();
+    try {
+      const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
+      renderDashboardView(getHistoryTemplate());
+      if (window._hideLoadingBar) window._hideLoadingBar();
 
-    const modeAdminBtn = document.getElementById('modeAdminBtn');
-    const modeFuelBtn = document.getElementById('modeFuelBtn');
-    const modeWaterBtn = document.getElementById('modeWaterBtn');
-    const modePersonnelBtn = document.getElementById('modePersonnelBtn');
-    const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-    [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeAdminBtn, modeHistoryBtn].forEach(b => b && b.classList.remove('active'));
-    if (modeHistoryBtn) modeHistoryBtn.classList.add('active');
+      const modeAdminBtn = document.getElementById('modeAdminBtn');
+      const modeFuelBtn = document.getElementById('modeFuelBtn');
+      const modeWaterBtn = document.getElementById('modeWaterBtn');
+      const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeAdminBtn, modeHistoryBtn].forEach(b => b && b.classList.remove('active'));
+      if (modeHistoryBtn) modeHistoryBtn.classList.add('active');
 
-    const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
-    const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
-    const welcomeHeadingP = document.querySelector('.welcome-heading p');
+      const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+      const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+      const welcomeHeadingP = document.querySelector('.welcome-heading p');
 
-    if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Financial Archive v1.0';
-    if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ศูนย์รวมข้อมูลประวัติการเบิกจ่ายค่าน้ำมันและค่าน้ำดื่ม';
-    if (welcomeHeadingP) welcomeHeadingP.textContent = 'วิเคราะห์สรุปยอดการเบิกจ่ายรายปี สถิติความสิ้นเปลืองของยานพาหนะ และเรียกดูรายงานย้อนหลังในประวัติคลาวด์';
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Financial Archive v1.0';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ศูนย์รวมข้อมูลประวัติการเบิกจ่ายค่าน้ำมันและค่าน้ำดื่ม';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'วิเคราะห์สรุปยอดการเบิกจ่ายรายปี สถิติความสิ้นเปลืองของยานพาหนะ และเรียกดูรายงานย้อนหลังในประวัติคลาวด์';
 
-    initHistoryView();
-    if (window._hideLoadingBar) window._hideLoadingBar();
+      initHistoryView();
+      if (window._hideLoadingBar) window._hideLoadingBar();
+    } catch (err) {
+      console.error("Failed to load history module:", err);
+      showModuleLoadError('activeDashboardView', 'ประวัติและสรุป (Financial Archive)', () => switchAppMode('history'));
+      if (window._hideLoadingBar) window._hideLoadingBar();
+      return;
+    }
   } else {
     if (!document.getElementById('globalConfigsCard')) {
-      const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
-      renderDashboardView(getCalculatorsTemplate());
-      setupCalculatorDOMReferencesAndEvents();
-      if (window._hideLoadingBar) window._hideLoadingBar();
+      try {
+        const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
+        renderDashboardView(getCalculatorsTemplate());
+        setupCalculatorDOMReferencesAndEvents();
+        if (window._hideLoadingBar) window._hideLoadingBar();
+      } catch (err) {
+        console.error("Failed to load calculators:", err);
+        showModuleLoadError('activeDashboardView', 'ระบบคำนวณ (Calculators)', () => switchAppMode(mode));
+        if (window._hideLoadingBar) window._hideLoadingBar();
+        return;
+      }
     }
 
     const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
