@@ -1576,6 +1576,7 @@ async function switchAppMode(mode) {
         const { getCalculatorsTemplate } = await import('./fuelCalculator.js');
         renderDashboardView(getCalculatorsTemplate());
         setupCalculatorDOMReferencesAndEvents();
+        wireEditModal();
         if (window._hideLoadingBar) window._hideLoadingBar();
       } catch (err) {
         console.error("Failed to load calculators:", err);
