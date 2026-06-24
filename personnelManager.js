@@ -423,38 +423,110 @@ function deletePersonnel(index) {
   });
 }
 
+function parseThaiDate(dateStr) {
+  if (!dateStr) return null;
+  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    return {
+      day: parseInt(slashMatch[1]),
+      month: parseInt(slashMatch[2]),
+      year: parseInt(slashMatch[3])
+    };
+  }
+
+  const cleanStr = dateStr.trim().replace(/\s+/g, ' ');
+  const parts = cleanStr.split(' ');
+  if (parts.length >= 3) {
+    const day = parseInt(parts[0]);
+    let monthName = parts[1].replace(/\./g, '');
+    const year = parseInt(parts[2]);
+
+    const thaiMonths = {
+      'มค': 1, 'มกราคม': 1,
+      'กพ': 2, 'กุมภาพันธ์': 2,
+      'มีค': 3, 'มีนาคม': 3,
+      'เมย': 4, 'เมษายน': 4,
+      'พค': 5, 'พฤษภาคม': 5,
+      'มิย': 6, 'มิถุนายน': 6,
+      'กค': 7, 'กรกฎาคม': 7,
+      'สค': 8, 'สิงหาคม': 8,
+      'กย': 9, 'กันยายน': 9,
+      'ตค': 10, 'ตุลาคม': 10,
+      'พย': 11, 'พฤศจิกายน': 11,
+      'ธค': 12, 'ธันวาคม': 12
+    };
+
+    const month = thaiMonths[monthName];
+    if (day && month && year) {
+      return { day, month, year };
+    }
+  }
+  return null;
+}
+
 function toggleResignPersonnel(index, shouldResign) {
   const personnel = getPersonnel();
   const person = personnel[index];
   if (!person) return;
 
   const actionText = shouldResign ? 'บันทึกสถานะลาออก' : 'กลับเข้าทำงาน';
-  const confirmMsg = shouldResign 
-    ? `คุณต้องการบันทึกสถานะ "ลาออก" ของ "${person.name}" ใช่หรือไม่?\n(รายชื่อนี้จะไม่ถูกดึงไปคำนวณค่าน้ำมัน/น้ำดื่มประจำเดือน แต่ประวัติจะยังคงอยู่ในระบบ)`
-    : `คุณต้องการให้ "${person.name}" กลับเข้าทำงานปกติใช่หรือไม่?`;
 
-  window.showConfirm({
-    title: shouldResign ? '🚪 บันทึกการลาออก' : '🏃 ให้กลับเข้าทำงาน',
-    message: confirmMsg,
-    icon: shouldResign ? '🚪' : '🏃',
-    okText: 'ยืนยัน',
-    okClass: shouldResign ? 'btn-danger' : 'btn-primary',
-    onConfirm: async () => {
-      if (shouldResign) {
-        personnel[index].status = 'resigned';
+  if (shouldResign) {
+    let resignDate = '';
+    let parsedDate = null;
+    while (true) {
+      resignDate = prompt(`กรุณาระบุวันที่ลาออกของ "${person.name}" (ตัวอย่าง: 15/6/2569 หรือ 15 มิ.ย. 2569):`);
+      if (resignDate === null) return; // Cancelled
+      resignDate = resignDate.trim();
+      if (!resignDate) {
+        alert("กรุณากรอกวันที่ลาออก");
+        continue;
+      }
+      parsedDate = parseThaiDate(resignDate);
+      if (parsedDate) {
+        break;
       } else {
-        delete personnel[index].status;
+        alert("รูปแบบวันที่ไม่ถูกต้อง! กรุณากรอกตัวอย่างเช่น:\n- 15/6/2569\n- 15 มิ.ย. 2569");
       }
-      setPersonnel(personnel);
-      renderPersonnelTable();
-      if (window.updateEmployeeSelectDropdown) {
-        window.updateEmployeeSelectDropdown();
-      }
-      savePersonnelList(personnel);
-      logActivity(shouldResign ? 'personnel_resign' : 'personnel_activate', `${actionText}: ${person.name}`);
-      window.showToast(`${actionText} ของ "${person.name}" สำเร็จ!`, 'success');
     }
-  });
+
+    personnel[index].status = 'resigned';
+    personnel[index].resignDate = resignDate;
+    personnel[index].resignMonth = parsedDate.month;
+    personnel[index].resignYear = parsedDate.year;
+
+    setPersonnel(personnel);
+    renderPersonnelTable();
+    if (window.updateEmployeeSelectDropdown) {
+      window.updateEmployeeSelectDropdown();
+    }
+    savePersonnelList(personnel);
+    logActivity('personnel_resign', `บันทึกสถานะลาออก: ${person.name} (มีผลวันที่ ${resignDate})`);
+    window.showToast(`บันทึกสถานะลาออกของ "${person.name}" สำเร็จ!`, 'success');
+  } else {
+    window.showConfirm({
+      title: '🏃 ให้กลับเข้าทำงาน',
+      message: `คุณต้องการให้ "${person.name}" กลับเข้าทำงานปกติใช่หรือไม่?`,
+      icon: '🏃',
+      okText: 'ยืนยัน',
+      okClass: 'btn-primary',
+      onConfirm: async () => {
+        delete personnel[index].status;
+        delete personnel[index].resignDate;
+        delete personnel[index].resignMonth;
+        delete personnel[index].resignYear;
+
+        setPersonnel(personnel);
+        renderPersonnelTable();
+        if (window.updateEmployeeSelectDropdown) {
+          window.updateEmployeeSelectDropdown();
+        }
+        savePersonnelList(personnel);
+        logActivity('personnel_activate', `กลับเข้าทำงาน: ${person.name}`);
+        window.showToast(`พนักงาน "${person.name}" กลับเข้าทำงานสำเร็จ!`, 'success');
+      }
+    });
+  }
 }
 
 function cancelPersonnelEdit() {

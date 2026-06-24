@@ -3012,19 +3012,39 @@ async function processCopy(prevList, isOverwrite) {
 async function handleLoadFromRegistry() {
   showToast('กำลังโหลดข้อมูลทะเบียนบุคลากร...', 'info');
   try {
-    const registry = await fetchPersonnelList();
-    if (!registry || registry.length === 0) {
+    const rawRegistry = await fetchPersonnelList();
+    if (!rawRegistry || rawRegistry.length === 0) {
       showToast('ไม่พบข้อมูลรายชื่อในทะเบียนประวัติบุคลากร', 'warning');
       return;
     }
 
-    // Load attendance to sync workDays
     const currMoSelect = document.getElementById('globalMonth');
     const currYrInput = document.getElementById('globalYear');
-    let attList = [];
+    let month = 0;
+    let year = 0;
     if (currMoSelect && currYrInput) {
-      const month = parseInt(currMoSelect.value);
-      const year = parseInt(currYrInput.value);
+      month = parseInt(currMoSelect.value);
+      year = parseInt(currYrInput.value);
+    }
+
+    // Filter out personnel who resigned BEFORE the active month/year
+    const registry = rawRegistry.filter(person => {
+      if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
+        if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (registry.length === 0) {
+      showToast('ไม่พบข้อมูลรายชื่อบุคลากรที่ยังทำงานอยู่ในทะเบียนสำหรับเดือนนี้', 'warning');
+      return;
+    }
+
+    // Load attendance to sync workDays
+    let attList = [];
+    if (month && year) {
       attList = await fetchAttendanceList(year, month);
     }
 
@@ -3032,8 +3052,12 @@ async function handleLoadFromRegistry() {
     const mappedList = registry.map(person => {
       const attRec = attList.find(a => a.name === person.name);
       const workDays = attRec ? attRec.checkedDays.length : 0;
-      const isResigned = person.status === 'resigned';
-      const statusRemark = isResigned ? `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}` : '';
+      
+      const isResignedInActiveMonth = person.status === 'resigned' && 
+        person.resignYear && person.resignMonth && 
+        (year === person.resignYear && month === person.resignMonth);
+      
+      const statusRemark = isResignedInActiveMonth ? `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}` : '';
 
       if (activeMode === 'fuel') {
         const isSupervisor = person.position === 'หัวหน้าโซน' || person.position === 'หัวหน้าโซนนำจ่าย' || person.duty === 'หัวหน้าโซนนำจ่าย';
@@ -3053,7 +3077,7 @@ async function handleLoadFromRegistry() {
         } else {
           item.formMode = 'standard';
           item.route = person.route || '';
-          item.method = isResigned ? 'daily' : 'monthly';
+          item.method = isResignedInActiveMonth ? 'daily' : 'monthly';
           item.daysNotWorked = 0;
           item.isSubstitute = false;
         }
