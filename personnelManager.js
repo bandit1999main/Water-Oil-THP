@@ -1424,30 +1424,94 @@ async function handleConfirmPersonnelImport() {
   dupModal.classList.add('active');
 }
 
-export function exportPersonnelCsv() {
+export async function exportPersonnelCsv() {
   const personnel = getPersonnel();
   if (personnel.length === 0) {
     window.showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
     return;
   }
-  let csvContent = "\uFEFF";
-  csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง,แผนก/กลุ่มงาน,หน้าที่,เงินเดือน (บาท),ด้านจ่ายหลัก,ประเภทพาหนะ,วันหยุดประจำสัปดาห์,ลงนามเริ่มต้น\n";
-  
+  if (!window.ExcelJS) {
+    window.showToast('เกิดข้อผิดพลาดในการโหลดโมดูล ExcelJS', 'error');
+    return;
+  }
+  const workbook = new window.ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('ทะเบียนบุคลากร');
+
+  worksheet.columns = [
+    { header: 'ลำดับ', key: 'id', width: 8 },
+    { header: 'ชื่อ-นามสกุล', key: 'name', width: 25 },
+    { header: 'ตำแหน่ง', key: 'position', width: 18 },
+    { header: 'แผนก/กลุ่มงาน', key: 'department', width: 18 },
+    { header: 'หน้าที่', key: 'duty', width: 45 },
+    { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
+    { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
+    { header: 'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)', key: 'vehicle', width: 35 },
+    { header: 'วันหยุดประจำสัปดาห์', key: 'restDaysText', width: 20 },
+    { header: 'ลงนามเริ่มต้น (ชื่อเรียก)', key: 'signature', width: 25 }
+  ];
+
   personnel.forEach((item, index) => {
-    const restDaysStr = item.restDays && item.restDays.length > 0 
+    const restDaysText = item.restDays && item.restDays.length > 0 
       ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join('-')
       : 'ไม่มี';
-    csvContent += `${index + 1},"${item.name}","${item.position}","${item.department || 'ทั่วไป'}","${item.duty || '-'}",${item.salary || 0},"${item.route || '-'}","${item.vehicle || '-'}","${restDaysStr}","${item.signature || item.name}"\n`;
+    
+    worksheet.addRow({
+      id: index + 1,
+      name: item.name,
+      position: item.position || '',
+      department: item.department || 'ทั่วไป',
+      duty: item.duty || '-',
+      salary: item.salary || 0,
+      route: item.route || '',
+      vehicle: item.vehicle || '-',
+      restDaysText: restDaysText,
+      signature: item.signature || item.name
+    });
   });
-  
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+  const maxRows = Math.max(500, personnel.length + 100);
+  for (let i = 2; i <= maxRows; i++) {
+    worksheet.getCell(`C${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"']
+    };
+
+    worksheet.getCell(`D${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"นำจ่าย,ไขตู้/ขนส่ง,รับฝาก,บริหาร/ธุรการ"']
+    };
+
+    worksheet.getCell(`E${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"']
+    };
+
+    worksheet.getCell(`H${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
+    };
+
+    worksheet.getCell(`I${i}`).dataValidation = {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"เสาร์-อาทิตย์,วันอาทิตย์,วันเสาร์,จันทร์,อังคาร,พุธ,พฤหัสบดี,ศุกร์,ไม่มี"']
+    };
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `ทะเบียนบุคลากร_ไปรษณีย์ไทย.csv`);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'ทะเบียนบุคลากร_ไปรษณีย์ไทย.xlsx';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  window.showToast('ส่งออกข้อมูลบุคลากรสำเร็จ!', 'success');
 }
 
 export function printPersonnelReport() {
@@ -1761,7 +1825,7 @@ export function getPersonnelTemplate() {
                       📥 นำเข้าบุคลากรจาก Excel / CSV
                     </button>
                     <button type="button" id="exportPersonnelCsvBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">
-                      📤 ส่งออกข้อมูล CSV
+                      📤 ส่งออกข้อมูล Excel
                     </button>
                     <button type="button" id="printPersonnelReportBtn" class="btn btn-secondary btn-small">
                       🖨️ พิมพ์ทำเนียบ
