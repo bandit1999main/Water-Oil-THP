@@ -292,11 +292,14 @@ export function renderPersonnelTable() {
   }
 
   filtered.forEach(({ person, originalIdx }, index) => {
+    const isResigned = person.status === 'resigned';
     const tr = document.createElement('tr');
+    tr.style.opacity = isResigned ? '0.6' : '1';
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td style="font-weight: 700;">
         ${person.name}
+        ${isResigned ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.4rem; font-weight: bold;">ลาออก</span>` : ''}
         ${person.restDays && person.restDays.length > 0 ? `<div style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
       </td>
       <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
@@ -308,6 +311,10 @@ export function renderPersonnelTable() {
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ddd; font-weight: 300;">${person.signature || person.name}</span></td>
       <td class="actions-col">
         <button class="row-action-btn edit-person-btn" data-index="${originalIdx}" title="แก้ไข">✏️</button>
+        ${isResigned ?
+          `<button class="row-action-btn activate-person-btn" data-index="${originalIdx}" title="ให้กลับเข้าทำงาน" style="color: var(--post-emerald);">🏃</button>` :
+          `<button class="row-action-btn resign-person-btn" data-index="${originalIdx}" title="แจ้งลาออก" style="color: #f59e0b;">🚪</button>`
+        }
         <button class="row-action-btn delete-person-btn" data-index="${originalIdx}" title="ลบ" style="color: var(--post-red);">🗑️</button>
       </td>
     `;
@@ -319,6 +326,20 @@ export function renderPersonnelTable() {
     btn.addEventListener('click', (e) => {
       const idx = parseInt(e.target.getAttribute('data-index'));
       editPersonnel(idx);
+    });
+  });
+
+  personnelTableBody.querySelectorAll('.resign-person-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      toggleResignPersonnel(idx, true);
+    });
+  });
+
+  personnelTableBody.querySelectorAll('.activate-person-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      toggleResignPersonnel(idx, false);
     });
   });
 
@@ -398,6 +419,40 @@ function deletePersonnel(index) {
       savePersonnelList(personnel);
       logActivity('personnel_delete', `ลบบุคลากรออกจากระบบ: ${person.name}`);
       window.showToast('ลบข้อมูลบุคลากรสำเร็จ!', 'success');
+    }
+  });
+}
+
+function toggleResignPersonnel(index, shouldResign) {
+  const personnel = getPersonnel();
+  const person = personnel[index];
+  if (!person) return;
+
+  const actionText = shouldResign ? 'บันทึกสถานะลาออก' : 'กลับเข้าทำงาน';
+  const confirmMsg = shouldResign 
+    ? `คุณต้องการบันทึกสถานะ "ลาออก" ของ "${person.name}" ใช่หรือไม่?\n(รายชื่อนี้จะไม่ถูกดึงไปคำนวณค่าน้ำมัน/น้ำดื่มประจำเดือน แต่ประวัติจะยังคงอยู่ในระบบ)`
+    : `คุณต้องการให้ "${person.name}" กลับเข้าทำงานปกติใช่หรือไม่?`;
+
+  window.showConfirm({
+    title: shouldResign ? '🚪 บันทึกการลาออก' : '🏃 ให้กลับเข้าทำงาน',
+    message: confirmMsg,
+    icon: shouldResign ? '🚪' : '🏃',
+    okText: 'ยืนยัน',
+    okClass: shouldResign ? 'btn-danger' : 'btn-primary',
+    onConfirm: async () => {
+      if (shouldResign) {
+        personnel[index].status = 'resigned';
+      } else {
+        delete personnel[index].status;
+      }
+      setPersonnel(personnel);
+      renderPersonnelTable();
+      if (window.updateEmployeeSelectDropdown) {
+        window.updateEmployeeSelectDropdown();
+      }
+      savePersonnelList(personnel);
+      logActivity(shouldResign ? 'personnel_resign' : 'personnel_activate', `${actionText}: ${person.name}`);
+      window.showToast(`${actionText} ของ "${person.name}" สำเร็จ!`, 'success');
     }
   });
 }

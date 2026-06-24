@@ -3012,9 +3012,14 @@ async function processCopy(prevList, isOverwrite) {
 async function handleLoadFromRegistry() {
   showToast('กำลังโหลดข้อมูลทะเบียนบุคลากร...', 'info');
   try {
-    const registry = await fetchPersonnelList();
-    if (!registry || registry.length === 0) {
+    const rawRegistry = await fetchPersonnelList();
+    if (!rawRegistry || rawRegistry.length === 0) {
       showToast('ไม่พบข้อมูลรายชื่อในทะเบียนประวัติบุคลากร', 'warning');
+      return;
+    }
+    const registry = rawRegistry.filter(person => person.status !== 'resigned');
+    if (registry.length === 0) {
+      showToast('ไม่พบข้อมูลรายชื่อบุคลากรที่ยังทำงานอยู่ในทะเบียน', 'warning');
       return;
     }
 
