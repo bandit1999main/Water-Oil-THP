@@ -807,6 +807,7 @@ function setupCalculatorDOMReferencesAndEvents() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
   window.saveGlobalSetting = saveGlobalSetting;
+  window.openEditModal = openEditModal;
   
   // Set default activeMonth and activeYear globally
   const currentDate = new Date();
