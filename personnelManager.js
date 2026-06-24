@@ -2403,7 +2403,14 @@ function renderAttendanceTableRows() {
   const sortedPersonnel = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
   
   const searchQuery = (document.getElementById('attSearchInput')?.value || '').toLowerCase().trim();
-  const filtered = sortedPersonnel.filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery));
+  const filtered = sortedPersonnel.filter(p => {
+    if (p.status === 'resigned' && p.resignYear && p.resignMonth) {
+      if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+        return false;
+      }
+    }
+    return !searchQuery || p.name.toLowerCase().includes(searchQuery);
+  });
   
   tableBody.innerHTML = '';
   
