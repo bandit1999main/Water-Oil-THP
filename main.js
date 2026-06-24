@@ -3012,14 +3012,9 @@ async function processCopy(prevList, isOverwrite) {
 async function handleLoadFromRegistry() {
   showToast('กำลังโหลดข้อมูลทะเบียนบุคลากร...', 'info');
   try {
-    const rawRegistry = await fetchPersonnelList();
-    if (!rawRegistry || rawRegistry.length === 0) {
+    const registry = await fetchPersonnelList();
+    if (!registry || registry.length === 0) {
       showToast('ไม่พบข้อมูลรายชื่อในทะเบียนประวัติบุคลากร', 'warning');
-      return;
-    }
-    const registry = rawRegistry.filter(person => person.status !== 'resigned');
-    if (registry.length === 0) {
-      showToast('ไม่พบข้อมูลรายชื่อบุคลากรที่ยังทำงานอยู่ในทะเบียน', 'warning');
       return;
     }
 
@@ -3037,6 +3032,8 @@ async function handleLoadFromRegistry() {
     const mappedList = registry.map(person => {
       const attRec = attList.find(a => a.name === person.name);
       const workDays = attRec ? attRec.checkedDays.length : 0;
+      const isResigned = person.status === 'resigned';
+      const statusRemark = isResigned ? `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}` : '';
 
       if (activeMode === 'fuel') {
         const isSupervisor = person.position === 'หัวหน้าโซน' || person.position === 'หัวหน้าโซนนำจ่าย' || person.duty === 'หัวหน้าโซนนำจ่าย';
@@ -3047,7 +3044,7 @@ async function handleLoadFromRegistry() {
           vehicle: person.vehicle || 'จักรยานยนต์',
           signature: person.signature || person.name,
           workDays: workDays,
-          remarks: '',
+          remarks: statusRemark,
         };
 
         if (isSupervisor) {
@@ -3056,7 +3053,7 @@ async function handleLoadFromRegistry() {
         } else {
           item.formMode = 'standard';
           item.route = person.route || '';
-          item.method = 'เหมาจ่าย';
+          item.method = isResigned ? 'daily' : 'monthly';
           item.daysNotWorked = 0;
           item.isSubstitute = false;
         }
@@ -3069,7 +3066,7 @@ async function handleLoadFromRegistry() {
           duty: person.duty || 'นำจ่าย',
           salary: person.salary || 0,
           workDays: workDays,
-          remarks: '',
+          remarks: statusRemark,
           signature: person.signature || person.name
         };
       }
