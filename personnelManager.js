@@ -967,6 +967,12 @@ function wireRegistryEditModal() {
     const signature = modal.querySelector('#modalPersonSignature').value.trim() || name;
     const restDays = Array.from(modal.querySelectorAll('input[name="modalPersonRestDays"]:checked')).map(cb => parseInt(cb.value));
 
+    const personnel = getPersonnel();
+    const oldPerson = personnel[idx];
+    const prevRestDays = oldPerson ? (oldPerson.restDays || []) : [];
+    
+    const isRestDaysChanged = JSON.stringify(prevRestDays.slice().sort()) !== JSON.stringify(restDays.slice().sort());
+
     const item = {
       name,
       position,
@@ -979,12 +985,24 @@ function wireRegistryEditModal() {
       restDays
     };
 
+    if (isRestDaysChanged && oldPerson) {
+      const today = new Date();
+      item.prevRestDays = prevRestDays;
+      item.restDaysChangeDate = {
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate()
+      };
+    } else if (oldPerson) {
+      if (oldPerson.prevRestDays) item.prevRestDays = oldPerson.prevRestDays;
+      if (oldPerson.restDaysChangeDate) item.restDaysChangeDate = oldPerson.restDaysChangeDate;
+    }
+
     window.showConfirm({
       title: 'ยืนยันการแก้ไขข้อมูลบุคลากร',
       message: `คุณต้องการบันทึกการแก้ไขข้อมูลของ "${name}" ใช่หรือไม่?`,
       onConfirm: async () => {
-        const personnel = getPersonnel();
-        const existingId = personnel[idx]?.id;
+        const existingId = oldPerson?.id;
         if (existingId) item.id = existingId;
         personnel[idx] = item;
         
@@ -1103,6 +1121,24 @@ function parseRestDaysText(text) {
   });
 
   return result.sort((a, b) => a - b);
+}
+
+function checkIsRestDayForDate(person, year, month, day) {
+  if (!person) return false;
+  const targetDate = new Date(year, month - 1, day);
+  const dayOfWeek = targetDate.getDay();
+  
+  const restDays = person.restDays || [];
+  
+  if (person.restDaysChangeDate && person.prevRestDays) {
+    const change = person.restDaysChangeDate;
+    const changeDate = new Date(change.year, change.month - 1, change.day);
+    if (targetDate < changeDate) {
+      return (person.prevRestDays || []).includes(dayOfWeek);
+    }
+  }
+  
+  return restDays.includes(dayOfWeek);
 }
 
 function normalizeVehicleType(text) {
@@ -2661,13 +2697,11 @@ function renderAttendanceTableRows() {
       </td>
     `;
     
-    const restDays = person.restDays || [];
-    
     for (let d = 1; d <= daysCount; d++) {
       const dateObj = new Date(ceYear, month - 1, d);
       const dayOfWeek = dateObj.getDay();
       
-      const isRestDay = restDays.includes(dayOfWeek);
+      const isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
       const dayStatus = attRec.dayStatuses ? (attRec.dayStatuses[d] || '') : (checkedDaysSet.has(d) ? '/' : '');
       const finalStatus = dayStatus === '' && checkedDaysSet.has(d) ? '/' : dayStatus;
       
@@ -2681,8 +2715,10 @@ function renderAttendanceTableRows() {
         else if (finalStatus === 'ย') statusBgClass = 'status-bg-holiday';
       }
       
+      const isHighlightRed = isRestDay || finalStatus === 'ย';
+      
       rowHtml += `
-        <td class="att-checkbox-cell ${isRestDay ? 'att-rest-day-cell' : ''} ${statusBgClass}">
+        <td class="att-checkbox-cell ${isHighlightRed ? 'att-rest-day-cell' : ''} ${statusBgClass}">
           <select class="att-select" data-name="${person.name}" data-day="${d}">
             <option value=""></option>
             <option value="/" ${finalStatus === '/' ? 'selected' : ''}>/</option>
@@ -2754,7 +2790,9 @@ function renderAttendanceTableRows() {
       const parentCell = e.target.closest('td');
       parentCell.className = 'att-checkbox-cell'; // reset
       const person = getPersonnel().find(p => p.name === name);
-      if (person && person.restDays && person.restDays.includes(new Date(ceYear, month - 1, day).getDay())) {
+      
+      const isRestDay = checkIsRestDayForDate(person, ceYear, month, day);
+      if (isRestDay || status === 'ย') {
         parentCell.classList.add('att-rest-day-cell');
       }
       if (status) {
@@ -2831,11 +2869,11 @@ async function toggleAllAttendanceDays(checkAll) {
         let checkedDays = [];
         let dayStatuses = {};
         if (checkAll) {
-          const restDays = person.restDays || [];
           for (let d = 1; d <= daysCount; d++) {
             const dateObj = new Date(ceYear, month - 1, d);
             const dayOfWeek = dateObj.getDay();
-            if (!restDays.includes(dayOfWeek)) {
+            const isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
+            if (!isRestDay) {
               checkedDays.push(d);
               dayStatuses[d] = '/';
             }
@@ -2994,17 +3032,19 @@ async function exportAttendanceToExcel() {
             const personIdx = R - 3;
             if (personIdx < sorted.length) {
               const person = sorted[personIdx];
-              if (person && person.restDays && person.restDays.includes(dayOfWeek)) {
-                isRestDay = true;
-              }
+              isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
             } else {
               if (dayOfWeek === 0 || dayOfWeek === 6) {
                 isRestDay = true;
               }
             }
-            if (isRestDay) {
-              if (dayOfWeek === 0) {
+            const isHighlightRed = isRestDay || cell.v === 'ย';
+            if (isHighlightRed) {
+              if (cell.v === 'ย' || dayOfWeek === 0) {
                 cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
+                if (cell.v === 'ย') {
+                  cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'E11D48' } };
+                }
               } else if (dayOfWeek === 6) {
                 cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
               } else {
@@ -3072,13 +3112,11 @@ export function printAttendanceReport() {
   sorted.forEach((person, idx) => {
     const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [], dayStatuses: {} };
     const checkedDaysSet = new Set(attRec.checkedDays);
-    const restDays = person.restDays || [];
-    
     let daysCellsHtml = '';
     for (let d = 1; d <= daysCount; d++) {
       const dateObj = new Date(ceYear, month - 1, d);
       const dayOfWeek = dateObj.getDay();
-      const isRestDay = restDays.includes(dayOfWeek);
+      const isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
       
       const dayStatus = attRec.dayStatuses ? (attRec.dayStatuses[d] || '') : (checkedDaysSet.has(d) ? '/' : '');
       const finalStatus = dayStatus === '' && checkedDaysSet.has(d) ? '/' : dayStatus;
@@ -3217,7 +3255,7 @@ export function printAttendanceReport() {
         .status-personal { background-color: #fef3c7 !important; color: #b45309 !important; }
         .status-vacation { background-color: #e0f2fe !important; color: #0369a1 !important; }
         .status-absent { background-color: #fef2f2 !important; color: #dc2626 !important; }
-        .status-holiday { background-color: #f3f4f6 !important; color: #4b5563 !important; }
+        .status-holiday { background-color: #ffeaea !important; color: #b91c1c !important; }
         
         /* Rest days styling */
         .sunday-cell { background-color: #ffeaea !important; }

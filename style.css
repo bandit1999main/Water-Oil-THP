@@ -1623,15 +1623,15 @@ tr:hover td {
 }
 
 .status-bg-holiday select {
-  background: rgba(148, 163, 184, 0.15) !important;
-  color: #475569 !important;
-  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #e11d48 !important;
+  border-color: rgba(244, 63, 94, 0.35) !important;
 }
 .status-bg-holiday select:hover {
-  box-shadow: 0 4px 10px rgba(148, 163, 184, 0.25) !important;
+  box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3) !important;
 }
 [data-theme="dark"] .status-bg-holiday select {
-  color: #94a3b8 !important;
+  color: #fb7185 !important;
 }
 
 
