@@ -1427,17 +1427,21 @@ async function handleConfirmPersonnelImport() {
     return;
   }
 
-  const dupModal = document.getElementById('personnelImportDuplicateModal');
-  const countSpan = document.getElementById('importDuplicateCount');
-  const listContainer = document.getElementById('importDuplicateListContainer');
-  const cancelBtn = document.getElementById('cancelPersonnelImportDuplicateBtn');
-  const closeBtn = document.getElementById('closePersonnelImportDuplicateModalBtn');
-  const confirmBtn = document.getElementById('confirmPersonnelImportDuplicateBtn');
+  const dupModal = document.getElementById('importDuplicateResolutionModal');
+  const countSpan = document.getElementById('importDuplicateCountText');
+  const listContainer = document.getElementById('importDuplicateList');
+  const cancelBtn = document.getElementById('cancelImportDuplicateBtn');
+  const closeBtn = document.getElementById('closeImportDuplicateModalBtn');
+  const confirmBtn = document.getElementById('confirmImportDuplicateBtn');
   const setAllNewBtn = document.getElementById('setAllImportNewBtn');
   const setAllOldBtn = document.getElementById('setAllOldBtn');
 
-  countSpan.textContent = duplicates.length;
-  listContainer.innerHTML = '';
+  if (countSpan) {
+    countSpan.textContent = `พบรายชื่อซ้ำกับในระบบจำนวน ${duplicates.length} รายชื่อ โปรดเลือกทางเลือกสำหรับรายชื่อที่ซ้ำ`;
+  }
+  if (listContainer) {
+    listContainer.innerHTML = '';
+  }
 
   duplicates.forEach((dup, idx) => {
     const card = document.createElement('div');
@@ -1488,15 +1492,19 @@ async function handleConfirmPersonnelImport() {
       </div>
     `;
 
-    listContainer.appendChild(card);
+    if (listContainer) {
+      listContainer.appendChild(card);
+    }
   });
 
-  setAllNewBtn.onclick = () => {
-    duplicates.forEach((_, idx) => {
-      const radio = document.querySelector(`input[name="choice-dup-${idx}"][value="new"]`);
-      if (radio) radio.checked = true;
-    });
-  };
+  if (setAllNewBtn) {
+    setAllNewBtn.onclick = () => {
+      duplicates.forEach((_, idx) => {
+        const radio = document.querySelector(`input[name="choice-dup-${idx}"][value="new"]`);
+        if (radio) radio.checked = true;
+      });
+    };
+  }
 
   if (setAllOldBtn) {
     setAllOldBtn.onclick = () => {
@@ -1507,12 +1515,16 @@ async function handleConfirmPersonnelImport() {
     };
   }
 
-  const closeDupModal = () => dupModal.classList.remove('active');
-  cancelBtn.onclick = closeDupModal;
-  closeBtn.onclick = closeDupModal;
+  const closeDupModal = () => {
+    if (dupModal) dupModal.classList.remove('active');
+  };
+  if (cancelBtn) cancelBtn.onclick = closeDupModal;
+  if (closeBtn) closeBtn.onclick = closeDupModal;
 
-  confirmBtn.onclick = async () => {
-    let overwritesCount = 0;
+  if (confirmBtn) {
+    confirmBtn.onclick = async () => {
+      let overwritesCount = 0;
+
     let keepCount = 0;
 
     duplicates.forEach((dup, idx) => {
