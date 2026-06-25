@@ -1560,9 +1560,10 @@ async function handleConfirmPersonnelImport() {
     if (pastedText) pastedText.value = '';
 
     window.showToast(`นำเข้าสำเร็จ! (รายใหม่: ${nonDuplicates.length}, เขียนทับ: ${overwritesCount}, ใช้ของเดิม: ${keepCount})`, 'success');
-  };
+    };
+  }
 
-  dupModal.classList.add('active');
+  if (dupModal) dupModal.classList.add('active');
 }
 
 export async function exportPersonnelCsv() {
