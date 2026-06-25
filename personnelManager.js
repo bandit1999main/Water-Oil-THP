@@ -372,14 +372,17 @@ function editPersonnel(index) {
   const person = personnel[index];
   if (!person) return;
 
-  document.getElementById('modalRegistryEditIndex').value = index;
-  document.getElementById('modalPersonName').value = person.name;
-  document.getElementById('modalPersonPosition').value = person.position;
+  const modal = document.getElementById('editRegistryPersonnelModal');
+  if (!modal) return;
+
+  modal.querySelector('#modalRegistryEditIndex').value = index;
+  modal.querySelector('#modalPersonName').value = person.name;
+  modal.querySelector('#modalPersonPosition').value = person.position;
   
   // Set department fields
-  const deptSelect = document.getElementById('modalPersonDepartment');
-  const deptCustomGroup = document.getElementById('modalPersonDepartmentCustomGroup');
-  const deptCustomInput = document.getElementById('modalPersonDepartmentCustom');
+  const deptSelect = modal.querySelector('#modalPersonDepartment');
+  const deptCustomGroup = modal.querySelector('#modalPersonDepartmentCustomGroup');
+  const deptCustomInput = modal.querySelector('#modalPersonDepartmentCustom');
   const stdDepts = ['นำจ่าย', 'ไขตู้/ขนส่ง', 'รับฝาก', 'บริหาร/ธุรการ'];
   const personDept = person.department || 'นำจ่าย';
 
@@ -393,9 +396,9 @@ function editPersonnel(index) {
     deptCustomInput.value = personDept;
   }
 
-  const dutySelect = document.getElementById('modalPersonDuty');
-  const dutyCustomGroup = document.getElementById('modalPersonDutyCustomGroup');
-  const dutyCustomInput = document.getElementById('modalPersonDutyCustom');
+  const dutySelect = modal.querySelector('#modalPersonDuty');
+  const dutyCustomGroup = modal.querySelector('#modalPersonDutyCustomGroup');
+  const dutyCustomInput = modal.querySelector('#modalPersonDutyCustom');
   const stdDuties = [
     'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ',
     'เจ้าหน้าที่ไขตู้ไปรษณีย์',
@@ -415,21 +418,21 @@ function editPersonnel(index) {
     dutyCustomInput.value = personDuty;
   }
 
-  document.getElementById('modalPersonSalary').value = person.salary || 0;
+  modal.querySelector('#modalPersonSalary').value = person.salary || 0;
   
   // Set rest days checkboxes
   const personRestDays = person.restDays || [];
-  document.querySelectorAll('input[name="modalPersonRestDays"]').forEach(cb => {
+  modal.querySelectorAll('input[name="modalPersonRestDays"]').forEach(cb => {
     cb.checked = personRestDays.includes(parseInt(cb.value));
   });
 
   // Ensure modal route dropdown has all options populated before setting value
   populateRouteDropdowns();
-  document.getElementById('modalPersonRoute').value = person.route || '';
-  document.getElementById('modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
-  document.getElementById('modalPersonSignature').value = person.signature || '';
+  modal.querySelector('#modalPersonRoute').value = person.route || '';
+  modal.querySelector('#modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
+  modal.querySelector('#modalPersonSignature').value = person.signature || '';
 
-  document.getElementById('editRegistryPersonnelModal').classList.add('active');
+  modal.classList.add('active');
 }
 
 function deletePersonnel(index) {
@@ -944,9 +947,9 @@ function wireRegistryEditModal() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const idx = parseInt(document.getElementById('modalRegistryEditIndex').value);
-    const name = document.getElementById('modalPersonName').value.trim();
-    const position = document.getElementById('modalPersonPosition').value;
+    const idx = parseInt(modal.querySelector('#modalRegistryEditIndex').value);
+    const name = modal.querySelector('#modalPersonName').value.trim();
+    const position = modal.querySelector('#modalPersonPosition').value;
     
     let department = deptSelect.value;
     if (department === 'custom') {
@@ -958,11 +961,11 @@ function wireRegistryEditModal() {
       duty = dutyCustomInput.value.trim() || 'ทั่วไป';
     }
 
-    const salary = parseFloat(document.getElementById('modalPersonSalary').value) || 0;
-    const route = document.getElementById('modalPersonRoute').value;
-    const vehicle = document.getElementById('modalPersonVehicle').value;
-    const signature = document.getElementById('modalPersonSignature').value.trim() || name;
-    const restDays = Array.from(document.querySelectorAll('input[name="modalPersonRestDays"]:checked')).map(cb => parseInt(cb.value));
+    const salary = parseFloat(modal.querySelector('#modalPersonSalary').value) || 0;
+    const route = modal.querySelector('#modalPersonRoute').value;
+    const vehicle = modal.querySelector('#modalPersonVehicle').value;
+    const signature = modal.querySelector('#modalPersonSignature').value.trim() || name;
+    const restDays = Array.from(modal.querySelectorAll('input[name="modalPersonRestDays"]:checked')).map(cb => parseInt(cb.value));
 
     const item = {
       name,
