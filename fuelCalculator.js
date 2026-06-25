@@ -18,6 +18,7 @@ let tempMissions = [];
 let oilPricePeriods = [];
 
 export function calculateClaimLiters(item) {
+  if (item.vehicle === 'ไม่ได้ใช้งาน') return 0;
   const ROUTE_DATA = getRouteData();
   if (item.formMode === 'supervisor') {
     let otherLiters = 0;
@@ -83,6 +84,7 @@ export function calculateSingleMissionMaint(item, m) {
 
 export function calculateMaintenanceCost(item) {
   if (item.isSubstitute) return 0;
+  if (item.vehicle === 'ไม่ได้ใช้งาน') return 0;
   const isStaff = item.position === 'พนักงาน' || item.position === 'ลูกจ้างประจำ';
   const ROUTE_DATA = getRouteData();
 

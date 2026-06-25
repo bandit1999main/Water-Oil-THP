@@ -125,6 +125,19 @@ export function initPersonnelManager() {
     });
   }
 
+  // Bind custom duty group show/hide
+  const personDutySelect = document.getElementById('personDuty');
+  const personDutyCustomGroup = document.getElementById('personDutyCustomGroup');
+  if (personDutySelect && personDutyCustomGroup) {
+    personDutySelect.addEventListener('change', () => {
+      if (personDutySelect.value === 'custom') {
+        personDutyCustomGroup.classList.remove('hidden');
+      } else {
+        personDutyCustomGroup.classList.add('hidden');
+      }
+    });
+  }
+
   // Personnel Import Modal Bindings
   const btnImportPersonnel = document.getElementById('importPersonnelBtn');
   const modalPersonnelImport = document.getElementById('personnelImportModal');
@@ -380,7 +393,28 @@ function editPersonnel(index) {
     deptCustomInput.value = personDept;
   }
 
-  document.getElementById('modalPersonDuty').value = person.duty || '';
+  const dutySelect = document.getElementById('modalPersonDuty');
+  const dutyCustomGroup = document.getElementById('modalPersonDutyCustomGroup');
+  const dutyCustomInput = document.getElementById('modalPersonDutyCustom');
+  const stdDuties = [
+    'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ',
+    'เจ้าหน้าที่ไขตู้ไปรษณีย์',
+    'หัวหน้าโซนนำจ่าย',
+    'เจ้าหน้าที่รับฝากนอกที่ทำการ',
+    'ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย'
+  ];
+  const personDuty = person.duty || '';
+
+  if (stdDuties.includes(personDuty) || personDuty === '') {
+    dutySelect.value = personDuty;
+    dutyCustomGroup.classList.add('hidden');
+    dutyCustomInput.value = '';
+  } else {
+    dutySelect.value = 'custom';
+    dutyCustomGroup.classList.remove('hidden');
+    dutyCustomInput.value = personDuty;
+  }
+
   document.getElementById('modalPersonSalary').value = person.salary || 0;
   
   // Set rest days checkboxes
@@ -537,6 +571,20 @@ function cancelPersonnelEdit() {
   document.getElementById('personnelFormTitle').textContent = 'ลงทะเบียนข้อมูลบุคลากร';
   document.getElementById('savePersonnelBtn').innerHTML = '📥 บันทึกบุคลากร';
   
+  const personDepartmentCustomGroup = document.getElementById('personDepartmentCustomGroup');
+  if (personDepartmentCustomGroup) {
+    personDepartmentCustomGroup.classList.add('hidden');
+    const input = document.getElementById('personDepartmentCustom');
+    if (input) input.value = '';
+  }
+  
+  const personDutyCustomGroup = document.getElementById('personDutyCustomGroup');
+  if (personDutyCustomGroup) {
+    personDutyCustomGroup.classList.add('hidden');
+    const input = document.getElementById('personDutyCustom');
+    if (input) input.value = '';
+  }
+
   const resetPersonnelBtn = document.getElementById('resetPersonnelBtn');
   if (resetPersonnelBtn) resetPersonnelBtn.classList.add('hidden');
 }
@@ -560,7 +608,13 @@ async function handlePersonnelFormSubmit(e) {
 
   const name = personNameInput.value.trim();
   const position = personPositionSelect.value;
-  const duty = personDutySelect.value;
+  
+  let duty = personDutySelect.value;
+  const personDutyCustomInput = document.getElementById('personDutyCustom');
+  if (duty === 'custom' && personDutyCustomInput) {
+    duty = personDutyCustomInput.value.trim() || 'ทั่วไป';
+  }
+
   let department = personDepartmentSelect.value;
   if (department === 'custom') {
     department = personDepartmentCustomInput.value.trim() || 'ทั่วไป';
@@ -875,6 +929,19 @@ function wireRegistryEditModal() {
     }
   });
 
+  const dutySelect = document.getElementById('modalPersonDuty');
+  const dutyCustomGroup = document.getElementById('modalPersonDutyCustomGroup');
+  const dutyCustomInput = document.getElementById('modalPersonDutyCustom');
+  if (dutySelect && dutyCustomGroup) {
+    dutySelect.addEventListener('change', () => {
+      if (dutySelect.value === 'custom') {
+        dutyCustomGroup.classList.remove('hidden');
+      } else {
+        dutyCustomGroup.classList.add('hidden');
+      }
+    });
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const idx = parseInt(document.getElementById('modalRegistryEditIndex').value);
@@ -886,7 +953,11 @@ function wireRegistryEditModal() {
       department = deptCustomInput.value.trim() || 'ทั่วไป';
     }
 
-    const duty = document.getElementById('modalPersonDuty').value;
+    let duty = dutySelect.value;
+    if (duty === 'custom') {
+      duty = dutyCustomInput.value.trim() || 'ทั่วไป';
+    }
+
     const salary = parseFloat(document.getElementById('modalPersonSalary').value) || 0;
     const route = document.getElementById('modalPersonRoute').value;
     const vehicle = document.getElementById('modalPersonVehicle').value;
@@ -1725,8 +1796,14 @@ export function getPersonnelTemplate() {
                         <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
                         <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
                         <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                        <option value="custom">อื่นๆ (ระบุเอง)...</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div class="form-group hidden" id="personDutyCustomGroup" style="margin-bottom: 1.25rem;">
+                    <label for="personDutyCustom">ระบุหน้าที่เพิ่มเติม</label>
+                    <input type="text" id="personDutyCustom" class="form-input" placeholder="เช่น เจ้าหน้าที่ธุรการ" />
                   </div>
 
                   <div class="form-row-2">
@@ -1766,6 +1843,7 @@ export function getPersonnelTemplate() {
                         <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
                         <option value="เรือยนต์">เรือยนต์</option>
                         <option value="รถยนต์">รถยนต์</option>
+                        <option value="ไม่ได้ใช้งาน">ไม่ได้ใช้งาน</option>
                       </select>
                     </div>
                   </div>
@@ -2147,8 +2225,14 @@ export function getPersonnelTemplate() {
                 <option value="หัวหน้าโซนนำจ่าย">หัวหน้าโซนนำจ่าย</option>
                 <option value="เจ้าหน้าที่รับฝากนอกที่ทำการ">เจ้าหน้าที่รับฝากนอกที่ทำการ</option>
                 <option value="ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย">ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย</option>
+                <option value="custom">อื่นๆ (ระบุเอง)...</option>
               </select>
             </div>
+          </div>
+
+          <div class="form-group hidden" id="modalPersonDutyCustomGroup" style="margin-bottom: 1rem;">
+            <label for="modalPersonDutyCustom">ระบุหน้าที่เพิ่มเติม</label>
+            <input type="text" id="modalPersonDutyCustom" class="form-input" placeholder="เช่น เจ้าหน้าที่ธุรการ" />
           </div>
 
           <div class="form-row-2">
@@ -2188,6 +2272,7 @@ export function getPersonnelTemplate() {
                 <option value="รถจักรยานยนต์ไฟฟ้า">รถจักรยานยนต์ไฟฟ้า</option>
                 <option value="เรือยนต์">เรือยนต์</option>
                 <option value="รถยนต์">รถยนต์</option>
+                <option value="ไม่ได้ใช้งาน">ไม่ได้ใช้งาน</option>
               </select>
             </div>
           </div>

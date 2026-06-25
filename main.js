@@ -3027,8 +3027,11 @@ async function handleLoadFromRegistry() {
       year = parseInt(currYrInput.value);
     }
 
-    // Filter out personnel who resigned BEFORE the active month/year
+    // Filter out personnel who resigned BEFORE the active month/year or vehicle is 'ไม่ได้ใช้งาน'
     const registry = rawRegistry.filter(person => {
+      if (person.vehicle === 'ไม่ได้ใช้งาน') {
+        return false;
+      }
       if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
         if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
           return false;
