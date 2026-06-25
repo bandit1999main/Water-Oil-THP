@@ -1070,25 +1070,83 @@ function clearSelectedPersonnelImportFile() {
 
 function parseRestDaysText(text) {
   const cleanText = String(text || '').trim();
-  if (cleanText === 'เสาร์-อาทิตย์' || cleanText === 'เสาร์ - อาทิตย์' || cleanText === 'ส.-อา.' || cleanText === 'ส. - อา.') {
+  if (!cleanText || cleanText === 'ไม่มี' || cleanText === '-') return [];
+
+  // Try to match standard common groups first
+  if (/เสาร์[- ]+อาทิตย์|ส\.?[- ]+อา\.?|อา\.?[- ]+ส\.?/.test(cleanText)) {
     return [0, 6];
-  } else if (cleanText === 'วันอาทิตย์' || cleanText === 'อาทิตย์' || cleanText === 'อา.') {
-    return [0];
-  } else if (cleanText === 'วันเสาร์' || cleanText === 'เสาร์' || cleanText === 'ส.') {
-    return [6];
-  } else if (cleanText === 'วันจันทร์' || cleanText === 'จันทร์' || cleanText === 'จ.') {
-    return [1];
-  } else if (cleanText === 'วันอังคาร' || cleanText === 'อังคาร' || cleanText === 'อ.') {
-    return [2];
-  } else if (cleanText === 'วันพุธ' || cleanText === 'พุธ' || cleanText === 'พ.') {
-    return [3];
-  } else if (cleanText === 'วันพฤหัสบดี' || cleanText === 'พฤหัสบดี' || cleanText === 'พฤหัส' || cleanText === 'พฤ.') {
-    return [4];
-  } else if (cleanText === 'วันศุกร์' || cleanText === 'ศุกร์' || cleanText === 'ศ.') {
-    return [5];
   }
-  return [];
+
+  const dayMap = {
+    'อา': 0, 'อาทิตย์': 0, 'วันอาทิตย์': 0,
+    'จ': 1, 'จันทร์': 1, 'วันจันทร์': 1,
+    'อ': 2, 'อังคาร': 2, 'วันอังคาร': 2,
+    'พ': 3, 'พุธ': 3, 'วันพุธ': 3,
+    'พฤ': 4, 'พฤหัส': 4, 'พฤหัสบดี': 4, 'วันพฤหัสบดี': 4,
+    'ศ': 5, 'ศุกร์': 5, 'วันศุกร์': 5,
+    'ส': 6, 'เสาร์': 6, 'วันเสาร์': 6
+  };
+
+  // Split by common separators: comma, hyphen, slash, space
+  const parts = cleanText.split(/[\s,/\-]+/);
+  const result = [];
+  parts.forEach(p => {
+    const key = p.replace(/\.$/, '').trim();
+    if (dayMap[key] !== undefined) {
+      if (!result.includes(dayMap[key])) {
+        result.push(dayMap[key]);
+      }
+    }
+  });
+
+  return result.sort((a, b) => a - b);
 }
+
+function normalizeVehicleType(text) {
+  const clean = String(text || '').trim();
+  if (!clean || clean === 'ไม่มี' || clean === '-' || clean === 'ไม่ได้ใช้งาน') {
+    return 'ไม่ได้ใช้งาน';
+  }
+  if (clean.includes('มอเตอร์ไซค์') || clean.includes('มอเตอร์ไซด์') || clean.includes('จักรยานยนต์') || clean.includes('มอไซค์')) {
+    if (clean.includes('ไฟฟ้า')) {
+      return 'รถจักรยานยนต์ไฟฟ้า';
+    }
+    return 'รถจักรยานยนต์';
+  }
+  if (clean.includes('รถยนต์') || clean.includes('เก๋ง') || clean.includes('กระบะ')) {
+    return 'รถยนต์';
+  }
+  if (clean.includes('เรือ')) {
+    return 'เรือยนต์';
+  }
+  if (clean.includes('จักรยาน') && !clean.includes('ยนต์')) {
+    return 'รถจักรยาน';
+  }
+  if (clean.includes('เดิน') || clean.includes('เท้า')) {
+    return 'เดินเท้า';
+  }
+  return clean;
+}
+
+function normalizePosition(text) {
+  const clean = String(text || '').trim();
+  if (clean.includes('หัวหน้า') || clean.includes('หน.')) return 'หน.ปณ.';
+  if (clean.includes('พนักงาน')) return 'พนักงาน';
+  if (clean.includes('ประจำ')) return 'ลูกจ้างประจำ';
+  if (clean.includes('เหมา')) return 'ลูกจ้างเหมา';
+  if (clean.includes('ชั่วคราว') || clean === 'ลูกจ้าง') return 'ลูกจ้าง';
+  return clean || 'ลูกจ้างเหมา';
+}
+
+function normalizeDepartment(text) {
+  const clean = String(text || '').trim();
+  if (clean.includes('นำจ่าย')) return 'นำจ่าย';
+  if (clean.includes('ไขตู้') || clean.includes('ขนส่ง')) return 'ไขตู้/ขนส่ง';
+  if (clean.includes('รับฝาก')) return 'รับฝาก';
+  if (clean.includes('บริหาร') || clean.includes('ธุรการ') || clean.includes('สำนักงาน')) return 'บริหาร/ธุรการ';
+  return clean || 'ทั่วไป';
+}
+
 
 async function downloadPersonnelTemplateXlsx() {
   if (!window.ExcelJS) {
@@ -1159,7 +1217,7 @@ async function downloadPersonnelTemplateXlsx() {
     worksheet.getCell(`H${i}`).dataValidation = {
       type: 'list',
       allowBlank: true,
-      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
+      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์,รถจักรยาน,เดินเท้า,ไม่ได้ใช้งาน"']
     };
 
     worksheet.getCell(`I${i}`).dataValidation = {
@@ -1202,12 +1260,12 @@ function handlePersonnelPaste() {
       if (tokens.length < 2) return;
       
       let name = tokens[0].trim();
-      let position = tokens[1] ? tokens[1].trim() : 'ลูกจ้างประจำ';
-      let department = tokens[2] ? tokens[2].trim() : 'นำจ่าย';
+      let position = normalizePosition(tokens[1]);
+      let department = normalizeDepartment(tokens[2]);
       let duty = tokens[3] ? tokens[3].trim() : 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ';
       let salary = tokens[4] ? parseFloat(tokens[4].replace(/,/g, '')) || 0 : 0;
       let route = tokens[5] ? tokens[5].trim() : '';
-      let vehicle = tokens[6] ? tokens[6].trim() : 'รถจักรยานยนต์';
+      let vehicle = normalizeVehicleType(tokens[6]);
       let restDaysText = tokens[7] ? tokens[7].trim() : 'ไม่มี';
       let signature = tokens[8] ? tokens[8].trim() : name.split(' ')[0];
       
@@ -1243,7 +1301,7 @@ function handlePersonnelPaste() {
     }
   }, 50);
 }
-
+ 
 function processUploadedPersonnelFile(file) {
   if (!file) return;
   
@@ -1252,7 +1310,7 @@ function processUploadedPersonnelFile(file) {
   const dragDropZone = document.getElementById('personnelDragDropZone');
   const previewTableBody = document.getElementById('personnelImportPreviewTableBody');
   const submitBtn = document.getElementById('submitPersonnelImportBtn');
-
+ 
   if (fileNameLabel) fileNameLabel.textContent = `📂 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
   if (selectedFileInfo) selectedFileInfo.classList.remove('hidden');
   if (dragDropZone) dragDropZone.classList.add('hidden');
@@ -1278,12 +1336,12 @@ function processUploadedPersonnelFile(file) {
         let name = String(row[1] || '').trim();
         if (name.length < 2 || name === 'ชื่อ-นามสกุล' || name === 'ชื่อ - นามสกุล') continue;
         
-        let position = String(row[2] || 'ลูกจ้างประจำ').trim();
-        let department = String(row[3] || 'นำจ่าย').trim();
+        let position = normalizePosition(row[2]);
+        let department = normalizeDepartment(row[3]);
         let duty = String(row[4] || 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ').trim();
         let salary = parseFloat(String(row[5] || '0').replace(/,/g, '')) || 0;
         let route = String(row[6] || '').trim();
-        let vehicle = String(row[7] || 'รถจักรยานยนต์').trim();
+        let vehicle = normalizeVehicleType(row[7]);
         let restDaysText = String(row[8] || 'ไม่มี').trim();
         let signature = String(row[9] || '').trim() || name.split(' ')[0];
         
@@ -1563,7 +1621,7 @@ export async function exportPersonnelCsv() {
     worksheet.getCell(`H${i}`).dataValidation = {
       type: 'list',
       allowBlank: true,
-      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์"']
+      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์,รถจักรยาน,เดินเท้า,ไม่ได้ใช้งาน"']
     };
 
     worksheet.getCell(`I${i}`).dataValidation = {
