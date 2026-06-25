@@ -3028,7 +3028,7 @@ async function handleLoadFromRegistry() {
     }
 
     // Filter out personnel who resigned BEFORE the active month/year or vehicle is 'ไม่ได้ใช้งาน'
-    const registry = rawRegistry.filter(person => {
+    let registry = rawRegistry.filter(person => {
       if (person.vehicle === 'ไม่ได้ใช้งาน') {
         return false;
       }
@@ -3039,6 +3039,10 @@ async function handleLoadFromRegistry() {
       }
       return true;
     });
+
+    if (activeMode === 'fuel') {
+      registry = registry.filter(person => person.vehicle !== 'รถจักรยาน' && person.vehicle !== 'เดินเท้า');
+    }
 
     if (registry.length === 0) {
       showToast('ไม่พบข้อมูลรายชื่อบุคลากรที่ยังทำงานอยู่ในทะเบียนสำหรับเดือนนี้', 'warning');
