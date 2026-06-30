@@ -53,7 +53,51 @@ function populateRouteDropdowns() {
   }
 }
 
+export function applyDutyBasedRegistryRestrictions() {
+  const claimDuties = window.currentUserDuties || ['fuel', 'water'];
+  const hasFuel = claimDuties.includes('fuel');
+  const hasWater = claimDuties.includes('water');
+
+  const setElVisible = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.setProperty('display', visible ? '' : 'none', 'important');
+    }
+  };
+
+  // Hide/Show main form elements
+  setElVisible('personSalaryGroup', hasWater);
+  setElVisible('personRouteVehicleGroup', hasFuel);
+  setElVisible('personRestDaysGroup', hasFuel);
+
+  // Hide/Show edit modal elements
+  setElVisible('modalPersonSalaryGroup', hasWater);
+  setElVisible('modalPersonRouteVehicleGroup', hasFuel);
+  setElVisible('modalPersonRestDaysGroup', hasFuel);
+
+  // Hide/Show table headers and cells
+  const table = document.querySelector('.data-table');
+  if (table) {
+    table.querySelectorAll('thead th.water-only-col').forEach(th => {
+      th.style.setProperty('display', hasWater ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('thead th.fuel-only-col').forEach(th => {
+      th.style.setProperty('display', hasFuel ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('tbody td.water-only-col').forEach(td => {
+      td.style.setProperty('display', hasWater ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('tbody td.fuel-only-col').forEach(td => {
+      td.style.setProperty('display', hasFuel ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('tbody td .fuel-only-field').forEach(el => {
+      el.style.setProperty('display', hasFuel ? '' : 'none', 'important');
+    });
+  }
+}
+
 export function initPersonnelManager() {
+  applyDutyBasedRegistryRestrictions();
 
   // Bind personnel Form submit
   const personnelForm = document.getElementById('personnelForm');
@@ -313,14 +357,14 @@ export function renderPersonnelTable() {
       <td style="font-weight: 700;">
         ${person.name}
         ${isResigned ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.4rem; font-weight: bold;">ลาออก</span>` : ''}
-        ${person.restDays && person.restDays.length > 0 ? `<div style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
+        ${person.restDays && person.restDays.length > 0 ? `<div class="fuel-only-field" style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
       </td>
       <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
       <td><span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #e11d48; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.department || 'ทั่วไป'}</span></td>
       <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: var(--post-emerald); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.duty || '-'}</span></td>
-      <td>${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
-      <td>${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
-      <td>${person.vehicle || '-'}</td>
+      <td class="water-only-col">${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+      <td class="fuel-only-col">${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
+      <td class="fuel-only-col">${person.vehicle || '-'}</td>
       <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ddd; font-weight: 300;">${person.signature || person.name}</span></td>
       <td class="actions-col">
         <button class="row-action-btn edit-person-btn" data-index="${originalIdx}" title="แก้ไข">✏️</button>
@@ -362,6 +406,8 @@ export function renderPersonnelTable() {
       deletePersonnel(idx);
     });
   });
+
+  applyDutyBasedRegistryRestrictions();
 }
 
 // Expose to window so real-time updates from main.js can re-trigger render
@@ -417,7 +463,7 @@ function editPersonnel(index) {
     dutyCustomGroup.classList.remove('hidden');
     dutyCustomInput.value = personDuty;
   }
-
+  
   modal.querySelector('#modalPersonSalary').value = person.salary || 0;
   
   // Set rest days checkboxes
@@ -433,6 +479,7 @@ function editPersonnel(index) {
   modal.querySelector('#modalPersonSignature').value = person.signature || '';
 
   modal.classList.add('active');
+  applyDutyBasedRegistryRestrictions();
 }
 
 function deletePersonnel(index) {
@@ -1917,7 +1964,7 @@ export function getPersonnelTemplate() {
                   </div>
 
                   <div class="form-row-2">
-                    <div class="form-group">
+                    <div class="form-group" id="personSalaryGroup">
                       <label for="personSalary">เงินเดือน (บาท - สำหรับค่าน้ำ)</label>
                       <input type="number" id="personSalary" class="form-input" value="0" />
                     </div>
@@ -1938,7 +1985,7 @@ export function getPersonnelTemplate() {
                     <input type="text" id="personDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
                   </div>
 
-                  <div class="form-row-2">
+                  <div class="form-row-2" id="personRouteVehicleGroup">
                     <div class="form-group">
                       <label for="personRoute">ด้านจ่ายหลัก</label>
                       <select id="personRoute" class="form-select">
@@ -1958,7 +2005,7 @@ export function getPersonnelTemplate() {
                     </div>
                   </div>
 
-                  <div class="form-group" style="margin-bottom: 1.25rem;">
+                  <div class="form-group" id="personRestDaysGroup" style="margin-bottom: 1.25rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
                     <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
                       <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">
@@ -2040,9 +2087,9 @@ export function getPersonnelTemplate() {
                         <th style="width: 12%;">ตำแหน่ง</th>
                         <th style="width: 13%;">แผนก/กลุ่มงาน</th>
                         <th style="width: 18%;">หน้าที่</th>
-                        <th style="width: 10%;">เงินเดือน</th>
-                        <th style="width: 10%;">ด้านจ่ายหลัก</th>
-                        <th style="width: 12%;">พาหนะหลัก</th>
+                        <th style="width: 10%;" class="water-only-col">เงินเดือน</th>
+                        <th style="width: 10%;" class="fuel-only-col">ด้านจ่ายหลัก</th>
+                        <th style="width: 12%;" class="fuel-only-col">พาหนะหลัก</th>
                         <th style="width: 10%;">ลงนาม</th>
                         <th style="width: 8%;" class="actions-col">จัดการ</th>
                       </tr>
@@ -2346,7 +2393,7 @@ export function getPersonnelTemplate() {
           </div>
 
           <div class="form-row-2">
-            <div class="form-group">
+            <div class="form-group" id="modalPersonSalaryGroup">
               <label for="modalPersonSalary">เงินเดือน (บาท)</label>
               <input type="number" id="modalPersonSalary" class="form-input" value="0" required />
             </div>
@@ -2367,7 +2414,7 @@ export function getPersonnelTemplate() {
             <input type="text" id="modalPersonDepartmentCustom" class="form-input" placeholder="เช่น แผนกการเงิน" />
           </div>
 
-          <div class="form-row-2">
+          <div class="form-row-2" id="modalPersonRouteVehicleGroup">
             <div class="form-group">
               <label for="modalPersonRoute">ด้านจ่ายหลัก</label>
               <select id="modalPersonRoute" class="form-select">
@@ -2387,7 +2434,7 @@ export function getPersonnelTemplate() {
             </div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 1rem;">
+          <div class="form-group" id="modalPersonRestDaysGroup" style="margin-bottom: 1rem;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">วันหยุดประจำสัปดาห์</label>
             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.5rem 0.75rem; background: rgba(0, 0, 0, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small);">
               <label style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.9rem; cursor: pointer; color: var(--text-primary);">

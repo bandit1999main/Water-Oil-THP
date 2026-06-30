@@ -130,15 +130,15 @@ export function getHistoryTemplate() {
       </div>
 
       <!-- Metrics Row -->
-      <div class="metrics-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
-        <div class="metric-card bg-orange-glow">
+      <div class="metrics-grid" id="historyMetricsGrid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem;">
+        <div class="metric-card bg-orange-glow" id="histFuelSumCard">
           <div class="metric-info">
             <h3>ยอดค่าน้ำมันเชื้อเพลิงสะสม</h3>
             <p class="metric-value"><span id="histFuelSum">0.00</span> <span class="unit">บาท</span></p>
           </div>
           <div class="metric-icon">⛽</div>
         </div>
-        <div class="metric-card bg-blue-glow">
+        <div class="metric-card bg-blue-glow" id="histWaterSumCard">
           <div class="metric-info">
             <h3>ยอดค่าน้ำดื่มสะสม</h3>
             <p class="metric-value"><span id="histWaterSum">0.00</span> <span class="unit">บาท</span></p>
@@ -187,9 +187,9 @@ export function getHistoryTemplate() {
               <tr>
                 <th style="width: 5%; text-align: center;">ที่</th>
                 <th style="width: 15%; text-align: center;">รอบเดือน/ปี</th>
-                <th style="width: 15%; text-align: right;">ค่าน้ำมันรวม (บาท)</th>
-                <th style="width: 15%; text-align: right;">ค่าน้ำดื่มรวม (บาท)</th>
-                <th style="width: 12%; text-align: right;">ภาษีค่าน้ำรวม (บาท)</th>
+                <th style="width: 15%; text-align: right;" class="fuel-only-col">ค่าน้ำมันรวม (บาท)</th>
+                <th style="width: 15%; text-align: right;" class="water-only-col">ค่าน้ำดื่มรวม (บาท)</th>
+                <th style="width: 12%; text-align: right;" class="water-only-col">ภาษีค่าน้ำรวม (บาท)</th>
                 <th style="width: 15%; text-align: right; font-weight: bold; color: var(--post-orange);">รวมเบิกจ่ายสุทธิ (บาท)</th>
                 <th style="width: 10%; text-align: center;">จำนวนบุคลากร</th>
                 <th style="width: 13%; text-align: center;">จัดการ</th>
@@ -295,6 +295,9 @@ export async function initHistoryView() {
 
   renderAnalyticsDashboard();
   renderSummariesDashboard();
+  if (typeof applyDutyBasedHistoryRestrictions === 'function') {
+    applyDutyBasedHistoryRestrictions();
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -555,9 +558,9 @@ function renderSummariesDashboard() {
       <tr>
         <td style="text-align: center;">${index + 1}</td>
         <td style="text-align: center; font-weight: 700;">${labelPeriod}</td>
-        <td style="text-align: right;">${fuelVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td style="text-align: right;">${waterVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td style="text-align: right; color: var(--post-red);">${waterTaxVal > 0 ? waterTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+        <td style="text-align: right;" class="fuel-only-col">${fuelVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td style="text-align: right;" class="water-only-col">${waterVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td style="text-align: right; color: var(--post-red);" class="water-only-col">${waterTaxVal > 0 ? waterTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
         <td style="text-align: right; font-weight: 800; color: var(--post-emerald);">${netSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td style="text-align: center; font-weight: bold;">${summary.totalPersonnelCount || 0} คน</td>
         <td style="text-align: center;">
@@ -713,6 +716,9 @@ function renderSummariesDashboard() {
         }
       });
     }
+  }
+  if (typeof applyDutyBasedHistoryRestrictions === 'function') {
+    applyDutyBasedHistoryRestrictions();
   }
 }
 
@@ -1175,4 +1181,47 @@ function printHistoricalWaterReport(year, month, list) {
     </html>
   `);
   printWindow.document.close();
+}
+
+export function applyDutyBasedHistoryRestrictions() {
+  const claimDuties = window.currentUserDuties || ['fuel', 'water'];
+  const hasFuel = claimDuties.includes('fuel');
+  const hasWater = claimDuties.includes('water');
+
+  const setElVisible = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.setProperty('display', visible ? '' : 'none', 'important');
+    }
+  };
+
+  // Hide metric cards in cumulative summary
+  setElVisible('histFuelSumCard', hasFuel);
+  setElVisible('histWaterSumCard', hasWater);
+
+  // Configure history grid columns layout based on visible metrics
+  const grid = document.getElementById('historyMetricsGrid');
+  if (grid) {
+    let count = 4;
+    if (!hasFuel) count--;
+    if (!hasWater) count--;
+    grid.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+  }
+
+  // Hide/Show table headers and cells
+  const table = document.querySelector('#historyTimelineCard table');
+  if (table) {
+    table.querySelectorAll('thead th.water-only-col').forEach(th => {
+      th.style.setProperty('display', hasWater ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('thead th.fuel-only-col').forEach(th => {
+      th.style.setProperty('display', hasFuel ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('tbody td.water-only-col').forEach(td => {
+      td.style.setProperty('display', hasWater ? '' : 'none', 'important');
+    });
+    table.querySelectorAll('tbody td.fuel-only-col').forEach(td => {
+      td.style.setProperty('display', hasFuel ? '' : 'none', 'important');
+    });
+  }
 }

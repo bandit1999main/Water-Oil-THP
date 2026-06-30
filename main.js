@@ -981,6 +981,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const claimDuties = profileData.duties || [];
     const hasFuelDuty = claimDuties.includes('fuel') || isMainAdmin;
     const hasWaterDuty = claimDuties.includes('water') || isMainAdmin;
+    
+    window.currentUserDuties = isMainAdmin ? ['fuel', 'water'] : claimDuties;
 
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
