@@ -1526,6 +1526,7 @@ export function printAll50Tawi() {
           body {
             background: #fff;
             padding: 0;
+            margin: 0;
           }
           .page-container {
             border: none;
@@ -1533,7 +1534,11 @@ export function printAll50Tawi() {
             padding: 0;
             margin: 0;
             width: 100%;
+            min-height: auto;
             page-break-after: always;
+          }
+          .page-container:last-child {
+            page-break-after: avoid;
           }
           .no-print {
             display: none !important;
