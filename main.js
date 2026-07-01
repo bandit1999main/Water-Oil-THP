@@ -166,6 +166,7 @@ let empNameSelect = null;
 
 let exportCsvBtn = null;
 let printReportBtn = null;
+let printAll50TawiBtn = null;
 let clearAllBtn = null;
 
 let importExcelAttendanceBtn = null;
@@ -413,6 +414,7 @@ function setupCalculatorDOMReferencesAndEvents() {
 
   exportCsvBtn = document.getElementById('exportCsvBtn');
   printReportBtn = document.getElementById('printReportBtn');
+  printAll50TawiBtn = document.getElementById('printAll50TawiBtn');
   clearAllBtn = document.getElementById('clearAllBtn');
 
   importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
@@ -711,6 +713,11 @@ function setupCalculatorDOMReferencesAndEvents() {
       import('./waterCalculator.js').then(m => m.printWaterReport());
     }
   });
+  if (printAll50TawiBtn) {
+    printAll50TawiBtn.addEventListener('click', () => {
+      import('./waterCalculator.js').then(m => m.printAll50Tawi());
+    });
+  }
   clearAllBtn.addEventListener('click', () => {
     if (window.isCurrentMonthLocked) {
       showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
@@ -1650,6 +1657,7 @@ async function switchAppMode(mode) {
       if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำมันเชื้อเพลิงรวม';
       if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ค่าบำรุงรักษารวม';
       if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+      if (printAll50TawiBtn) printAll50TawiBtn.classList.add('hidden');
       
       if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.';
       
@@ -1715,6 +1723,7 @@ async function switchAppMode(mode) {
       if (sumFuelCostLabel) sumFuelCostLabel.textContent = 'ค่าน้ำดื่มก่อนหักภาษีรวม';
       if (sumMaintCostLabel) sumMaintCostLabel.textContent = 'ภาษีหัก ณ ที่จ่ายรวม';
       if (sumTotalCostLabel) sumTotalCostLabel.textContent = 'ยอดเงินเบิกจ่ายรวมสุทธิ';
+      if (printAll50TawiBtn) printAll50TawiBtn.classList.remove('hidden');
       
       if (tableTitle) tableTitle.textContent = 'รายการพนักงานเบิกค่าน้ำดื่มประจำที่ทำการ ปณ.';
       

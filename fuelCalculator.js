@@ -2235,6 +2235,9 @@ export function getCalculatorsTemplate() {
                 <button type="button" id="exportCsvBtn" class="btn btn-secondary btn-small">
                   📊 ส่งออก Excel (CSV)
                 </button>
+                <button type="button" id="printAll50TawiBtn" class="btn btn-primary btn-small hidden" style="background: var(--post-emerald); border-color: var(--post-emerald);">
+                  🖨️ พิมพ์ 50 ทวิ ทั้งหมด
+                </button>
                 <button type="button" id="printReportBtn" class="btn btn-primary btn-small">
                   🖨️ พิมพ์ใบเบิกเงิน / PDF
                 </button>
