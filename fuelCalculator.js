@@ -1209,11 +1209,12 @@ export function printFuelReport() {
         const fuelCost = liters * currentFuelPrice;
         const sumTotal = fuelCost + inspectMaint;
 
+        const routesList = inspectMissions.map(m => m.route).filter((v, i, a) => a.indexOf(v) === i).join(',');
         const rowObj = {
           name: item.name,
           position: item.position,
           duty: item.duty || '-',
-          routeDesc: `ตรวจสอบการนำจ่าย`,
+          routeDesc: `ตรวจสอบการนำจ่าย ด้าน ${routesList}`,
           workDays: inspectDays,
           liters: liters,
           fuelCost: fuelCost,
@@ -1438,7 +1439,7 @@ export function printFuelReport() {
         `;
       }
 
-      const missionDesc = m.type === 'ตรวจสอบการนำจ่าย' ? 'ตรวจสอบการนำจ่าย' : `${m.type} ด้าน ${m.route}`;
+      const missionDesc = m.type === 'ตรวจสอบการนำจ่าย' ? `ตรวจสอบการนำจ่าย ด้าน ${m.route}` : `${m.type} ด้าน ${m.route}`;
 
       supervisorRowsHtml += `
         <tr>
