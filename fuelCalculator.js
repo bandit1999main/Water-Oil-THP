@@ -1411,6 +1411,7 @@ export function printFuelReport() {
   // Supervisors (ชนจ.) Pages
   const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
   supervisors.forEach((sup) => {
+    if (!sup.missions || sup.missions.length === 0) return;
     let missionsRowsHtml = sup.missions.map((m, idx) => {
       return `
         <tr>
