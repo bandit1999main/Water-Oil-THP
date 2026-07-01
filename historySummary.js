@@ -744,10 +744,15 @@ async function openMonthlyDetails(summaryIdx) {
     const fuelList = await fetchEmployeesFromCollection(fuelColl);
     const waterList = await fetchEmployeesFromCollection(waterColl);
 
+    let enrichedFuelList = fuelList;
+    if (window.enrichEmployeesWithCalculations) {
+      enrichedFuelList = window.enrichEmployeesWithCalculations(fuelList);
+    }
+
     currentViewingSnapshot = {
       year: summary.year,
       month: summary.month,
-      fuelList,
+      fuelList: enrichedFuelList,
       waterList
     };
 

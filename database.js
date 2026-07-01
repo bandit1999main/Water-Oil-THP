@@ -166,6 +166,9 @@ export async function fetchEmployees() {
 
 // Save all employees to Firestore in batch
 export async function saveEmployees(employeesList) {
+  if (window.enrichEmployeesWithCalculations) {
+    employeesList = window.enrichEmployeesWithCalculations(employeesList);
+  }
   const collName = getActiveEmployeesCollectionName();
   const localKey = `tp_${collName}`;
   
@@ -946,7 +949,12 @@ export async function updateMonthlySummaryAfterSave(year, month) {
   let fuelTotalNet = 0;
   let fuelLiters = 0;
   
-  fuelList.forEach(emp => {
+  let enrichedFuelList = fuelList;
+  if (window.enrichEmployeesWithCalculations) {
+    enrichedFuelList = window.enrichEmployeesWithCalculations(fuelList);
+  }
+
+  enrichedFuelList.forEach(emp => {
     fuelTotalCost += (emp.fuelCost || 0);
     maintTotalCost += (emp.maintCost || 0);
     fuelTotalNet += (emp.sumTotal || 0);

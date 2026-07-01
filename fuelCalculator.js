@@ -14,6 +14,61 @@ function getRouteData() {
   return window.ROUTE_DATA || {};
 }
 
+export function enrichEmployeesWithCalculations(list) {
+  const globalFuelInput = document.getElementById('globalFuelPrice');
+  const fuelPrice = globalFuelInput ? parseFloat(globalFuelInput.value) : (window.appConfigs?.defaultFuelPrice || 35.00);
+  const ROUTE_DATA = getRouteData();
+
+  return list.map(item => {
+    let liters = 0;
+    let fuelCost = 0;
+    let maintCost = 0;
+    let sumTotal = 0;
+
+    if (item.formMode !== 'supervisor') {
+      liters = calculateClaimLiters(item);
+      fuelCost = liters * fuelPrice;
+      maintCost = calculateMaintenanceCost(item);
+      sumTotal = fuelCost + maintCost;
+    } else {
+      // 1. Group 'ตรวจสอบการนำจ่าย'
+      const inspectMissions = (item.missions || []).filter(m => m.type === 'ตรวจสอบการนำจ่าย');
+      if (inspectMissions.length > 0) {
+        let rawInspectionLiters = 0;
+        inspectMissions.forEach(m => {
+          const routeInfo = ROUTE_DATA[m.route];
+          const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+          rawInspectionLiters += dailyLiters * m.days;
+          maintCost += calculateSingleMissionMaint(item, m);
+        });
+        liters += Math.ceil(rawInspectionLiters / 2);
+      }
+
+      // 2. Individual other missions
+      const otherMissions = (item.missions || []).filter(m => m.type !== 'ตรวจสอบการนำจ่าย');
+      otherMissions.forEach(m => {
+        const routeInfo = ROUTE_DATA[m.route];
+        const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
+        const mliters = dailyLiters * m.days;
+        liters += mliters;
+        maintCost += calculateSingleMissionMaint(item, m);
+      });
+
+      fuelCost = liters * fuelPrice;
+      sumTotal = fuelCost + maintCost;
+    }
+
+    return {
+      ...item,
+      liters,
+      fuelCost,
+      maintCost,
+      sumTotal
+    };
+  });
+}
+window.enrichEmployeesWithCalculations = enrichEmployeesWithCalculations;
+
 let tempMissions = [];
 let oilPricePeriods = [];
 
@@ -395,7 +450,7 @@ export function cloneRow(index) {
   employees.push(clone);
   setEmployees(employees);
   renderFuelTable();
-  saveEmployees(employees);
+  saveEmployees(enrichEmployeesWithCalculations(employees));
   window.showToast('คัดลอกข้อมูลพนักงานเสร็จเรียบร้อย!', 'success');
 }
 
@@ -412,7 +467,7 @@ export function deleteRow(index) {
       employees.splice(index, 1);
       setEmployees(employees);
       renderFuelTable();
-      saveEmployees(employees);
+      saveEmployees(enrichEmployeesWithCalculations(employees));
       window.showToast('ลบรายการพนักงานเรียบร้อยแล้ว!', 'success');
     }
   });
@@ -668,7 +723,7 @@ export async function handleFuelFormSubmit(e) {
   }
   
   renderFuelTable();
-  saveEmployees(employees);
+  saveEmployees(enrichEmployeesWithCalculations(employees));
   window.showToast(isEdit ? 'อัปเดตข้อมูลสำเร็จ!' : 'บันทึกข้อมูลสำเร็จ!', 'success');
 }
 
