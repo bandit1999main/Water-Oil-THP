@@ -610,6 +610,15 @@ export function print50Tawi(originalIdx) {
   const allowance = employee.workDays * (window.waterAllowancePerDay || 30);
   const tax = calculateWaterTax(employee.salary, allowance);
 
+  const sortedWaterEmployees = [...waterEmployees].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  const taxEmployees = sortedWaterEmployees.filter(item => {
+    const itemAllowance = item.workDays * (window.waterAllowancePerDay || 30);
+    const itemTax = calculateWaterTax(item.salary, itemAllowance);
+    return itemTax > 0;
+  });
+  const taxIndex = taxEmployees.findIndex(emp => emp.name === employee.name);
+  const sequenceNo = taxIndex !== -1 ? (taxIndex + 1) : 1;
+
   const formatTaxIdBoxes = (taxIdStr) => {
     const clean = (taxIdStr || '').replace(/\D/g, '').padEnd(13, ' ');
     return clean.split('').map(char => `<span class="tax-box">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
@@ -881,8 +890,8 @@ export function print50Tawi(originalIdx) {
               <p>ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
             </div>
             <div class="header-right">
-              เล่มที่ <span class="editable-field" contenteditable="true">.......</span><br>
-              เลขที่ <span class="editable-field" contenteditable="true">.......</span>
+              เล่มที่ <span class="editable-field" contenteditable="true">${yearText}</span><br>
+              เลขที่ <span class="editable-field" contenteditable="true">${sequenceNo.toString().padStart(2, '0')}</span>
             </div>
           </div>
 
