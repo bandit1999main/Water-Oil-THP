@@ -919,7 +919,7 @@ export function print50Tawi(originalIdx) {
               </div>
             </div>
             <div class="party-detail">
-              <div>ชื่อหน่วยงาน: <span class="editable-field" contenteditable="true">${poName}</span></div>
+              <div>ชื่อหน่วยงาน: <span class="editable-field" contenteditable="true">บริษัท ไปรษณีย์ไทย จำกัด</span></div>
               <div>ที่อยู่: <span id="poAddressSpan" class="editable-field" contenteditable="true">${poAddress || '.........................................................................................................'}</span></div>
             </div>
           </div>
@@ -1032,7 +1032,7 @@ export function print50Tawi(originalIdx) {
               <div>ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้น ถูกต้องตรงกับความจริงทุกประการ</div>
               <br>
               <div>ลงชื่อ ............................................................ ผู้จ่ายเงิน</div>
-              <div>(<span class="editable-field" contenteditable="true">${poName}</span>)</div>
+              <div>(<span class="editable-field" contenteditable="true">บริษัท ไปรษณีย์ไทย จำกัด</span>)</div>
               <div>วันที่ออกเอกสาร: <span class="editable-field" contenteditable="true">${thDate}</span></div>
             </div>
           </div>
