@@ -1599,29 +1599,29 @@ export function printFuelReport() {
           </tbody>
         </table>
 
-        <div style="text-indent: 1.2cm; margin-bottom: 1.5rem; font-size: 10pt;">
+        <div style="text-indent: 1.2cm; margin-bottom: 1rem; font-size: 10pt;">
           จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
         </div>
 
-        <div style="display: flex; flex-direction: column; align-items: flex-end; font-size: 10pt; margin-top: 0.5cm;">
-          <div style="text-align: center; width: 280px;">
-            <p>ลงชื่อ..........................................................ผู้ขออนุมัติ</p>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; font-size: 10pt; margin-top: 0.3cm;">
+          <div style="text-align: center; width: 340px; white-space: nowrap;">
+            <p>ลงชื่อ..................................................ผู้ขออนุมัติ</p>
             <p style="margin-top: 0.3rem; font-weight: bold;">( ${sup.name} )</p>
             <p>ตำแหน่ง ${sup.duty || 'หัวหน้าโซนนำจ่าย'}</p>
             <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
           </div>
         </div>
 
-        <div class="approval-section" style="margin-top: 1.5rem; border-top: 1px dashed #777; padding-top: 0.8rem; page-break-inside: avoid; font-size: 10pt;">
-          <div style="font-weight: bold; margin-bottom: 0.4rem;">(2) คำสั่ง หน.ปณ.${postOffice}</div>
-          <div style="margin-left: 1cm; margin-bottom: 0.4rem;">
+        <div class="approval-section" style="margin-top: 1rem; border-top: 1px dashed #777; padding-top: 0.6rem; page-break-inside: avoid; font-size: 10pt;">
+          <div style="font-weight: bold; margin-bottom: 0.3rem; text-align: left;">(2) คำสั่ง หน.ปณ.${postOffice}</div>
+          <div style="margin-left: 1cm; margin-bottom: 0.3rem; text-align: left;">
             [ &nbsp; ] อนุมัติแผนการออกตรวจดังกล่าว<br>
             [ &nbsp; ] ไม่อนุมัติ เนื่องจาก....................................................................................................
           </div>
           
-          <div style="display: flex; justify-content: flex-end; margin-top: 0.8cm;">
-            <div style="text-align: center; width: 280px;">
-              <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.4cm;">
+            <div style="text-align: center; width: 340px; white-space: nowrap;">
+              <p>ลงชื่อ..................................................ผู้อนุมัติ</p>
               <p style="margin-top: 0.3rem; font-weight: bold;">( ${sigApproverNameVal} )</p>
               <p>ตำแหน่ง ${sigApproverPosVal}</p>
               <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
