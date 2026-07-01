@@ -928,7 +928,7 @@ export function print50Tawi(originalIdx) {
           <!-- Seq Section -->
           <div class="seq-form-row">
             <div class="seq-form-left">
-              <span>ลำดับที่ <span class="editable-field" contenteditable="true">${originalIdx + 1}</span> ในแบบ</span>
+              <span>ลำดับที่ <span class="editable-field" contenteditable="true">${sequenceNo}</span> ในแบบ</span>
               <span>[✓] (1) ภ.ง.ด.1ก</span>
               <span>[ ] (2) ภ.ง.ด.1ก พิเศษ</span>
               <span>[ ] (3) ภ.ง.ด.3</span>
