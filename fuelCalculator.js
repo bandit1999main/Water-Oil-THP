@@ -1277,6 +1277,7 @@ export function printFuelReport() {
         duty: item.duty || '-',
         routeDesc: `ด้านจ่ายที่ ${item.route}`,
         workDays: item.workDays,
+        daysNotWorked: item.daysNotWorked || 0,
         liters: liters,
         fuelCost: fuelCost,
         maintCost: maintCost,
@@ -1320,7 +1321,7 @@ export function printFuelReport() {
           <td><strong>${row.name}</strong></td>
           <td>${row.position} / ${row.duty}</td>
           <td style="text-align: left !important; font-size: 7.5pt; line-height: 1.3;">${row.routeDesc}</td>
-          <td>${row.workDays} วัน</td>
+          <td>${title === 'พนักงาน และ ลูกจ้างประจำ' ? (row.daysNotWorked || 0) : row.workDays} วัน</td>
           <td>${row.liters.toFixed(2)}</td>
           <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1352,7 +1353,7 @@ export function printFuelReport() {
               <th style="width: 17%">ชื่อ - นามสกุล</th>
               <th style="width: 18%">ตำแหน่ง / บทบาท</th>
               <th style="width: 18%">รายละเอียด/ด้านจ่าย</th>
-              <th style="width: 6%">วันทำงาน</th>
+              <th style="width: 6%">${title === 'พนักงาน และ ลูกจ้างประจำ' ? 'วันไม่ได้นำรถมาใช้' : 'วันทำงาน'}</th>
               <th style="width: 8%">ปริมาณน้ำมัน (ลิตร)</th>
               <th style="width: 8%">ค่าน้ำมัน (บาท)</th>
               <th style="width: 8%">ค่าบำรุงรักษา (บาท)</th>
