@@ -1736,6 +1736,7 @@ async function switchAppMode(mode) {
         `;
       }
       if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
+      if (document.getElementById('substituteTableContainer')) document.getElementById('substituteTableContainer').classList.add('hidden');
     }
     
     cancelEdit();
