@@ -303,6 +303,16 @@ export function getAdminPanelTemplate() {
                 </div>
                 
                 <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label for="adminPostOfficeTaxId" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เลขประจำตัวผู้เสียภาษี (หน่วยงาน ปณ.):</label>
+                  <input type="text" id="adminPostOfficeTaxId" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น 0105500000000" maxlength="13" />
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label for="adminPostOfficeAddress" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ที่อยู่หน่วยงาน ปณ.:</label>
+                  <input type="text" id="adminPostOfficeAddress" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น เลขที่ 1/1 ถนนสุขุมวิท..." />
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                   <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
                   <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
                 </div>
@@ -402,6 +412,8 @@ export function getAdminPanelTemplate() {
 
 export async function initAdminPanel() {
   const officeInput = document.getElementById('adminPostOfficeName');
+  const officeTaxIdInput = document.getElementById('adminPostOfficeTaxId');
+  const officeAddressInput = document.getElementById('adminPostOfficeAddress');
   const allowanceInput = document.getElementById('adminWaterAllowance');
   const fuelInput = document.getElementById('adminDefaultFuelPrice');
   const addBracketBtn = document.getElementById('adminAddBracketBtn');
@@ -413,6 +425,8 @@ export async function initAdminPanel() {
   const configs = await fetchGlobalConfigs();
   
   if (officeInput) officeInput.value = configs.postOfficeName || "ไปรษณีย์ไทย";
+  if (officeTaxIdInput) officeTaxIdInput.value = configs.postOfficeTaxId || "";
+  if (officeAddressInput) officeAddressInput.value = configs.postOfficeAddress || "";
   if (allowanceInput) allowanceInput.value = configs.waterAllowancePerDay || 30;
   if (fuelInput) fuelInput.value = configs.defaultFuelPrice !== undefined ? configs.defaultFuelPrice : 35.00;
 
@@ -495,6 +509,8 @@ export async function initAdminPanel() {
   saveConfigBtn.addEventListener('click', async () => {
     const allowance = parseInt(allowanceInput.value);
     const officeName = officeInput.value.trim();
+    const officeTaxId = officeTaxIdInput ? officeTaxIdInput.value.trim() : "";
+    const officeAddress = officeAddressInput ? officeAddressInput.value.trim() : "";
     const fuelPrice = parseFloat(fuelInput.value);
 
     if (isNaN(allowance) || allowance <= 0) {
@@ -528,6 +544,8 @@ export async function initAdminPanel() {
     const success = await saveGlobalConfigs({
       waterAllowancePerDay: allowance,
       postOfficeName: officeName,
+      postOfficeTaxId: officeTaxId,
+      postOfficeAddress: officeAddress,
       defaultFuelPrice: fuelPrice,
       waterTaxBrackets: localBrackets
     });

@@ -477,6 +477,8 @@ function editPersonnel(index) {
   modal.querySelector('#modalPersonRoute').value = person.route || '';
   modal.querySelector('#modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
   modal.querySelector('#modalPersonSignature').value = person.signature || '';
+  modal.querySelector('#modalPersonTaxId').value = person.taxId || '';
+  modal.querySelector('#modalPersonAddress').value = person.address || '';
 
   modal.classList.add('active');
   applyDutyBasedRegistryRestrictions();
@@ -675,6 +677,11 @@ async function handlePersonnelFormSubmit(e) {
   const signature = personSignatureInput.value.trim() || name;
   const restDays = Array.from(document.querySelectorAll('input[name="personRestDays"]:checked')).map(cb => parseInt(cb.value));
   const editIndexVal = personnelEditIndexInput.value;
+  
+  const taxIdInput = document.getElementById('personTaxId');
+  const addressInput = document.getElementById('personAddress');
+  const taxId = taxIdInput ? taxIdInput.value.trim() : "";
+  const address = addressInput ? addressInput.value.trim() : "";
 
   const personnel = getPersonnel();
 
@@ -687,7 +694,9 @@ async function handlePersonnelFormSubmit(e) {
     route,
     vehicle,
     signature,
-    restDays
+    restDays,
+    taxId,
+    address
   };
 
   if (editIndexVal !== '') {
@@ -1013,6 +1022,11 @@ function wireRegistryEditModal() {
     const vehicle = modal.querySelector('#modalPersonVehicle').value;
     const signature = modal.querySelector('#modalPersonSignature').value.trim() || name;
     const restDays = Array.from(modal.querySelectorAll('input[name="modalPersonRestDays"]:checked')).map(cb => parseInt(cb.value));
+    
+    const taxIdInput = modal.querySelector('#modalPersonTaxId');
+    const addressInput = modal.querySelector('#modalPersonAddress');
+    const taxId = taxIdInput ? taxIdInput.value.trim() : "";
+    const address = addressInput ? addressInput.value.trim() : "";
 
     const personnel = getPersonnel();
     const oldPerson = personnel[idx];
@@ -1029,7 +1043,9 @@ function wireRegistryEditModal() {
       route,
       vehicle,
       signature,
-      restDays
+      restDays,
+      taxId,
+      address
     };
 
     if (isRestDaysChanged && oldPerson) {
@@ -1936,6 +1952,17 @@ export function getPersonnelTemplate() {
 
                   <div class="form-row-2">
                     <div class="form-group">
+                      <label for="personTaxId">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                      <input type="text" id="personTaxId" class="form-input" placeholder="เช่น 1234567890123" maxlength="13" />
+                    </div>
+                    <div class="form-group">
+                      <label for="personAddress">ที่อยู่</label>
+                      <input type="text" id="personAddress" class="form-input" placeholder="เลขที่ ถนน ตำบล..." />
+                    </div>
+                  </div>
+
+                  <div class="form-row-2">
+                    <div class="form-group">
                       <label for="personPosition">ตำแหน่ง</label>
                       <select id="personPosition" class="form-select">
                         <option value="หน.ปณ.">หน.ปณ.</option>
@@ -2361,6 +2388,17 @@ export function getPersonnelTemplate() {
           <div class="form-group">
             <label for="modalPersonName">ชื่อ - นามสกุล</label>
             <input type="text" id="modalPersonName" class="form-input" required />
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="modalPersonTaxId">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+              <input type="text" id="modalPersonTaxId" class="form-input" placeholder="เช่น 1234567890123" maxlength="13" />
+            </div>
+            <div class="form-group">
+              <label for="modalPersonAddress">ที่อยู่</label>
+              <input type="text" id="modalPersonAddress" class="form-input" placeholder="เลขที่ ถนน ตำบล..." />
+            </div>
           </div>
 
           <div class="form-row-2">
