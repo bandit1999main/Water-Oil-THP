@@ -1409,12 +1409,6 @@ export function printFuelReport() {
     };
   };
 
-  let supervisorRowsHtml = '';
-  let overallSupFuel = 0;
-  let overallSupMaint = 0;
-  let overallSupTotal = 0;
-  let supervisorIndex = 1;
-
   supervisors.forEach((sup) => {
     if (!sup.missions || sup.missions.length === 0) return;
 
@@ -1423,16 +1417,15 @@ export function printFuelReport() {
     const supMaint = calculateMaintenanceCost(sup);
     const supTotal = supFuelCost + supMaint;
 
-    overallSupFuel += supFuelCost;
-    overallSupMaint += supMaint;
-    overallSupTotal += supTotal;
-
     const numMissions = sup.missions.length;
     const zoneNum = (sup.route || '').replace(/\D/g, '') || '-';
 
     const splitFuel = splitBahtSatang(supFuelCost);
     const splitMaint = splitBahtSatang(supMaint);
     const splitTotal = splitBahtSatang(supTotal);
+
+    let supervisorRowsHtml = '';
+    let supervisorIndex = 1;
 
     sup.missions.forEach((m, mIdx) => {
       const isFirst = mIdx === 0;
@@ -1475,12 +1468,8 @@ export function printFuelReport() {
         <td style="text-align: right; padding-right: 8px !important;">${supTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       </tr>
     `;
-  });
 
-  if (supervisorIndex > 1) {
     const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
-    
-    // Calculate total monthly active days - default 26 or number of days in active month
     const activeDaysInMonth = new Date(year - 543, month, 0).getDate();
     
     const pageSup = `
@@ -1531,8 +1520,8 @@ export function printFuelReport() {
         <div class="print-signatures" style="margin-top: 0.8rem; display: flex; justify-content: space-between; font-size: 7.8pt;">
           <div class="sig-box" style="text-align: center; width: 30%;">
             <p>ลงชื่อ..........................................................ผู้จัดทำ</p>
-            <p style="margin-top: 0.4rem;">(${sigMakerNameVal})</p>
-            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+            <p style="margin-top: 0.4rem;">(${sup.signature || sup.name})</p>
+            <p>ตำแหน่ง ${sup.position || 'หัวหน้าโซนนำจ่าย'}</p>
           </div>
           <div class="sig-box" style="text-align: center; width: 30%;">
             <p>ลงชื่อ..........................................................ผู้ตรวจสอบ</p>
@@ -1548,7 +1537,7 @@ export function printFuelReport() {
       </div>
     `;
     pagesHtml.push(pageSup);
-  }
+  });
 
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
