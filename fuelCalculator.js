@@ -1538,6 +1538,99 @@ export function printFuelReport() {
       </div>
     `;
     pagesHtml.push(pageSup);
+
+    // Also build the inspection plan page
+    let totalInspectDist = 0;
+    let totalFuelUsed = 0;
+    let missionsHtml = '';
+    
+    sup.missions.forEach((mission) => {
+      const routeInfo = ROUTE_DATA[mission.route];
+      const workerDist = routeInfo ? parseFloat(routeInfo.workerDist) || 0 : 0;
+      const workerLiters = routeInfo ? parseFloat(routeInfo.workerLiters) || 0 : 0;
+
+      const isInspection = mission.type === 'ตรวจสอบการนำจ่าย';
+      const insDist = isInspection ? (workerDist / 2) : workerDist;
+      const insLiters = isInspection ? (workerLiters / 2) : workerLiters;
+
+      totalInspectDist += insDist;
+      totalFuelUsed += insLiters;
+
+      missionsHtml += `
+        <tr>
+          <td style="text-align: left; padding-left: 10px; border: 1px solid #000; padding: 5px;">ด้านจ่ายที่ ${mission.route}</td>
+          <td style="border: 1px solid #000; padding: 5px;">${mission.dates || '-'}</td>
+          <td style="border: 1px solid #000; padding: 5px;">${workerDist.toFixed(2)}</td>
+          <td style="border: 1px solid #000; padding: 5px;">${insDist.toFixed(2)}</td>
+          <td style="border: 1px solid #000; padding: 5px;">${insLiters.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    const pagePlan = `
+      <div class="print-page print-plan-page">
+        <h2 style="text-align: center; font-size: 13pt !important; font-weight: bold; margin-bottom: 1.2rem; text-decoration: underline;">แบบขออนุมัติแผนการออกตรวจสอบการนำจ่าย</h2>
+        
+        <div style="margin-bottom: 0.8rem; font-size: 10pt;">
+          <strong>(1) เรียน</strong> หน.ปณ.${postOffice}
+        </div>
+
+        <div style="text-indent: 1.2cm; text-align: justify; margin-bottom: 0.8rem; font-size: 10pt; line-height: 1.5; color: black;">
+          ข้าพเจ้า <strong>${sup.name}</strong> <strong>${sup.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขออนุมัติแผนการออกตรวจสอบการนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${sup.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่าย รวม <strong>${totalInspectDist.toFixed(0)}</strong> กม. โดยมีรายละเอียด ดังนี้
+        </div>
+
+        <table class="plan-table">
+          <thead>
+            <tr style="background-color: #f8f8f8; font-weight: bold;">
+              <th style="width: 25%">ด้านจ่ายในความรับผิดชอบ</th>
+              <th style="width: 20%">ว./ด./ป. ที่ตรวจสอบ</th>
+              <th style="width: 15%">ระยะทาง (กม./วัน)</th>
+              <th style="width: 20%">ระยะทางที่ออกตรวจสอบการนำจ่าย<br>(ครึ่งหนึ่งของระยะทางด้านจ่าย) (กม./วัน)</th>
+              <th style="width: 20%">น้ำมันเชื้อเพลิงที่ใช้ (ลิตร/วัน)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${missionsHtml}
+            <tr style="font-weight: bold; background-color: #fafafa;">
+              <td colspan="3" style="text-align: right; padding-right: 15px;">รวม</td>
+              <td>${totalInspectDist.toFixed(2)}</td>
+              <td>${totalFuelUsed.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="text-indent: 1.2cm; margin-bottom: 1.5rem; font-size: 10pt;">
+          จึงเรียน มาเพื่อโปรดพิจารณาอนุมัติต่อไปด้วย
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: flex-end; font-size: 10pt; margin-top: 0.5cm;">
+          <div style="text-align: center; width: 280px;">
+            <p>ลงชื่อ..........................................................ผู้ขออนุมัติ</p>
+            <p style="margin-top: 0.3rem; font-weight: bold;">( ${sup.name} )</p>
+            <p>ตำแหน่ง ${sup.duty || 'หัวหน้าโซนนำจ่าย'}</p>
+            <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
+          </div>
+        </div>
+
+        <div class="approval-section" style="margin-top: 1.5rem; border-top: 1px dashed #777; padding-top: 0.8rem; page-break-inside: avoid; font-size: 10pt;">
+          <div style="font-weight: bold; margin-bottom: 0.4rem;">(2) คำสั่ง หน.ปณ.${postOffice}</div>
+          <div style="margin-left: 1cm; margin-bottom: 0.4rem;">
+            [ &nbsp; ] อนุมัติแผนการออกตรวจดังกล่าว<br>
+            [ &nbsp; ] ไม่อนุมัติ เนื่องจาก....................................................................................................
+          </div>
+          
+          <div style="display: flex; justify-content: flex-end; margin-top: 0.8cm;">
+            <div style="text-align: center; width: 280px;">
+              <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+              <p style="margin-top: 0.3rem; font-weight: bold;">( ${sigApproverNameVal} )</p>
+              <p>ตำแหน่ง ${sigApproverPosVal}</p>
+              <p style="margin-top: 0.25rem; color: #444;">วันที่......... เดือน.......................... พ.ศ. .............</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    pagesHtml.push(pagePlan);
   });
 
   const printWindow = window.open('', '_blank');
@@ -1568,6 +1661,28 @@ export function printFuelReport() {
         @page {
           size: A4 landscape;
           margin: 0.2cm;
+        }
+        @page portrait-layout {
+          size: A4 portrait;
+          margin: 1.5cm;
+        }
+        .print-plan-page {
+          page: portrait-layout;
+          page-break-before: always;
+          font-size: 10.5pt !important;
+        }
+        .plan-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          margin-bottom: 15px;
+        }
+        .plan-table th, .plan-table td {
+          border: 1px solid #000 !important;
+          padding: 5px !important;
+          text-align: center;
+          font-size: 9.5pt;
+          height: auto !important;
         }
         .print-header {
           text-align: center;
