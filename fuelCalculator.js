@@ -2183,9 +2183,6 @@ export function getCalculatorsTemplate() {
                 <button type="button" id="printReportBtn" class="btn btn-primary btn-small">
                   🖨️ พิมพ์ใบเบิกเงิน / PDF
                 </button>
-                <button type="button" id="printPnd3Btn" class="btn btn-secondary btn-small hidden" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05); font-weight: bold;">
-                  📋 พิมพ์ใบแนบ ภ.ง.ด.3
-                </button>
                 <button type="button" id="clearAllBtn" class="btn btn-danger btn-small">
                   🗑️ ล้างทั้งหมด
                 </button>

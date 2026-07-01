@@ -166,7 +166,6 @@ let empNameSelect = null;
 
 let exportCsvBtn = null;
 let printReportBtn = null;
-let printPnd3Btn = null;
 let clearAllBtn = null;
 
 let importExcelAttendanceBtn = null;
@@ -414,7 +413,6 @@ function setupCalculatorDOMReferencesAndEvents() {
 
   exportCsvBtn = document.getElementById('exportCsvBtn');
   printReportBtn = document.getElementById('printReportBtn');
-  printPnd3Btn = document.getElementById('printPnd3Btn');
   clearAllBtn = document.getElementById('clearAllBtn');
 
   importExcelAttendanceBtn = document.getElementById('importExcelAttendanceBtn');
@@ -713,11 +711,6 @@ function setupCalculatorDOMReferencesAndEvents() {
       import('./waterCalculator.js').then(m => m.printWaterReport());
     }
   });
-  if (printPnd3Btn) {
-    printPnd3Btn.addEventListener('click', () => {
-      import('./waterCalculator.js').then(m => m.printPnd3());
-    });
-  }
   clearAllBtn.addEventListener('click', () => {
     if (window.isCurrentMonthLocked) {
       showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
@@ -1678,10 +1671,6 @@ async function switchAppMode(mode) {
         `;
       }
       if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลพนักงาน';
-      if (document.getElementById('openRouteEditorBtn')) document.getElementById('openRouteEditorBtn').classList.remove('hidden');
-      if (document.getElementById('pullAttendanceDaysBtn')) document.getElementById('pullAttendanceDaysBtn').classList.remove('hidden');
-      if (document.getElementById('importExcelAttendanceBtn')) document.getElementById('importExcelAttendanceBtn').classList.remove('hidden');
-      if (printPnd3Btn) printPnd3Btn.classList.add('hidden');
     } else {
       if (modeWaterBtn) { modeWaterBtn.classList.add('active'); }
       if (modeFuelBtn) { modeFuelBtn.classList.remove('active'); }
@@ -1747,10 +1736,6 @@ async function switchAppMode(mode) {
         `;
       }
       if (saveBtn) saveBtn.innerHTML = '📥 บันทึกข้อมูลค่าน้ำดื่ม';
-      if (document.getElementById('openRouteEditorBtn')) document.getElementById('openRouteEditorBtn').classList.add('hidden');
-      if (document.getElementById('pullAttendanceDaysBtn')) document.getElementById('pullAttendanceDaysBtn').classList.add('hidden');
-      if (document.getElementById('importExcelAttendanceBtn')) document.getElementById('importExcelAttendanceBtn').classList.add('hidden');
-      if (printPnd3Btn) printPnd3Btn.classList.remove('hidden');
     }
     
     cancelEdit();
