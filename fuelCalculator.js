@@ -338,7 +338,11 @@ export function renderFuelTable() {
     `;
 
     tr.querySelector('.edit-row-btn').addEventListener('click', () => {
-      if (window.openEditModal) window.openEditModal(false, row.parentIndex);
+      if (row.item.formMode === 'supervisor') {
+        editSupervisorInForm(row.parentIndex);
+      } else {
+        if (window.openEditModal) window.openEditModal(false, row.parentIndex);
+      }
     });
     if (row.item.formMode === 'supervisor') {
       tr.querySelector('.print-plan-btn').addEventListener('click', () => printSupervisorPlan(row.parentIndex));
@@ -666,6 +670,50 @@ export async function handleFuelFormSubmit(e) {
   renderFuelTable();
   saveEmployees(employees);
   window.showToast(isEdit ? 'อัปเดตข้อมูลสำเร็จ!' : 'บันทึกข้อมูลสำเร็จ!', 'success');
+}
+
+export function clearSupervisorMissions() {
+  tempMissions = [];
+  renderMissionsTable();
+}
+
+export function editSupervisorInForm(parentIndex) {
+  const employees = getEmployees();
+  const emp = employees[parentIndex];
+  if (!emp) return;
+
+  document.getElementById('empName').value = emp.name;
+  document.getElementById('formMode').value = emp.formMode; // 'supervisor'
+  document.getElementById('remarks').value = emp.remarks || '';
+  document.getElementById('signature').value = emp.signature || '';
+  document.getElementById('editIndex').value = parentIndex;
+
+  tempMissions = [...(emp.missions || [])];
+
+  if (window.switchFormMode) {
+    window.switchFormMode('supervisor', true);
+  }
+
+  // Pre-fill position/duty for supervisor
+  document.getElementById('empPosition').value = emp.position || 'หัวหน้าโซน';
+  document.getElementById('vehicleType').value = emp.vehicle || 'จักรยานยนต์';
+
+  renderMissionsTable();
+
+  const formTitle = document.getElementById('formTitle');
+  if (formTitle) formTitle.textContent = '✏️ แก้ไขข้อมูล ชนจ. (ในแบบฟอร์ม)';
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) saveBtn.innerHTML = '📥 อัปเดตข้อมูล ชนจ.';
+  const resetBtn = document.getElementById('resetBtn');
+  if (resetBtn) {
+    resetBtn.classList.remove('hidden');
+    resetBtn.textContent = '❌ ยกเลิกการแก้ไข';
+  }
+
+  const entryFormCard = document.getElementById('entryFormCard');
+  if (entryFormCard) {
+    entryFormCard.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 export function printSupervisorPlan(parentIndex) {

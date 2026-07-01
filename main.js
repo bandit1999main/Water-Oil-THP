@@ -1802,6 +1802,7 @@ function handleEmpNameSelectChange(e) {
 }
 
 function switchFormMode(mode, keepEditState = false) {
+  window.switchFormMode = switchFormMode;
   formModeInput.value = mode;
   if (mode === 'supervisor') {
     tabSupervisor.classList.add('active');
@@ -1866,6 +1867,9 @@ function cancelEdit() {
   if (formTitle) formTitle.textContent = activeMode === 'fuel' ? 'กรอกข้อมูลผู้รับเงินค่าน้ำมัน' : 'กรอกข้อมูลผู้รับค่าน้ำดื่ม';
   if (activeMode === 'fuel') {
     switchFormMode('standard');
+    import('./fuelCalculator.js').then(m => {
+      if (m.clearSupervisorMissions) m.clearSupervisorMissions();
+    });
   }
 }
 
