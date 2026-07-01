@@ -1182,6 +1182,7 @@ export function printFuelReport() {
   let listDailyAndTemp = [];
   let listContractors = [];
   let listSubstitutes = [];
+  let listSupervisors = [];
   let supervisors = [];
 
   const ROUTE_DATA = getRouteData();
@@ -1222,14 +1223,7 @@ export function printFuelReport() {
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         };
 
-        const posLower = (item.position || '').toLowerCase();
-        if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
-          listStaffAndRegular.push(rowObj);
-        } else if (posLower.includes('เหมา')) {
-          listContractors.push(rowObj);
-        } else {
-          listDailyAndTemp.push(rowObj);
-        }
+        listSupervisors.push(rowObj);
       }
 
       // 2. Individual other missions ('นำจ่ายแทน', 'ฝึกสอนงาน') get their own rows
@@ -1256,14 +1250,7 @@ export function printFuelReport() {
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         };
 
-        const posLower = (item.position || '').toLowerCase();
-        if (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ')) {
-          listStaffAndRegular.push(rowObj);
-        } else if (posLower.includes('เหมา')) {
-          listContractors.push(rowObj);
-        } else {
-          listDailyAndTemp.push(rowObj);
-        }
+        listSupervisors.push(rowObj);
       });
     } else {
       const liters = calculateClaimLiters(item);
@@ -1407,6 +1394,9 @@ export function printFuelReport() {
 
   const page4 = buildStandardPageHtml('เจ้าหน้าที่จ้างวิ่งแทนด้านจ่าย', listSubstitutes);
   if (page4) pagesHtml.push(page4);
+
+  const page5 = buildStandardPageHtml('หัวหน้าโซนนำจ่าย (ชนจ.)', listSupervisors);
+  if (page5) pagesHtml.push(page5);
 
   // Supervisors (ชนจ.) Pages
   const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
