@@ -1032,8 +1032,8 @@ export function print50Tawi(originalIdx) {
               <div>ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้น ถูกต้องตรงกับความจริงทุกประการ</div>
               <br>
               <div>ลงชื่อ ............................................................ ผู้จ่ายเงิน</div>
-              <div>(<span class="editable-field" contenteditable="true">บริษัท ไปรษณีย์ไทย จำกัด</span>)</div>
-              <div>วันที่ออกเอกสาร: <span class="editable-field" contenteditable="true">${thDate}</span></div>
+              <div>( <span class="editable-field" contenteditable="true">............................................................</span> )</div>
+              <div>วันที่ออกเอกสาร: <span class="editable-field" contenteditable="true">............................................................</span></div>
             </div>
           </div>
 
