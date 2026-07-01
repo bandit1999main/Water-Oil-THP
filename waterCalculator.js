@@ -852,9 +852,20 @@ export function print50Tawi(originalIdx) {
       </style>
     </head>
     <body>
-      <div class="no-print-header no-print">
-        <span style="font-size: 10.5pt;">💡 <strong>โหมดแก้ไขก่อนพิมพ์:</strong> คุณสามารถคลิกข้อความสีส้มเพื่อแก้ไขรายละเอียดต่าง ๆ ได้โดยตรงก่อนสั่งพิมพ์</span>
-        <button onclick="window.print()">🖨️ สั่งพิมพ์ใบ 50 ทวิ</button>
+      <div class="no-print-header no-print" style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; flex-grow: 1;">
+          <h2 style="margin: 0; font-size: 11pt;">📄 พิมพ์ใบ 50 ทวิ</h2>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <label for="poTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: white;">เลขผู้เสียภาษี ปณ.:</label>
+            <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 140px; text-align: center; color: black; font-family: monospace;" />
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-grow: 1; max-width: 500px;">
+            <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
+            <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
+          </div>
+          <button id="savePoConfigBtn" style="background: var(--post-emerald); color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกค่าเริ่มต้น</button>
+        </div>
+        <button onclick="window.print()" style="background: var(--post-orange); color: white; border: none; padding: 6px 16px; font-weight: bold; border-radius: 4px; cursor: pointer;">🖨️ สั่งพิมพ์ใบ 50 ทวิ</button>
       </div>
 
       <div class="page-container">
@@ -881,12 +892,12 @@ export function print50Tawi(originalIdx) {
               <span>ผู้มีหน้าที่หักภาษี ณ ที่จ่าย :</span>
               <div class="tax-id-line">
                 <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
-                ${formatTaxIdBoxes(poTaxId)}
+                <span id="poTaxIdContainer" style="display: inline-flex;">${formatTaxIdBoxes(poTaxId)}</span>
               </div>
             </div>
             <div class="party-detail">
               <div>ชื่อหน่วยงาน: <span class="editable-field" contenteditable="true">${poName}</span></div>
-              <div>ที่อยู่: <span class="editable-field" contenteditable="true">${poAddress || '.........................................................................................................'}</span></div>
+              <div>ที่อยู่: <span id="poAddressSpan" class="editable-field" contenteditable="true">${poAddress || '.........................................................................................................'}</span></div>
             </div>
           </div>
 
@@ -1002,6 +1013,52 @@ export function print50Tawi(originalIdx) {
 
         </div>
       </div>
+      <script>
+        const poTaxIdInput = document.getElementById('poTaxIdInput');
+        const poAddressInput = document.getElementById('poAddressInput');
+        const savePoConfigBtn = document.getElementById('savePoConfigBtn');
+
+        function updateTaxIdBoxes(taxId) {
+          const clean = (taxId || '').replace(/\\D/g, '').padEnd(13, ' ');
+          const boxes = clean.split('').map(char => `<span class="tax-box">\${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+          const container = document.getElementById('poTaxIdContainer');
+          if (container) container.innerHTML = boxes;
+        }
+
+        if (poTaxIdInput) {
+          poTaxIdInput.addEventListener('input', (e) => {
+            updateTaxIdBoxes(e.target.value);
+          });
+        }
+
+        if (poAddressInput) {
+          poAddressInput.addEventListener('input', (e) => {
+            const addressSpan = document.getElementById('poAddressSpan');
+            if (addressSpan) addressSpan.textContent = e.target.value || '.........................................................................................................';
+          });
+        }
+
+        if (savePoConfigBtn) {
+          savePoConfigBtn.addEventListener('click', () => {
+            const newTaxId = poTaxIdInput.value.trim();
+            const newAddress = poAddressInput.value.trim();
+            try {
+              const parentConfigs = JSON.parse(window.opener.localStorage.getItem('tp_global_configs')) || {};
+              parentConfigs.postOfficeTaxId = newTaxId;
+              parentConfigs.postOfficeAddress = newAddress;
+              window.opener.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
+              if (window.opener.appConfigs) {
+                window.opener.appConfigs.postOfficeTaxId = newTaxId;
+                window.opener.appConfigs.postOfficeAddress = newAddress;
+              }
+              alert('บันทึกข้อมูลผู้มีหน้าที่หักภาษีเป็นค่าเริ่มต้นสำเร็จเรียบร้อยแล้ว!');
+            } catch (err) {
+              console.error(err);
+              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าตั้งค่าแอดมิน');
+            }
+          });
+        }
+      </script>
     </body>
     </html>
   `);
