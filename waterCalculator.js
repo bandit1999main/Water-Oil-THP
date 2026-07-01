@@ -600,11 +600,13 @@ export function print50Tawi(originalIdx) {
   const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
   const poName = configs.postOfficeName || "ไปรษณีย์ไทย";
   const poTaxId = configs.postOfficeTaxId || "";
+  const poBranch = configs.postOfficeBranch || "00000";
   const poAddress = configs.postOfficeAddress || "";
 
   const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
   const person = registry.find(p => p.name === employee.name);
   const empTaxId = person ? (person.taxId || "") : "";
+  const empBranch = person ? (person.branch || "00000") : "00000";
   const empAddress = person ? (person.address || "") : "";
 
   const allowance = employee.workDays * (window.waterAllowancePerDay || 30);
@@ -622,6 +624,11 @@ export function print50Tawi(originalIdx) {
   const formatTaxIdBoxes = (taxIdStr) => {
     const clean = (taxIdStr || '').replace(/\D/g, '').padEnd(13, ' ');
     return clean.split('').map(char => `<span class="tax-box">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+  };
+
+  const formatBranchBoxes = (branchStr) => {
+    const clean = (branchStr || '').replace(/\D/g, '').padEnd(5, '0');
+    return clean.split('').map(char => `<span class="tax-box">${char === ' ' ? '0' : char}</span>`).join('');
   };
 
   const today = new Date();
@@ -866,9 +873,13 @@ export function print50Tawi(originalIdx) {
           <h2 style="margin: 0; font-size: 11pt;">📄 พิมพ์ใบ 50 ทวิ</h2>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
             <label for="poTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: white;">เลขผู้เสียภาษี ปณ.:</label>
-            <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 140px; text-align: center; color: black; font-family: monospace;" />
+            <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 130px; text-align: center; color: black; font-family: monospace;" />
           </div>
-          <div style="display: flex; gap: 0.4rem; align-items: center; flex-grow: 1; max-width: 500px;">
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <label for="poBranchInput" style="font-size: 8.5pt; font-weight: bold; color: white;">สาขาที่:</label>
+            <input type="text" id="poBranchInput" value="${poBranch}" maxlength="5" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 70px; text-align: center; color: black; font-family: monospace;" />
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-grow: 1; max-width: 400px;">
             <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
             <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
           </div>
@@ -902,6 +913,9 @@ export function print50Tawi(originalIdx) {
               <div class="tax-id-line">
                 <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
                 <span id="poTaxIdContainer" style="display: inline-flex;">${formatTaxIdBoxes(poTaxId)}</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <span>สาขาที่ :</span>
+                <span id="poBranchContainer" style="display: inline-flex;">${formatBranchBoxes(poBranch)}</span>
               </div>
             </div>
             <div class="party-detail">
@@ -916,7 +930,10 @@ export function print50Tawi(originalIdx) {
               <span>ผู้ถูกหักภาษี ณ ที่จ่าย :</span>
               <div class="tax-id-line">
                 <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
-                ${formatTaxIdBoxes(empTaxId)}
+                <span id="empTaxIdContainer" style="display: inline-flex;">${formatTaxIdBoxes(empTaxId)}</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <span>สาขาที่ :</span>
+                <span id="empBranchContainer" style="display: inline-flex;">${formatBranchBoxes(empBranch)}</span>
               </div>
             </div>
             <div class="party-detail">
@@ -1024,6 +1041,7 @@ export function print50Tawi(originalIdx) {
       </div>
       <script>
         const poTaxIdInput = document.getElementById('poTaxIdInput');
+        const poBranchInput = document.getElementById('poBranchInput');
         const poAddressInput = document.getElementById('poAddressInput');
         const savePoConfigBtn = document.getElementById('savePoConfigBtn');
 
@@ -1034,9 +1052,22 @@ export function print50Tawi(originalIdx) {
           if (container) container.innerHTML = boxes;
         }
 
+        function updateBranchBoxes(branch) {
+          const clean = (branch || '').replace(/\D/g, '').padEnd(5, '0');
+          const boxes = clean.split('').map(char => '<span class="tax-box">' + char + '</span>').join('');
+          const container = document.getElementById('poBranchContainer');
+          if (container) container.innerHTML = boxes;
+        }
+
         if (poTaxIdInput) {
           poTaxIdInput.addEventListener('input', (e) => {
             updateTaxIdBoxes(e.target.value);
+          });
+        }
+
+        if (poBranchInput) {
+          poBranchInput.addEventListener('input', (e) => {
+            updateBranchBoxes(e.target.value);
           });
         }
 
@@ -1050,14 +1081,17 @@ export function print50Tawi(originalIdx) {
         if (savePoConfigBtn) {
           savePoConfigBtn.addEventListener('click', () => {
             const newTaxId = poTaxIdInput.value.trim();
+            const newBranch = poBranchInput.value.trim();
             const newAddress = poAddressInput.value.trim();
             try {
               const parentConfigs = JSON.parse(window.opener.localStorage.getItem('tp_global_configs')) || {};
               parentConfigs.postOfficeTaxId = newTaxId;
+              parentConfigs.postOfficeBranch = newBranch;
               parentConfigs.postOfficeAddress = newAddress;
               window.opener.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
               if (window.opener.appConfigs) {
                 window.opener.appConfigs.postOfficeTaxId = newTaxId;
+                window.opener.appConfigs.postOfficeBranch = newBranch;
                 window.opener.appConfigs.postOfficeAddress = newAddress;
               }
               alert('บันทึกข้อมูลผู้มีหน้าที่หักภาษีเป็นค่าเริ่มต้นสำเร็จเรียบร้อยแล้ว!');

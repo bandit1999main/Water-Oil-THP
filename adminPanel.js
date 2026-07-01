@@ -310,6 +310,11 @@ export function getAdminPanelTemplate() {
                   </div>
 
                   <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminPostOfficeBranch" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">สาขาที่ (5 หลัก เช่น 00000):</label>
+                    <input type="text" id="adminPostOfficeBranch" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น 00000" maxlength="5" />
+                  </div>
+
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                     <label for="adminPostOfficeAddress" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ที่อยู่หน่วยงาน ปณ. (ตามที่จดทะเบียน):</label>
                     <input type="text" id="adminPostOfficeAddress" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น เลขที่ 1/1 ถนนสุขุมวิท..." />
                   </div>
@@ -419,6 +424,7 @@ export function getAdminPanelTemplate() {
 export async function initAdminPanel() {
   const officeInput = document.getElementById('adminPostOfficeName');
   const officeTaxIdInput = document.getElementById('adminPostOfficeTaxId');
+  const officeBranchInput = document.getElementById('adminPostOfficeBranch');
   const officeAddressInput = document.getElementById('adminPostOfficeAddress');
   const allowanceInput = document.getElementById('adminWaterAllowance');
   const fuelInput = document.getElementById('adminDefaultFuelPrice');
@@ -432,6 +438,7 @@ export async function initAdminPanel() {
   
   if (officeInput) officeInput.value = configs.postOfficeName || "ไปรษณีย์ไทย";
   if (officeTaxIdInput) officeTaxIdInput.value = configs.postOfficeTaxId || "";
+  if (officeBranchInput) officeBranchInput.value = configs.postOfficeBranch || "00000";
   if (officeAddressInput) officeAddressInput.value = configs.postOfficeAddress || "";
   if (allowanceInput) allowanceInput.value = configs.waterAllowancePerDay || 30;
   if (fuelInput) fuelInput.value = configs.defaultFuelPrice !== undefined ? configs.defaultFuelPrice : 35.00;
@@ -516,6 +523,7 @@ export async function initAdminPanel() {
     const allowance = parseInt(allowanceInput.value);
     const officeName = officeInput.value.trim();
     const officeTaxId = officeTaxIdInput ? officeTaxIdInput.value.trim() : "";
+    const officeBranch = officeBranchInput ? officeBranchInput.value.trim() : "00000";
     const officeAddress = officeAddressInput ? officeAddressInput.value.trim() : "";
     const fuelPrice = parseFloat(fuelInput.value);
 
@@ -551,6 +559,7 @@ export async function initAdminPanel() {
       waterAllowancePerDay: allowance,
       postOfficeName: officeName,
       postOfficeTaxId: officeTaxId,
+      postOfficeBranch: officeBranch,
       postOfficeAddress: officeAddress,
       defaultFuelPrice: fuelPrice,
       waterTaxBrackets: localBrackets
