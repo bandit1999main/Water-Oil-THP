@@ -1019,8 +1019,8 @@ export function print50Tawi(originalIdx) {
         const savePoConfigBtn = document.getElementById('savePoConfigBtn');
 
         function updateTaxIdBoxes(taxId) {
-          const clean = (taxId || '').replace(/\\D/g, '').padEnd(13, ' ');
-          const boxes = clean.split('').map(char => `<span class="tax-box">\${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+          const clean = (taxId || '').replace(/\D/g, '').padEnd(13, ' ');
+          const boxes = clean.split('').map(char => '<span class="tax-box">' + (char === ' ' ? '&nbsp;' : char) + '</span>').join('');
           const container = document.getElementById('poTaxIdContainer');
           if (container) container.innerHTML = boxes;
         }
