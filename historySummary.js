@@ -839,13 +839,14 @@ function renderHistoricalWaterTable() {
       <th style="width: 25%">ปฏิบัติหน้าที่</th>
       <th style="width: 15%">เงินเดือน (บาท)</th>
       <th style="width: 10%">วันทำงาน</th>
-      <th style="width: 20%">ยอดค่าน้ำรวมสุทธิ (บาท)</th>
+      <th style="width: 15%">ยอดค่าน้ำรวมสุทธิ (บาท)</th>
+      <th style="width: 10%">จัดการ</th>
     </tr>
   `;
 
   const list = currentViewingSnapshot.waterList || [];
   if (list.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="6" class="no-data">ไม่มีข้อมูลบันทึกค่าน้ำดื่มของเดือนนี้</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="7" class="no-data">ไม่มีข้อมูลบันทึกค่าน้ำดื่มของเดือนนี้</td></tr>`;
     return;
   }
 
@@ -863,10 +864,20 @@ function renderHistoricalWaterTable() {
         <td style="text-align: right;">${(item.salary || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td style="text-align: center;">${item.workDays} วัน</td>
         <td style="text-align: right; font-weight: bold; color: var(--post-emerald);">${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td style="text-align: center;">
+          ${tax > 0 ? `<button class="btn btn-secondary btn-small history-print-50-btn" data-index="${index}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">📄 พิมพ์</button>` : '-'}
+        </td>
       </tr>
     `;
   });
   tableBody.innerHTML = html;
+
+  tableBody.querySelectorAll('.history-print-50-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.currentTarget.getAttribute('data-index'));
+      printHistorical50Tawi(idx);
+    });
+  });
 }
 
 // Internal water tax calculator matching rules
@@ -1229,4 +1240,574 @@ export function applyDutyBasedHistoryRestrictions() {
       td.style.setProperty('display', hasFuel ? '' : 'none', 'important');
     });
   }
+}
+
+function arabicToBahtText(number) {
+  if (isNaN(number) || number === null) return "";
+  const decimal = Math.round((number % 1) * 100);
+  const integer = Math.floor(number);
+  
+  const thNumbers = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+  const thPositions = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
+  
+  function convertSection(num) {
+    if (num === 0) return "";
+    let res = "";
+    const s = num.toString();
+    const len = s.length;
+    for (let i = 0; i < len; i++) {
+      const digit = parseInt(s[i]);
+      const pos = len - i - 1;
+      if (digit !== 0) {
+        if (pos === 1 && digit === 1) {
+          res += "สิบ";
+        } else if (pos === 1 && digit === 2) {
+          res += "ยี่สิบ";
+        } else if (pos === 0 && digit === 1 && len > 1) {
+          res += "เอ็ด";
+        } else {
+          res += thNumbers[digit] + thPositions[pos];
+        }
+      }
+    }
+    return res;
+  }
+
+  let result = "";
+  if (integer === 0) {
+    result = "ศูนย์บาท";
+  } else {
+    const millionStr = integer.toString();
+    if (millionStr.length > 6) {
+      const milPart = parseInt(millionStr.substring(0, millionStr.length - 6));
+      const restPart = parseInt(millionStr.substring(millionStr.length - 6));
+      result += convertSection(milPart) + "ล้าน" + convertSection(restPart) + "บาท";
+    } else {
+      result += convertSection(integer) + "บาท";
+    }
+  }
+  
+  if (decimal === 0) {
+    result += "ถ้วน";
+  } else {
+    result += convertSection(decimal) + "สตางค์";
+  }
+  return result;
+}
+
+function printHistorical50Tawi(idx) {
+  const list = currentViewingSnapshot.waterList || [];
+  const employee = list[idx];
+  if (!employee) return;
+
+  const year = currentViewingSnapshot.year;
+  const month = currentViewingSnapshot.month;
+  const monthNames = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  const monthText = monthNames[month - 1] || '';
+  const yearText = String(year);
+
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const poTaxId = configs.postOfficeTaxId || "";
+  const poBranch = configs.postOfficeBranch || "00000";
+  const poAddress = configs.postOfficeAddress || "";
+
+  const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  const person = registry.find(p => p.name === employee.name);
+  const empTaxId = person ? (person.taxId || "") : "";
+  const empBranch = person ? (person.branch || "00000") : "00000";
+  const empAddress = person ? (person.address || "") : "";
+
+  const allowance = (employee.workDays || 0) * (window.waterAllowancePerDay || 30);
+  const tax = calculateWaterTaxInternal(employee.salary || 0, allowance);
+
+  const sortedList = [...list].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  const taxEmployees = sortedList.filter(item => {
+    const itemAllowance = (item.workDays || 0) * (window.waterAllowancePerDay || 30);
+    const itemTax = calculateWaterTaxInternal(item.salary || 0, itemAllowance);
+    return itemTax > 0;
+  });
+  const taxIndex = taxEmployees.findIndex(emp => emp.name === employee.name);
+  const sequenceNo = taxIndex !== -1 ? (taxIndex + 1) : 1;
+
+  const formatTaxIdBoxes = (taxIdStr) => {
+    const clean = (taxIdStr || '').replace(/\D/g, '').padEnd(13, ' ');
+    return clean.split('').map(char => `<span class="tax-box">${char === ' ' ? '&nbsp;' : char}</span>`).join('');
+  };
+
+  const formatBranchBoxes = (branchStr) => {
+    const clean = (branchStr || '').replace(/\D/g, '').padEnd(5, '0');
+    return clean.split('').map(char => `<span class="tax-box">${char === ' ' ? '0' : char}</span>`).join('');
+  };
+
+  const today = new Date();
+  const thDate = `${today.getDate()} ${monthNames[today.getMonth()]} ${today.getFullYear() + 543}`;
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+      <meta charset="UTF-8">
+      <title>หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ) - ${employee.name}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+      <style>
+        * {
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Sarabun', sans-serif;
+          margin: 0;
+          padding: 15px;
+          background: #f0f0f0;
+          color: #000;
+          font-size: 8pt;
+          line-height: 1.25;
+        }
+        .page-container {
+          width: 210mm;
+          min-height: 297mm;
+          padding: 10mm;
+          margin: 0 auto;
+          background: #fff;
+          border: 1px solid #ddd;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+          position: relative;
+        }
+        .no-print-header {
+          background: #333;
+          color: #fff;
+          padding: 10px 20px;
+          margin: -15px -15px 15px -15px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-radius: 4px 4px 0 0;
+        }
+        .no-print-header button {
+          background: var(--post-orange, #f97316);
+          color: white;
+          border: none;
+          padding: 6px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: bold;
+          font-size: 10pt;
+        }
+        .no-print-header button:hover {
+          opacity: 0.9;
+        }
+        
+        .main-border-box {
+          border: 1.5px solid #000;
+          padding: 6px;
+          position: relative;
+        }
+        
+        .header-section {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 5px;
+        }
+        .header-left {
+          font-size: 7.5pt;
+          line-height: 1.2;
+        }
+        .header-center {
+          text-align: center;
+          flex-grow: 1;
+        }
+        .header-center h1 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin: 0 0 3px 0;
+        }
+        .header-center p {
+          font-size: 8pt;
+          margin: 0;
+        }
+        .header-right {
+          font-size: 7.5pt;
+          text-align: right;
+        }
+
+        .party-box {
+          border: 1px solid #000;
+          margin-bottom: 5px;
+          padding: 4px 6px;
+        }
+        .party-title {
+          font-weight: bold;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 0.5px dashed #000;
+          padding-bottom: 3px;
+          margin-bottom: 4px;
+        }
+        .party-detail {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .tax-id-line {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .tax-box {
+          display: inline-block;
+          border: 1px solid #000;
+          width: 14px;
+          height: 17px;
+          text-align: center;
+          line-height: 15px;
+          font-weight: bold;
+          font-size: 8.5pt;
+          background: #fff;
+        }
+
+        .seq-form-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 5px;
+          font-size: 8pt;
+        }
+        .seq-form-left {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+        
+        .main-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 5px;
+        }
+        .main-table th, .main-table td {
+          border: 1px solid #000;
+          padding: 4px;
+          font-size: 7.8pt;
+        }
+        .main-table th {
+          text-align: center;
+          background: #f2f2f2;
+          font-weight: bold;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        
+        .total-words-box {
+          border: 1px solid #000;
+          padding: 6px;
+          margin-bottom: 5px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-weight: bold;
+          background: #fafafa;
+        }
+
+        .fund-row {
+          border: 1px solid #000;
+          padding: 4px 6px;
+          margin-bottom: 5px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 7.5pt;
+        }
+
+        .footer-signatures {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 5px;
+        }
+        .footer-box-left {
+          border: 1px solid #000;
+          padding: 6px;
+          font-size: 7.5pt;
+          line-height: 1.3;
+        }
+        .footer-box-right {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 110px;
+        }
+
+        .editable-field {
+          background: rgba(254, 243, 199, 0.4);
+          border-bottom: 1px dashed #b45309;
+          padding: 1px 3px;
+          cursor: text;
+          outline: none;
+        }
+        .editable-field:focus {
+          background: rgba(254, 243, 199, 0.8);
+          border-bottom: 1.5px solid #b45309;
+        }
+
+        @media print {
+          body {
+            background: #fff;
+            padding: 0;
+          }
+          .page-container {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .editable-field {
+            background: transparent !important;
+            border-bottom: none !important;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="no-print-header no-print" style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; flex-grow: 1;">
+          <h2 style="margin: 0; font-size: 11pt; color: white;">📄 พิมพ์ใบ 50 ทวิ (ประวัติย้อนหลัง)</h2>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <label for="poTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: white;">เลขผู้เสียภาษี ปณ.:</label>
+            <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 130px; text-align: center; color: black; font-family: monospace;" />
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <label for="poBranchInput" style="font-size: 8.5pt; font-weight: bold; color: white;">สาขาที่:</label>
+            <input type="text" id="poBranchInput" value="${poBranch}" maxlength="5" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 70px; text-align: center; color: black; font-family: monospace;" />
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center; flex-grow: 1; max-width: 400px;">
+            <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
+            <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
+          </div>
+          <button id="savePoConfigBtn" style="background: var(--post-emerald); color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกค่าเริ่มต้น</button>
+        </div>
+        <button onclick="window.print()" style="background: var(--post-orange); color: white; border: none; padding: 6px 16px; font-weight: bold; border-radius: 4px; cursor: pointer;">🖨️ สั่งพิมพ์ใบ 50 ทวิ</button>
+      </div>
+
+      <div class="page-container">
+        <div class="main-border-box">
+          
+          <div class="header-section">
+            <div class="header-left">
+              <strong>ฉบับที่ 1</strong> (สำหรับผู้ถูกหักภาษี ณ ที่จ่าย ใช้แนบพร้อมกับแบบแสดงรายการภาษี)<br>
+              <strong>ฉบับที่ 2</strong> (สำหรับผู้ถูกหักภาษี ณ ที่จ่าย เก็บไว้เป็นหลักฐาน)
+            </div>
+            <div class="header-center">
+              <h1>หนังสือรับรองการหักภาษี ณ ที่จ่าย</h1>
+              <p>ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
+            </div>
+            <div class="header-right">
+              เล่มที่ <span class="editable-field" contenteditable="true">${yearText}</span><br>
+              เลขที่ <span class="editable-field" contenteditable="true">${sequenceNo.toString().padStart(2, '0')}</span>
+            </div>
+          </div>
+
+          <!-- Party 1: Withholder -->
+          <div class="party-box">
+            <div class="party-title">
+              <span>ผู้มีหน้าที่หักภาษี ณ ที่จ่าย :</span>
+              <div class="tax-id-line">
+                <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
+                <span id="poTaxIdContainer" style="display: inline-flex;">${formatTaxIdBoxes(poTaxId)}</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <span>สาขาที่ :</span>
+                <span id="poBranchContainer" style="display: inline-flex;">${formatBranchBoxes(poBranch)}</span>
+              </div>
+            </div>
+            <div class="party-detail">
+              <div>ชื่อหน่วยงาน: <span class="editable-field" contenteditable="true">บริษัท ไปรษณีย์ไทย จำกัด</span></div>
+              <div>ที่อยู่: <span id="poAddressSpan" class="editable-field" contenteditable="true">${poAddress || '.........................................................................................................'}</span></div>
+            </div>
+          </div>
+
+          <!-- Party 2: Payee -->
+          <div class="party-box">
+            <div class="party-title">
+              <span>ผู้ถูกหักภาษี ณ ที่จ่าย :</span>
+              <div class="tax-id-line">
+                <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
+                <span id="empTaxIdContainer" style="display: inline-flex;">${formatTaxIdBoxes(empTaxId)}</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <span>สาขาที่ :</span>
+                <span id="empBranchContainer" style="display: inline-flex;">${formatBranchBoxes(empBranch)}</span>
+              </div>
+            </div>
+            <div class="party-detail">
+              <div>ชื่อ-นามสกุล: <span class="editable-field" contenteditable="true">${employee.name}</span></div>
+              <div>ที่อยู่: <span class="editable-field" contenteditable="true">${empAddress || '.........................................................................................................'}</span></div>
+            </div>
+          </div>
+
+          <!-- Seq Section -->
+          <div class="seq-form-row">
+            <div class="seq-form-left">
+              <span>ลำดับที่ <span class="editable-field" contenteditable="true">${sequenceNo}</span> ในแบบ</span>
+              <span>[✓] (1) ภ.ง.ด.1ก</span>
+              <span>[ ] (2) ภ.ง.ด.1ก พิเศษ</span>
+              <span>[ ] (3) ภ.ง.ด.3</span>
+            </div>
+          </div>
+
+          <!-- Main Table -->
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th style="width: 50%">ประเภทเงินได้พึงประเมินที่จ่าย</th>
+                <th style="width: 18%">วัน เดือน หรือปี ที่จ่าย</th>
+                <th style="width: 16%">จำนวนเงินที่จ่าย</th>
+                <th style="width: 16%">ภาษีที่หักและนำส่งไว้</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="line-height: 1.3;">
+                  <strong>1. เงินเดือน ค่าจ้าง เบี้ยเลี้ยง โบนัส ฯลฯ ตามมาตรา 40 (1) (สวัสดิการค่าน้ำดื่ม)</strong>
+                </td>
+                <td class="text-center">
+                  <span class="editable-field" contenteditable="true">สิ้นเดือน ${monthText} ${yearText}</span>
+                </td>
+                <td class="text-right">
+                  <span class="editable-field" contenteditable="true">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </td>
+                <td class="text-right" style="font-weight: bold;">
+                  <span class="editable-field" contenteditable="true">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </td>
+              </tr>
+              <!-- Empty rows 2-6 -->
+              ${Array(5).fill(0).map((_, i) => `
+                <tr>
+                  <td>\${i + 2}. <span class="editable-field" contenteditable="true">........................................................................................</span></td>
+                  <td class="text-center"><span class="editable-field" contenteditable="true">............................</span></td>
+                  <td class="text-right"><span class="editable-field" contenteditable="true">................</span></td>
+                  <td class="text-right"><span class="editable-field" contenteditable="true">................</span></td>
+                </tr>
+              `).join('')}
+              
+              <!-- Total row -->
+              <tr style="font-weight: bold; background: #fafafa;">
+                <td class="text-right">รวมเงินที่จ่ายและภาษีที่หักนำส่ง</td>
+                <td class="text-center">-</td>
+                <td class="text-right">
+                  <span class="editable-field" contenteditable="true">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </td>
+                <td class="text-right">
+                  <span class="editable-field" contenteditable="true">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Total in words -->
+          <div class="total-words-box">
+            <span>รวมเงินภาษีที่หักนำส่ง (ตัวอักษร) :</span>
+            <span class="editable-field" contenteditable="true">${arabicToBahtText(tax)}</span>
+          </div>
+
+          <!-- Fund info -->
+          <div class="fund-row">
+            <span>เงินที่นำส่งเข้า: กองทุนประกันสังคม <span class="editable-field" contenteditable="true">0.00</span> บาท</span>
+            <span>กองทุนสำรองเลี้ยงชีพ <span class="editable-field" contenteditable="true">0.00</span> บาท</span>
+          </div>
+
+          <!-- Bottom sections -->
+          <div class="footer-signatures">
+            <div class="footer-box-left">
+              <strong>คำเตือน:</strong> ผู้มีหน้าที่ออกหนังสือรับรองการหักภาษี ณ ที่จ่าย ฝ่าฝืนไม่ปฏิบัติตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร ต้องรับโทษทางอาญาตามมาตรา 35 แห่งประมวลรัษฎากร
+              <br><br>
+              <strong>ผู้จ่ายเงิน:</strong> [✓] (1) หัก ณ ที่จ่าย &nbsp;&nbsp;&nbsp;&nbsp; [ ] (2) ออกให้ตลอดไป &nbsp;&nbsp;&nbsp;&nbsp; [ ] (3) ออกให้ครั้งเดียว
+            </div>
+            
+            <div class="footer-box-right">
+              <div>ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้น ถูกต้องตรงกับความจริงทุกประการ</div>
+              <br>
+              <div>ลงชื่อ ............................................................ ผู้จ่ายเงิน</div>
+              <div>( <span class="editable-field" contenteditable="true">............................................................</span> )</div>
+              <div>วันที่ออกเอกสาร: <span class="editable-field" contenteditable="true">............................................................</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <script>
+        const poTaxIdInput = document.getElementById('poTaxIdInput');
+        const poBranchInput = document.getElementById('poBranchInput');
+        const poAddressInput = document.getElementById('poAddressInput');
+        const savePoConfigBtn = document.getElementById('savePoConfigBtn');
+
+        function updateTaxIdBoxes(taxId) {
+          const clean = (taxId || '').replace(/\\D/g, '').padEnd(13, ' ');
+          const boxes = clean.split('').map(char => '<span class="tax-box">' + (char === ' ' ? '&nbsp;' : char) + '</span>').join('');
+          const container = document.getElementById('poTaxIdContainer');
+          if (container) container.innerHTML = boxes;
+        }
+
+        function updateBranchBoxes(branch) {
+          const clean = (branch || '').replace(/\\D/g, '').padEnd(5, '0');
+          const boxes = clean.split('').map(char => '<span class="tax-box">' + char + '</span>').join('');
+          const container = document.getElementById('poBranchContainer');
+          if (container) container.innerHTML = boxes;
+        }
+
+        if (poTaxIdInput) {
+          poTaxIdInput.addEventListener('input', (e) => {
+            updateTaxIdBoxes(e.target.value);
+          });
+        }
+
+        if (poBranchInput) {
+          poBranchInput.addEventListener('input', (e) => {
+            updateBranchBoxes(e.target.value);
+          });
+        }
+
+        if (poAddressInput) {
+          poAddressInput.addEventListener('input', (e) => {
+            const addressSpan = document.getElementById('poAddressSpan');
+            if (addressSpan) addressSpan.textContent = e.target.value || '.........................................................................................................';
+          });
+        }
+
+        if (savePoConfigBtn) {
+          savePoConfigBtn.addEventListener('click', () => {
+            const newTaxId = poTaxIdInput.value.trim();
+            const newBranch = poBranchInput.value.trim();
+            const newAddress = poAddressInput.value.trim();
+            try {
+              const parentConfigs = JSON.parse(window.opener.localStorage.getItem('tp_global_configs')) || {};
+              parentConfigs.postOfficeTaxId = newTaxId;
+              parentConfigs.postOfficeBranch = newBranch;
+              parentConfigs.postOfficeAddress = newAddress;
+              window.opener.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
+              if (window.opener.appConfigs) {
+                window.opener.appConfigs.postOfficeTaxId = newTaxId;
+                window.opener.appConfigs.postOfficeBranch = newBranch;
+                window.opener.appConfigs.postOfficeAddress = newAddress;
+              }
+              alert('บันทึกข้อมูลผู้มีหน้าที่หักภาษีเป็นค่าเริ่มต้นสำเร็จเรียบร้อยแล้ว!');
+            } catch (err) {
+              console.error(err);
+              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าตั้งค่าแอดมิน');
+            }
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
