@@ -296,30 +296,36 @@ export function getAdminPanelTemplate() {
             <div style="display: flex; flex-direction: column; gap: 1.5rem;">
               
               <!-- Core Global Vars -->
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem;">
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label for="adminPostOfficeName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ชื่อที่ทำการไปรษณีย์ / หน่วยงาน:</label>
-                  <input type="text" id="adminPostOfficeName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น ไปรษณีย์ไทย มาบตาพุด" />
-                </div>
-                
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label for="adminPostOfficeTaxId" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เลขประจำตัวผู้เสียภาษี (หน่วยงาน ปณ.):</label>
-                  <input type="text" id="adminPostOfficeTaxId" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น 0105500000000" maxlength="13" />
+              <div>
+                <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); margin-bottom: 0.75rem;">🏢 ข้อมูลผู้มีหน้าที่หักภาษี ณ ที่จ่าย (หน่วยงาน ปณ.)</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.01); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 8px;">
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminPostOfficeName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ชื่อหน่วยงาน / ผู้จ่ายเงิน:</label>
+                    <input type="text" id="adminPostOfficeName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น ไปรษณีย์ไทย มาบตาพุด" />
+                  </div>
+                  
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminPostOfficeTaxId" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เลขประจำตัวผู้เสียภาษีอากร (13 หลัก):</label>
+                    <input type="text" id="adminPostOfficeTaxId" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น 0105500000000" maxlength="13" />
+                  </div>
+
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminPostOfficeAddress" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ที่อยู่หน่วยงาน ปณ. (ตามที่จดทะเบียน):</label>
+                    <input type="text" id="adminPostOfficeAddress" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น เลขที่ 1/1 ถนนสุขุมวิท..." />
+                  </div>
                 </div>
 
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label for="adminPostOfficeAddress" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ที่อยู่หน่วยงาน ปณ.:</label>
-                  <input type="text" id="adminPostOfficeAddress" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น เลขที่ 1/1 ถนนสุขุมวิท..." />
-                </div>
+                <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); margin-bottom: 0.75rem;">💵 อัตราอ้างอิงและเงินช่วยเหลือกลาง</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; background: rgba(0, 0, 0, 0.01); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 8px;">
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
+                    <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
+                  </div>
 
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label for="adminWaterAllowance" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">เงินสวัสดิการค่าน้ำดื่มรายวัน (บาท / วัน):</label>
-                  <input type="number" id="adminWaterAllowance" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="1" value="30" />
-                </div>
-
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label for="adminDefaultFuelPrice" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ราคาน้ำมันอ้างอิงเริ่มต้น (บาท / ลิตร):</label>
-                  <input type="number" id="adminDefaultFuelPrice" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="0.01" value="35.00" />
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminDefaultFuelPrice" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ราคาน้ำมันอ้างอิงเริ่มต้น (บาท / ลิตร):</label>
+                    <input type="number" id="adminDefaultFuelPrice" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" min="1" step="0.01" value="35.00" />
+                  </div>
                 </div>
               </div>
 
