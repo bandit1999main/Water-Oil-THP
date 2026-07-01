@@ -246,6 +246,8 @@ export function printWaterReport() {
   const globalYearSelect = document.getElementById('globalYear');
   const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
   const yearText = globalYearSelect.value;
+  const month = parseInt(globalMonthSelect.value);
+  const year = parseInt(globalYearSelect.value);
   
   let totalAllowanceVal = 0;
   let totalTaxVal = 0;
@@ -271,7 +273,7 @@ export function printWaterReport() {
         <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
         <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #f7f4f4; font-weight: 300;">${item.signature}</span></td>
-        <td><span style="font-size: 8pt; color: #444;">${item.remarks}</span></td>
+        <td><span style="font-size: 8pt; color: #444;">${getResignRemarkForEmployee(item.name, year, month, item.remarks)}</span></td>
       </tr>
     `;
   });
@@ -505,4 +507,24 @@ export async function clearWaterData() {
       window.showToast('ล้างตารางข้อมูลค่าน้ำดื่มเรียบร้อยแล้ว!', 'success');
     }
   });
+}
+
+function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
+  try {
+    const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    const person = registry.find(p => p.name === name);
+    if (person && person.status === 'resigned' && person.resignYear && person.resignMonth) {
+      if (year === person.resignYear && month === person.resignMonth) {
+        const resignStr = `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}`;
+        const cleanExisting = (existingRemark || '').trim();
+        if (cleanExisting && !cleanExisting.includes('ลาออก')) {
+          return `${resignStr} | ${cleanExisting}`;
+        }
+        return resignStr;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading resignation remark:", e);
+  }
+  return existingRemark || '';
 }

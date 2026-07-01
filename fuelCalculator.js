@@ -166,6 +166,10 @@ export function renderFuelTable() {
   const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : (window.defaultFuelPrice || 35.00)) || (window.defaultFuelPrice || 35.00);
   const ROUTE_DATA = getRouteData();
   const employees = getEmployees();
+  const globalMonthSelect = document.getElementById('globalMonth');
+  const globalYearSelect = document.getElementById('globalYear');
+  const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
+  const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
 
   // Sort fuel employees by name (Thai alphabetical order ก-ฮ)
   employees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
@@ -210,7 +214,7 @@ export function renderFuelTable() {
         maintCost: maintCost,
         sumTotal: sumTotal,
         signature: item.signature,
-        remarks: item.remarks
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
       });
     } else {
       // 1. Group 'ตรวจสอบการนำจ่าย' into a single row
@@ -245,7 +249,7 @@ export function renderFuelTable() {
           maintCost: inspectMaint,
           sumTotal: sumTotal,
           signature: item.signature,
-          remarks: item.remarks
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         });
       }
 
@@ -272,7 +276,7 @@ export function renderFuelTable() {
           maintCost: maint,
           sumTotal: sumTotal,
           signature: item.signature,
-          remarks: item.remarks
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         });
       });
     }
@@ -1123,6 +1127,8 @@ export function printFuelReport() {
   const globalYearSelect = document.getElementById('globalYear');
   const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
   const yearText = globalYearSelect.value;
+  const month = parseInt(globalMonthSelect.value);
+  const year = parseInt(globalYearSelect.value);
 
   let listStaffAndRegular = [];
   let listDailyAndTemp = [];
@@ -1165,7 +1171,7 @@ export function printFuelReport() {
           maintCost: inspectMaint,
           sumTotal: sumTotal,
           signature: item.signature,
-          remarks: item.remarks || ''
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         };
 
         const posLower = (item.position || '').toLowerCase();
@@ -1199,7 +1205,7 @@ export function printFuelReport() {
           maintCost: maint,
           sumTotal: sumTotal,
           signature: item.signature,
-          remarks: item.remarks || ''
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         };
 
         const posLower = (item.position || '').toLowerCase();
@@ -1228,7 +1234,7 @@ export function printFuelReport() {
         maintCost: maintCost,
         sumTotal: sumTotal,
         signature: item.signature,
-        remarks: item.remarks || ''
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
       };
 
       if (item.isSubstitute) {
@@ -1611,6 +1617,25 @@ export async function clearFuelData() {
   });
 }
 
+function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
+  try {
+    const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    const person = registry.find(p => p.name === name);
+    if (person && person.status === 'resigned' && person.resignYear && person.resignMonth) {
+      if (year === person.resignYear && month === person.resignMonth) {
+        const resignStr = `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}`;
+        const cleanExisting = (existingRemark || '').trim();
+        if (cleanExisting && !cleanExisting.includes('ลาออก')) {
+          return `${resignStr} | ${cleanExisting}`;
+        }
+        return resignStr;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading resignation remark:", e);
+  }
+  return existingRemark || '';
+}
 
 export function getCalculatorsTemplate() {
   return `<div class="dashboard-grid animate-fade-in">
