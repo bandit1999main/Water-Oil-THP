@@ -597,7 +597,7 @@ export function print50Tawi(originalIdx) {
   const monthText = globalMonthSelect ? globalMonthSelect.options[globalMonthSelect.selectedIndex].text : '';
   const yearText = globalYearSelect ? globalYearSelect.value : '';
 
-  const configs = window.appConfigs || {};
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
   const poName = configs.postOfficeName || "ไปรษณีย์ไทย";
   const poTaxId = configs.postOfficeTaxId || "";
   const poAddress = configs.postOfficeAddress || "";
