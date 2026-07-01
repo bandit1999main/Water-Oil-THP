@@ -1400,108 +1400,155 @@ export function printFuelReport() {
 
   // Supervisors (ชนจ.) Pages
   const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
+  const splitBahtSatang = (value) => {
+    const rounded = Math.round(value * 100) / 100;
+    const parts = rounded.toFixed(2).split('.');
+    return {
+      baht: parts[0].replace(/\B(?=(\d{3})+(?!\D))/g, ","),
+      satang: parts[1]
+    };
+  };
+
+  let supervisorRowsHtml = '';
+  let overallSupFuel = 0;
+  let overallSupMaint = 0;
+  let overallSupTotal = 0;
+  let supervisorIndex = 1;
+
   supervisors.forEach((sup) => {
     if (!sup.missions || sup.missions.length === 0) return;
-    let missionsRowsHtml = sup.missions.map((m, idx) => {
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td style="text-align: left !important; padding-left: 8px !important;">${m.type}</td>
-          <td>ด้านที่ ${m.route}</td>
-          <td>${m.days} วัน</td>
-          <td>${m.dates || '-'}</td>
-          <td>${m.distance.toFixed(1)} กม.</td>
-        </tr>
-      `;
-    }).join('');
 
     const supLiters = calculateClaimLiters(sup);
     const supFuelCost = supLiters * currentFuelPrice;
     const supMaint = calculateMaintenanceCost(sup);
     const supTotal = supFuelCost + supMaint;
 
+    overallSupFuel += supFuelCost;
+    overallSupMaint += supMaint;
+    overallSupTotal += supTotal;
+
+    const numMissions = sup.missions.length;
+    const zoneNum = (sup.route || '').replace(/\D/g, '') || '-';
+
+    const splitFuel = splitBahtSatang(supFuelCost);
+    const splitMaint = splitBahtSatang(supMaint);
+    const splitTotal = splitBahtSatang(supTotal);
+
+    sup.missions.forEach((m, mIdx) => {
+      const isFirst = mIdx === 0;
+      let rowspanHtml = '';
+      if (isFirst) {
+        rowspanHtml = `
+          <td rowspan="${numMissions + 1}" style="text-align: center; vertical-align: middle;">${supervisorIndex++}</td>
+          <td rowspan="${numMissions + 1}" style="vertical-align: middle; padding-left: 8px !important;"><strong>${sup.name}</strong><br><span style="font-size: 7.2pt; color: #555;">${sup.position}</span></td>
+          <td rowspan="${numMissions + 1}" style="text-align: center; vertical-align: middle;">${zoneNum}</td>
+        `;
+      }
+
+      const missionDesc = m.type === 'ตรวจสอบการนำจ่าย' ? 'ตรวจสอบการนำจ่าย' : `${m.type} ด้าน ${m.route}`;
+
+      supervisorRowsHtml += `
+        <tr>
+          ${rowspanHtml}
+          <td style="text-align: left !important; padding-left: 8px !important;">${missionDesc}</td>
+          <td style="text-align: center;">${m.dates || m.days || '-'}</td>
+          <td style="text-align: right; padding-right: 8px !important;">${m.distance.toFixed(2)}</td>
+          <td></td>
+          <td></td><td></td>
+          <td></td><td></td>
+          <td></td>
+        </tr>
+      `;
+    });
+
+    // Totals row for this supervisor
+    supervisorRowsHtml += `
+      <tr style="background: #fafafa; font-weight: bold;">
+        <td style="text-align: right; padding-right: 8px !important; font-size: 7.5pt; color: #555;">${currentFuelPrice.toFixed(2)}</td>
+        <td style="text-align: center;">รวม</td>
+        <td style="text-align: right; padding-right: 8px !important;">${sup.missions.reduce((acc, m) => acc + m.distance, 0).toFixed(2)}</td>
+        <td style="text-align: right; padding-right: 8px !important;">${supLiters.toFixed(2)}</td>
+        <td style="text-align: right; padding-right: 4px !important; border-right: none !important;">${splitFuel.baht}</td>
+        <td style="text-align: center; border-left: none !important; font-size: 7.2pt; color: #444;">${splitFuel.satang}</td>
+        <td style="text-align: right; padding-right: 4px !important; border-right: none !important;">${splitMaint.baht}</td>
+        <td style="text-align: center; border-left: none !important; font-size: 7.2pt; color: #444;">${splitMaint.satang}</td>
+        <td style="text-align: right; padding-right: 8px !important;">${supTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      </tr>
+    `;
+  });
+
+  if (supervisorIndex > 1) {
+    const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
+    
+    // Calculate total monthly active days - default 26 or number of days in active month
+    const activeDaysInMonth = new Date(year - 543, month, 0).getDate();
+    
     const pageSup = `
       <div class="print-page">
-        <div class="print-header">
-          <div class="print-title-container">
-            <h2>ใบสรุปผลการปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.)</h2>
-            <h3>ผู้รายงาน: ${sup.name} (${sup.position}) | ที่ทำการ ปณ. ${postOffice}</h3>
-            <p>ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
-          </div>
+        <div class="print-header" style="text-align: center; border-bottom: 2px double #000; padding-bottom: 0.2rem; margin-bottom: 0.3rem;">
+          <h2 style="font-size: 10.5pt !important; font-weight: bold; margin: 0 0 0.1rem 0; text-align: center;">แบบรายงานการปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.)</h2>
+          <h3 style="font-size: 8.5pt !important; font-weight: normal; margin: 0 0 0.2rem 0; text-align: center;">(ประกอบการเบิกจ่ายเงินค่าบำรุงและค่าน้ำมันเชื้อเพลิงของ ชนจ.)</h3>
+          <p style="font-size: 7.8pt; margin: 0 0 0.1rem 0; text-align: center;">ประจำที่ทำการ ไปรษณีย์<strong>${postOffice}</strong> รหัสไปรษณีย์ <strong>21150</strong> สังกัด <strong>ปข.2</strong></p>
+          <p style="font-size: 7.8pt; margin: 0 0 0.2rem 0; text-align: center;">ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong></p>
         </div>
         
-        <div style="margin-top: 0.6rem; margin-bottom: 0.6rem; font-size: 8.2pt; text-align: justify; line-height: 1.4; text-indent: 1cm; color: black;">
-          ข้าพเจ้า <strong>${sup.name}</strong> <strong>${sup.duty || 'หัวหน้าโซนนำจ่าย'}</strong> ที่ทำการไปรษณีย์<strong>${postOffice}</strong> ขอเสนอใบสรุปผลการปฏิบัติงานของหัวหน้าโซนนำจ่าย ประจำเดือน <strong>${monthText}</strong> พ.ศ. <strong>${yearText}</strong> ตามบันทึก ปณท ที่ ปณท รป.(นจ.1)/951 ลว. 22 กันยายน 2568 เรื่อง วิธีปฏิบัติในการเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้ายานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาปฏิบัติงานของหัวหน้าโซนนำจ่าย (ชนจ.) ซึ่งข้าพเจ้า มีด้านจ่ายในความรับผิดชอบ จำนวน <strong>${sup.missions.length}</strong> ด้านจ่าย มีระยะทางออกตรวจสอบการนำจ่ายและเดินทางปฏิบัติงานนำจ่ายแทน รวมสะสมทั้งสิ้น <strong>${sup.missions.reduce((acc, m) => acc + m.distance, 0).toFixed(0)}</strong> กม. โดยมีรายละเอียด ดังนี้
+        <div style="display: flex; justify-content: space-between; font-size: 7.8pt; margin-bottom: 0.3rem; font-weight: bold; padding: 0 4px;">
+          <span>ค่าน้ำมันเฉลี่ยเดือนนี้: ${currentFuelPrice.toFixed(2)} บาท/ลิตร</span>
+          <span>จำนวนวันปฏิบัติงานเดือนนี้: ${activeDaysInMonth} วัน</span>
         </div>
 
-        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 8.5pt;">รายละเอียดภารกิจตรวจการนำจ่ายและเดินทางนำจ่ายแทน:</h4>
-        <table class="print-table" style="margin-bottom: 0.5rem;">
+        <table class="print-table supervisor-report-table" style="width: 100%; border-collapse: collapse; margin-bottom: 0.4rem;">
           <thead>
             <tr>
-              <th style="width: 5%">ที่</th>
-              <th style="width: 30%">ประเภทภารกิจ</th>
-              <th style="width: 15%">เป้าหมายด้านจ่าย</th>
-              <th style="width: 15%">จำนวนวันงาน</th>
-              <th style="width: 20%">วันที่ปฏิบัติงาน</th>
-              <th style="width: 15%">ระยะทางสะสม</th>
+              <th rowspan="2" style="width: 4%">ลำดับ</th>
+              <th rowspan="2" style="width: 15%">ชื่อ-นามสกุล</th>
+              <th rowspan="2" style="width: 4%">โซน</th>
+              <th rowspan="2" style="width: 17%">ภารกิจที่ปฏิบัติ</th>
+              <th rowspan="2" style="width: 12%">วว/ดด/ปปปป ที่<br>ปฏิบัติงาน</th>
+              <th rowspan="2" style="width: 8%">ระยะทางที่ใช้จริง<br>(กม.)</th>
+              <th rowspan="2" style="width: 8%">น้ำมันเชื้อเพลิง<br>ที่ใช้จริง (ลิตร)</th>
+              <th colspan="2" style="width: 12%">ค่าน้ำมัน/ค่าไฟฟ้า</th>
+              <th colspan="2" style="width: 12%">ค่าบำรุง</th>
+              <th rowspan="2" style="width: 10%">ลงชื่อผู้รับเงิน</th>
+            </tr>
+            <tr>
+              <th style="border-top: 1px solid #000 !important; font-size: 7pt; width: 8%">บาท</th>
+              <th style="border-top: 1px solid #000 !important; font-size: 7pt; width: 4%">สต.</th>
+              <th style="border-top: 1px solid #000 !important; font-size: 7pt; width: 8%">บาท</th>
+              <th style="border-top: 1px solid #000 !important; font-size: 7pt; width: 4%">สต.</th>
             </tr>
           </thead>
           <tbody>
-            ${missionsRowsHtml}
+            ${supervisorRowsHtml}
           </tbody>
         </table>
 
-        <h4 style="margin: 0.5rem 0 0.25rem 0; font-size: 8.5pt;">สรุปผลการคำนวณเงินค่าพาหนะเบิกจ่ายสะสมประจำเดือน:</h4>
-        <table class="print-table">
-          <thead>
-            <tr>
-              <th>ประเภทพาหนะ</th>
-              <th>จำนวนวันรวม</th>
-              <th>น้ำมันเบิกเฉลี่ยสะสม</th>
-              <th>ค่าน้ำมันสะสม (@ ${currentFuelPrice.toFixed(2)} บ.)</th>
-              <th>ค่าบำรุงรักษาสะสม</th>
-              <th>ยอดเบิกจ่ายรวมสุทธิ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>${sup.vehicle}</strong></td>
-              <td>${sup.workDays} วัน</td>
-              <td>${supLiters.toFixed(2)} ลิตร</td>
-              <td>${supFuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
-              <td>${supMaint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
-              <td><strong style="font-size: 10.5pt;">${supTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</strong></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="margin-top: 0.6rem; text-align: left; font-size: 7.5pt; border-top: 2px solid #888; border-bottom: 2px solid #888; padding: 6px 4px; background-color: #fafafa; line-height: 1.4;">
-          <strong>หมายเหตุสำคัญ (ชนจ. Regulations):</strong><br>
-          - ภารกิจ "ตรวจสอบการนำจ่าย" (ตรวจโซน): การเบิกจ่ายน้ำมันและระยะทางเดินทางจะคิดลดลงกึ่งหนึ่ง (50%) จากอัตราเกณฑ์มาตรฐานของผู้นำจ่ายจริง<br>
-          - ภารกิจ "นำจ่ายแทน" / "ฝึกสอนงาน": การเบิกจ่ายค่าน้ำมันและค่าพาหนะจะถูกคำนวณเต็มพิกัดอัตราปกติ (100%) ตามจริงของด้านจ่ายนั้นๆ
+        <div style="margin-top: 0.3rem; text-align: left; font-size: 7.2pt; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; line-height: 1.35; color: #222;">
+          <strong>*** หมายเหตุ:</strong> 1. การออกตรวจตรวจสอบการนำจ่าย ให้ดำเนินการไม่เกินวันละ 1 ด้านจ่าย และให้ใช้ระยะทางไม่เกินครึ่งหนึ่งของระยะทางของด้านที่ออกตรวจสอบฯ<br>
+          2. การคำนวณค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้าใช้วิธีการคำนวณตามระเบียบ ปณท ฉบับที่ 313 ว่าด้วย การเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและไฟฟ้า ยานพาหนะส่วนตัวหรือยานพาหนะเช่าซื้อที่นำมาใช้ปฏิบัติงานของพนักงานหรือลูกจ้างประจำ พ.ศ. 2567 และระเบียบ ปณท ฉบับที่ 314 ว่าด้วย การเบิกจ่ายเงินค่าบำรุง ค่าน้ำมันเชื้อเพลิงและค่าไฟฟ้า ยานพาหนะส่วนตัวที่นำมาใช้ปฏิบัติงานของลูกจ้าง พ.ศ. 2567 แต่ให้ใช้จำนวนลิตรของน้ำมันเชื้อเพลิงเป็นทศนิยม 2 ตำแหน่ง
         </div>
 
-        <div class="print-signatures">
-          <div class="sig-box">
-            <p>ลงชื่อ..........................................................ผู้จัดทำ (ชนจ.)</p>
-            <p style="margin-top: 0.5rem;">(${sup.signature || sup.name})</p>
-            <p>${sup.duty || 'หัวหน้าโซนนำจ่าย'}</p>
+        <div class="print-signatures" style="margin-top: 0.8rem; display: flex; justify-content: space-between; font-size: 7.8pt;">
+          <div class="sig-box" style="text-align: center; width: 30%;">
+            <p>ลงชื่อ..........................................................ผู้จัดทำ</p>
+            <p style="margin-top: 0.4rem;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
           </div>
-          <div class="sig-box">
-            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
-            <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+          <div class="sig-box" style="text-align: center; width: 30%;">
+            <p>ลงชื่อ..........................................................ผู้ตรวจสอบ</p>
+            <p style="margin-top: 0.4rem;">(${sigCheckerNameVal})</p>
             <p>ตำแหน่ง ${sigCheckerPosVal}</p>
           </div>
-          <div class="sig-box">
-            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
-            <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+          <div class="sig-box" style="text-align: center; width: 30%;">
+            <p>ลงชื่อ..........................................................ผู้อนุมัติ</p>
+            <p style="margin-top: 0.4rem;">(${sigApproverNameVal})</p>
             <p>ตำแหน่ง ${sigApproverPosVal}</p>
           </div>
         </div>
       </div>
     `;
     pagesHtml.push(pageSup);
-  });
+  }
 
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
