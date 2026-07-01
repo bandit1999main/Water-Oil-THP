@@ -1284,7 +1284,7 @@ export function printFuelReport() {
           <div class="print-title-container" style="flex-grow: 1; text-align: center;">
             <h2 style="font-size: 10pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">รายละเอียดบัญชีรายชื่อพนักงานใช้รถจักรยานยนต์ส่วนตัวปฏิบัติหน้าที่นำจ่ายไปรษณีย์ภัณฑ์ค้างจ่าย</h2>
             <h3 style="font-size: 8.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">กลุ่มงาน: ${title}</h3>
-            <p style="font-size: 7.8pt; margin: 0 0 0.2rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText} (ราคาน้ำมันอ้างอิง: ${currentFuelPrice.toFixed(4)} บาท/ลิตร)</p>
+            <p style="font-size: 7.8pt; margin: 0 0 0.2rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText} (ราคาน้ำมันอ้างอิง: ${currentFuelPrice.toFixed(2)} บาท/ลิตร)</p>
           </div>
           <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
             ตราประทับ<br>ปณ.
