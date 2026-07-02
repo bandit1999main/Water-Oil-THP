@@ -317,6 +317,7 @@ export function renderFuelTable() {
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
         const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const maint = calculateSingleMissionMaint(item, m);
         const roundedMaint = Math.round(maint * 100) / 100;
         const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
@@ -1166,6 +1167,7 @@ export function exportFuelCsv() {
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
         const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const maint = calculateSingleMissionMaint(item, m);
         const roundedMaint = Math.round(maint * 100) / 100;
         const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
@@ -1293,6 +1295,7 @@ export function printFuelReport() {
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
         const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const maint = calculateSingleMissionMaint(item, m);
         const roundedMaint = Math.round(maint * 100) / 100;
         const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
