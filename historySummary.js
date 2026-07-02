@@ -1,7 +1,8 @@
 import {
   fetchMonthlySummaries,
   fetchEmployeesFromCollection,
-  isCloudConnected
+  isCloudConnected,
+  updateMonthlySummaryAfterSave
 } from './database.js';
 
 export function getHistoryTemplate() {
@@ -174,11 +175,14 @@ export function getHistoryTemplate() {
 
       <!-- History Table Timeline -->
       <div class="glass-card full-width" id="historyTimelineCard" style="padding: 1.5rem;">
-        <div class="card-header table-header-flex" style="margin-bottom: 1rem;">
-          <div class="header-left">
+        <div class="card-header table-header-flex" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div class="header-left" style="display: flex; align-items: center; gap: 0.5rem;">
             <span class="card-icon">📊</span>
-            <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางบันทึกประวัติการเบิกจ่ายรายเดือน</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">ตารางบันทึกประวัติการเบิกจ่ายรายเดือน</h3>
           </div>
+          <button type="button" id="recalculateAllSummariesBtn" class="btn btn-secondary btn-small" style="background: var(--post-orange); color: white; border: none; font-weight: bold; border-radius: 8px; padding: 0.4rem 0.8rem;">
+            🔄 ปรับปรุงยอดรวมประวัติทั้งหมด
+          </button>
         </div>
 
         <div class="table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass);">
@@ -285,6 +289,49 @@ export async function initHistoryView() {
   // Load summaries list
   window.showToast('กำลังโหลดข้อมูลประวัติ...', 'info');
   summariesList = await fetchMonthlySummaries();
+
+  // Recalculate summaries action listener
+  const recalcBtn = document.getElementById('recalculateAllSummariesBtn');
+  if (recalcBtn) {
+    recalcBtn.addEventListener('click', async () => {
+      if (confirm('คุณต้องการปรับปรุงยอดรวมประวัติค่าน้ำมันและค่าน้ำดื่มของทุกเดือนย้อนหลังใช่หรือไม่? (ระบบจะดึงข้อมูลพนักงานแต่ละเดือนขึ้นมาคำนวณแบบปัดทศนิยม 2 ตำแหน่งใหม่ให้ถูกต้อง)')) {
+        recalcBtn.disabled = true;
+        recalcBtn.innerHTML = '⏳ กำลังปรับปรุงข้อมูล...';
+        
+        window.showToast('กำลังทำการคำนวณและอัปเดตยอดประวัติน้ำมัน/น้ำดื่มย้อนหลัง...', 'info', 15000);
+        
+        let successCount = 0;
+        try {
+          for (const sum of summariesList) {
+            const year = sum.year;
+            const month = sum.month;
+            if (year && month) {
+              await updateMonthlySummaryAfterSave(year, month);
+              successCount++;
+            }
+          }
+          
+          window.showToast(`ปรับปรุงประวัติเสร็จเรียบร้อย! อัปเดตสำเร็จ ${successCount} เดือน`, 'success');
+          
+          // Re-load summaries and re-render
+          summariesList = await fetchMonthlySummaries();
+          summariesList.sort((a, b) => {
+            const keyA = `${a.year}_${String(a.month).padStart(2, '0')}`;
+            const keyB = `${b.year}_${String(b.month).padStart(2, '0')}`;
+            return keyB.localeCompare(keyA);
+          });
+          renderAnalyticsDashboard();
+          renderSummariesDashboard();
+        } catch (err) {
+          console.error(err);
+          window.showToast('เกิดข้อผิดพลาดในการปรับปรุงข้อมูล', 'danger');
+        } finally {
+          recalcBtn.disabled = false;
+          recalcBtn.innerHTML = '🔄 ปรับปรุงยอดรวมประวัติทั้งหมด';
+        }
+      }
+    });
+  }
 
   // Sort summaries chronologically by YYYY_MM
   summariesList.sort((a, b) => {
