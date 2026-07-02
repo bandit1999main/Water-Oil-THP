@@ -979,13 +979,13 @@ export async function updateMonthlySummaryAfterSave(year, month) {
   waterList.forEach(e => personnelNames.add(e.name));
   
   const summaryData = {
-    fuelTotalCost,
-    maintTotalCost,
-    fuelTotalNet,
-    fuelLiters,
-    waterTotalCost,
-    waterTotalTax,
-    waterTotalNet,
+    fuelTotalCost: Math.round(fuelTotalCost * 100) / 100,
+    maintTotalCost: Math.round(maintTotalCost * 100) / 100,
+    fuelTotalNet: Math.round(fuelTotalNet * 100) / 100,
+    fuelLiters: Math.round(fuelLiters * 100) / 100,
+    waterTotalCost: Math.round(waterTotalCost * 100) / 100,
+    waterTotalTax: Math.round(waterTotalTax * 100) / 100,
+    waterTotalNet: Math.round(waterTotalNet * 100) / 100,
     totalPersonnelCount: personnelNames.size
   };
   
