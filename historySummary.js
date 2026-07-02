@@ -345,6 +345,36 @@ export async function initHistoryView() {
   if (typeof applyDutyBasedHistoryRestrictions === 'function') {
     applyDutyBasedHistoryRestrictions();
   }
+
+  // Automatic background summary updates (Runs once per session on initial load)
+  if (!window.hasDoneBackgroundSummaryRecalc) {
+    window.hasDoneBackgroundSummaryRecalc = true;
+    setTimeout(async () => {
+      try {
+        console.log('🔄 Starting automatic background summary updates...');
+        for (const sum of summariesList) {
+          const year = sum.year;
+          const month = sum.month;
+          if (year && month) {
+            await updateMonthlySummaryAfterSave(year, month);
+          }
+        }
+        // Re-load summaries and re-render quietly
+        const newList = await fetchMonthlySummaries();
+        newList.sort((a, b) => {
+          const keyA = `${a.year}_${String(a.month).padStart(2, '0')}`;
+          const keyB = `${b.year}_${String(b.month).padStart(2, '0')}`;
+          return keyB.localeCompare(keyA);
+        });
+        summariesList = newList;
+        renderAnalyticsDashboard();
+        renderSummariesDashboard();
+        console.log('✅ Automatic background summary updates completed.');
+      } catch (e) {
+        console.warn('Failed background summary recalculation:', e);
+      }
+    }, 1000);
+  }
 }
 
 // ─────────────────────────────────────────────
