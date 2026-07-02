@@ -27,9 +27,9 @@ export function enrichEmployeesWithCalculations(list) {
 
     if (item.formMode !== 'supervisor') {
       liters = calculateClaimLiters(item);
-      fuelCost = liters * fuelPrice;
-      maintCost = calculateMaintenanceCost(item);
-      sumTotal = fuelCost + maintCost;
+      fuelCost = Math.round(liters * fuelPrice * 100) / 100;
+      maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
+      sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
     } else {
       // 1. Group 'ตรวจสอบการนำจ่าย'
       const inspectMissions = (item.missions || []).filter(m => m.type === 'ตรวจสอบการนำจ่าย');
@@ -54,8 +54,9 @@ export function enrichEmployeesWithCalculations(list) {
         maintCost += calculateSingleMissionMaint(item, m);
       });
 
-      fuelCost = liters * fuelPrice;
-      sumTotal = fuelCost + maintCost;
+      maintCost = Math.round(maintCost * 100) / 100;
+      fuelCost = Math.round(liters * fuelPrice * 100) / 100;
+      sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
     }
 
     return {
@@ -252,9 +253,9 @@ export function renderFuelTable() {
   employees.forEach((item, parentIndex) => {
     if (item.formMode !== 'supervisor') {
       const liters = calculateClaimLiters(item);
-      const fuelCost = liters * currentFuelPrice;
-      const maintCost = calculateMaintenanceCost(item);
-      const sumTotal = fuelCost + maintCost;
+      const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+      const maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
+      const sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
 
       flatRows.push({
         parentIndex,
@@ -288,8 +289,9 @@ export function renderFuelTable() {
         });
 
         const liters = Math.ceil(rawInspectionLiters / 2);
-        const fuelCost = liters * currentFuelPrice;
-        const sumTotal = fuelCost + inspectMaint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedInspectMaint = Math.round(inspectMaint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedInspectMaint) * 100) / 100;
 
         flatRows.push({
           parentIndex,
@@ -301,7 +303,7 @@ export function renderFuelTable() {
           workDays: inspectDays,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: inspectMaint,
+          maintCost: roundedInspectMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
@@ -314,9 +316,9 @@ export function renderFuelTable() {
         const routeInfo = ROUTE_DATA[m.route];
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
-        const fuelCost = liters * currentFuelPrice;
-        const maint = calculateSingleMissionMaint(item, m);
-        const sumTotal = fuelCost + maint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedMaint = Math.round(maint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
         flatRows.push({
           parentIndex,
@@ -328,7 +330,7 @@ export function renderFuelTable() {
           workDays: m.days,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: maint,
+          maintCost: roundedMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
@@ -1108,9 +1110,9 @@ export function exportFuelCsv() {
   employees.forEach((item, parentIndex) => {
     if (item.formMode !== 'supervisor') {
       const liters = calculateClaimLiters(item);
-      const fuelCost = liters * currentFuelPrice;
-      const maintCost = calculateMaintenanceCost(item);
-      const sumTotal = fuelCost + maintCost;
+      const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+      const maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
+      const sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
 
       flatRows.push({
         name: item.name,
@@ -1140,8 +1142,9 @@ export function exportFuelCsv() {
         });
 
         const liters = Math.ceil(rawInspectionLiters / 2);
-        const fuelCost = liters * currentFuelPrice;
-        const sumTotal = fuelCost + inspectMaint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedInspectMaint = Math.round(inspectMaint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedInspectMaint) * 100) / 100;
 
         flatRows.push({
           name: item.name,
@@ -1150,7 +1153,7 @@ export function exportFuelCsv() {
           workDays: inspectDays,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: inspectMaint,
+          maintCost: roundedInspectMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: item.remarks
@@ -1162,9 +1165,9 @@ export function exportFuelCsv() {
         const routeInfo = ROUTE_DATA[m.route];
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
-        const fuelCost = liters * currentFuelPrice;
-        const maint = calculateSingleMissionMaint(item, m);
-        const sumTotal = fuelCost + maint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedMaint = Math.round(maint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
         flatRows.push({
           name: item.name,
@@ -1173,7 +1176,7 @@ export function exportFuelCsv() {
           workDays: m.days,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: maint,
+          maintCost: roundedMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: item.remarks
@@ -1261,8 +1264,9 @@ export function printFuelReport() {
         });
 
         const liters = Math.ceil(rawInspectionLiters / 2);
-        const fuelCost = liters * currentFuelPrice;
-        const sumTotal = fuelCost + inspectMaint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedInspectMaint = Math.round(inspectMaint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedInspectMaint) * 100) / 100;
 
         const routesList = inspectMissions.map(m => m.route).filter((v, i, a) => a.indexOf(v) === i).join(',');
         const rowObj = {
@@ -1273,7 +1277,7 @@ export function printFuelReport() {
           workDays: inspectDays,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: inspectMaint,
+          maintCost: roundedInspectMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
@@ -1288,9 +1292,9 @@ export function printFuelReport() {
         const routeInfo = ROUTE_DATA[m.route];
         const dailyLiters = routeInfo ? routeInfo.workerLiters : 0;
         const liters = dailyLiters * m.days;
-        const fuelCost = liters * currentFuelPrice;
-        const maint = calculateSingleMissionMaint(item, m);
-        const sumTotal = fuelCost + maint;
+        const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+        const roundedMaint = Math.round(maint * 100) / 100;
+        const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
         const rowObj = {
           name: item.name,
@@ -1300,7 +1304,7 @@ export function printFuelReport() {
           workDays: m.days,
           liters: liters,
           fuelCost: fuelCost,
-          maintCost: maint,
+          maintCost: roundedMaint,
           sumTotal: sumTotal,
           signature: item.signature,
           remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
@@ -1310,9 +1314,9 @@ export function printFuelReport() {
       });
     } else {
       const liters = calculateClaimLiters(item);
-      const fuelCost = liters * currentFuelPrice;
-      const maintCost = calculateMaintenanceCost(item);
-      const sumTotal = fuelCost + maintCost;
+      const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+      const maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
+      const sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
 
       const rowObj = {
         name: item.name,
