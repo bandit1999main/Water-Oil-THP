@@ -854,7 +854,7 @@ function renderHistoricalWaterTable() {
   list.forEach((item, index) => {
     const allowance = (item.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(item.salary || 0, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
     
     html += `
       <tr>
@@ -892,7 +892,7 @@ function calculateWaterTaxInternal(salary, totalAllowance) {
   ];
   for (const b of brackets) {
     if (salary >= b.minSalary && salary <= b.maxSalary) {
-      return totalAllowance * (b.rate || 0);
+      return Math.round(totalAllowance * (b.rate || 0) * 100) / 100;
     }
   }
   return 0;
@@ -1065,7 +1065,7 @@ function printHistoricalWaterReport(year, month, list) {
   const rows = list.map((item, idx) => {
     const allowance = (item.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(item.salary || 0, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
 
     totalCost += allowance;
     totalTax += tax;

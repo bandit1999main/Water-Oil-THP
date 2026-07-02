@@ -930,7 +930,7 @@ function calculateWaterTaxInternal(salary, totalAllowance) {
   ];
   for (const b of brackets) {
     if (salary >= b.minSalary && salary <= b.maxSalary) {
-      return totalAllowance * (b.rate || 0);
+      return Math.round(totalAllowance * (b.rate || 0) * 100) / 100;
     }
   }
   return 0;
@@ -968,7 +968,7 @@ export async function updateMonthlySummaryAfterSave(year, month) {
   waterList.forEach(emp => {
     const allowance = (emp.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTaxInternal(emp.salary || 0, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
     waterTotalCost += allowance;
     waterTotalTax += tax;
     waterTotalNet += net;

@@ -22,7 +22,7 @@ export function calculateWaterTax(salary, totalAllowance) {
   ];
   for (const b of brackets) {
     if (salary >= b.minSalary && salary <= b.maxSalary) {
-      return totalAllowance * (b.rate || 0);
+      return Math.round(totalAllowance * (b.rate || 0) * 100) / 100;
     }
   }
   return 0;
@@ -59,7 +59,7 @@ export function renderWaterTable() {
   waterEmployees.forEach((item) => {
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
     totalAllowance += allowance;
     totalTaxVal += tax;
     totalNetVal += net;
@@ -94,7 +94,7 @@ export function renderWaterTable() {
   filtered.forEach(({ item, originalIdx }, index) => {
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -217,7 +217,7 @@ export function exportWaterCsv() {
   waterEmployees.forEach((item, index) => {
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
     csvContent += `${index + 1},"${item.name}","${item.position} / ${item.duty || '-'}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
   });
   
@@ -261,7 +261,7 @@ export function printWaterReport() {
   waterEmployees.forEach((item, index) => {
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
-    const net = allowance - tax;
+    const net = Math.round((allowance - tax) * 100) / 100;
     
     totalAllowanceVal += allowance;
     totalTaxVal += tax;
