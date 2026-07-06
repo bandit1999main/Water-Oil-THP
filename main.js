@@ -1314,11 +1314,18 @@ function bindMonthlyDataListeners() {
   // Quick offline load
   import('./database.js').then(async (dbMod) => {
     try {
+      const globalMonthSelect = document.getElementById('globalMonth');
+      const globalYearSelect = document.getElementById('globalYear');
+      const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
+      const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+
       if (activeMode === 'fuel') {
-        employees = await dbMod.fetchEmployees();
+        const rawList = await dbMod.fetchEmployees();
+        employees = filterAndEnrichResignedEmployees(rawList, year, month);
         renderEmployeeTable();
       } else if (activeMode === 'water') {
-        waterEmployees = await dbMod.fetchWaterEmployees();
+        const rawList = await dbMod.fetchWaterEmployees();
+        waterEmployees = filterAndEnrichResignedEmployees(rawList, year, month);
         renderEmployeeTable();
       }
     } catch (e) {
@@ -1329,11 +1336,19 @@ function bindMonthlyDataListeners() {
   if (isCloudConnected()) {
     import('./database.js').then((dbMod) => {
       unsubscribeEmployees = dbMod.listenToEmployees((updatedList) => {
-        employees = updatedList;
+        const globalMonthSelect = document.getElementById('globalMonth');
+        const globalYearSelect = document.getElementById('globalYear');
+        const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
+        const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+        employees = filterAndEnrichResignedEmployees(updatedList, year, month);
         if (activeMode === 'fuel') renderEmployeeTable();
       });
       unsubscribeWaterEmployees = dbMod.listenToWaterEmployees((updatedList) => {
-        waterEmployees = updatedList;
+        const globalMonthSelect = document.getElementById('globalMonth');
+        const globalYearSelect = document.getElementById('globalYear');
+        const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
+        const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+        waterEmployees = filterAndEnrichResignedEmployees(updatedList, year, month);
         if (activeMode === 'water') renderEmployeeTable();
       });
     });
@@ -1751,10 +1766,17 @@ async function switchAppMode(mode) {
     cancelEdit();
     if (isCloudConnected()) {
       try {
+        const globalMonthSelect = document.getElementById('globalMonth');
+        const globalYearSelect = document.getElementById('globalYear');
+        const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
+        const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+
         if (mode === 'fuel') {
-          employees = await fetchEmployees();
+          const rawList = await fetchEmployees();
+          employees = filterAndEnrichResignedEmployees(rawList, year, month);
         } else {
-          waterEmployees = await fetchWaterEmployees();
+          const rawList = await fetchWaterEmployees();
+          waterEmployees = filterAndEnrichResignedEmployees(rawList, year, month);
         }
         cachedGlobalSettings = await fetchGlobalSettings();
         applyGlobalSettingsToDOM();
@@ -3012,6 +3034,14 @@ async function processCopy(prevList, isOverwrite) {
   }
 
   // Save list
+  const currMoSelect = document.getElementById('globalMonth');
+  const currYrInput = document.getElementById('globalYear');
+  if (currMoSelect && currYrInput) {
+    const month = parseInt(currMoSelect.value);
+    const year = parseInt(currYrInput.value);
+    resultList = filterAndEnrichResignedEmployees(resultList, year, month);
+  }
+
   if (activeMode === 'fuel') {
     employees = resultList;
     await saveEmployees(employees);
@@ -3179,5 +3209,35 @@ async function processLoadRegistry(mappedList, isOverwrite) {
   }
 
   showToast(`โหลดทะเบียนบุคลากรสำเร็จ! จัดเก็บทั้งหมด ${resultList.length} รายชื่อ`, 'success');
+}
+
+function filterAndEnrichResignedEmployees(list, year, month) {
+  if (!Array.isArray(list) || !year || !month) return list;
+  const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  
+  return list.filter(emp => {
+    const person = registry.find(p => p.name === emp.name);
+    if (person) {
+      if (person.vehicle === 'ไม่ได้ใช้งาน') {
+        return false;
+      }
+      if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
+        // If resigned BEFORE active month/year, filter them out
+        if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }).map(emp => {
+    const person = registry.find(p => p.name === emp.name);
+    if (person && person.status === 'resigned' && person.resignYear === year && person.resignMonth === month) {
+      const resignStr = `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}`;
+      if (!emp.remarks || !emp.remarks.includes(resignStr)) {
+        emp.remarks = emp.remarks ? `${resignStr} | ${emp.remarks}` : resignStr;
+      }
+    }
+    return emp;
+  });
 }
 
