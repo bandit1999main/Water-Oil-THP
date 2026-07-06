@@ -320,8 +320,13 @@ export function renderPersonnelTable() {
     return;
   }
 
-  // Sort personnel by name in Thai alphabetical order (ก-ฮ)
-  personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Sort personnel by status (active first, resigned last) and then name in Thai alphabetical order (ก-ฮ)
+  personnel.sort((a, b) => {
+    const aRes = a.status === 'resigned' ? 1 : 0;
+    const bRes = b.status === 'resigned' ? 1 : 0;
+    if (aRes !== bRes) return aRes - bRes;
+    return a.name.localeCompare(b.name, 'th');
+  });
 
   // Filter based on search query and active month resignation status
   const query = (window.personnelSearchQuery || '').toLowerCase().trim();
@@ -367,12 +372,20 @@ export function renderPersonnelTable() {
     return;
   }
 
+  let activeCount = 0;
   filtered.forEach(({ person, originalIdx }, index) => {
     const isResigned = person.status === 'resigned';
+    let displayNo = '';
+    if (isResigned) {
+      displayNo = '<span style="color: var(--text-secondary); opacity: 0.5;">-</span>';
+    } else {
+      activeCount++;
+      displayNo = activeCount;
+    }
     const tr = document.createElement('tr');
     tr.style.opacity = isResigned ? '0.6' : '1';
     tr.innerHTML = `
-      <td>${index + 1}</td>
+      <td>${displayNo}</td>
       <td style="font-weight: 700;">
         ${person.name}
         ${isResigned ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.4rem; font-weight: bold;">ลาออก</span>` : ''}

@@ -227,8 +227,16 @@ export function renderFuelTable() {
   const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 1;
   const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
 
-  // Sort fuel employees by name (Thai alphabetical order ก-ฮ)
-  employees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Sort fuel employees: active first, resigned last (and then by name in Thai alphabetical order)
+  const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  employees.sort((a, b) => {
+    const aPerson = registry.find(p => p.name === a.name);
+    const bPerson = registry.find(p => p.name === b.name);
+    const aRes = (aPerson && aPerson.status === 'resigned') ? 1 : 0;
+    const bRes = (bPerson && bPerson.status === 'resigned') ? 1 : 0;
+    if (aRes !== bRes) return aRes - bRes;
+    return a.name.localeCompare(b.name, 'th');
+  });
 
   if (employees.length === 0) {
     if (employeeTableBody) {
@@ -370,7 +378,17 @@ export function renderFuelTable() {
 
   filteredFlatRows.forEach((row) => {
     const tr = document.createElement('tr');
-    const currentTableIndex = row.item.isSubstitute ? ++substituteCount : ++regularCount;
+    
+    const person = registry.find(p => p.name === row.name);
+    const isResigned = person && person.status === 'resigned';
+    let displayNo = '';
+    if (isResigned) {
+      displayNo = '<span style="color: var(--text-secondary); opacity: 0.5;">-</span>';
+    } else {
+      displayNo = row.item.isSubstitute ? ++substituteCount : ++regularCount;
+    }
+
+    if (isResigned) tr.style.opacity = '0.7';
 
     let planBtnHtml = '';
     if (row.item.formMode === 'supervisor') {
@@ -378,7 +396,7 @@ export function renderFuelTable() {
     }
 
     tr.innerHTML = `
-      <td>${currentTableIndex}</td>
+      <td>${displayNo}</td>
       <td><strong>${row.name}</strong></td>
       <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position} / ${row.item.duty || '-'}</span></td>
       <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>

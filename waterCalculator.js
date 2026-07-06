@@ -38,8 +38,16 @@ export function renderWaterTable() {
 
   const waterEmployees = getWaterEmployees();
 
-  // Sort water employees by name (Thai alphabetical order ก-ฮ)
-  waterEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Sort water employees: active first, resigned last (and then by name in Thai alphabetical order)
+  const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  waterEmployees.sort((a, b) => {
+    const aPerson = registry.find(p => p.name === a.name);
+    const bPerson = registry.find(p => p.name === b.name);
+    const aRes = (aPerson && aPerson.status === 'resigned') ? 1 : 0;
+    const bRes = (bPerson && bPerson.status === 'resigned') ? 1 : 0;
+    if (aRes !== bRes) return aRes - bRes;
+    return a.name.localeCompare(b.name, 'th');
+  });
 
   if (waterEmployees.length === 0) {
     employeeTableBody.innerHTML = `
@@ -91,14 +99,26 @@ export function renderWaterTable() {
     return;
   }
 
+  let activeCount = 0;
   filtered.forEach(({ item, originalIdx }, index) => {
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(item.salary, allowance);
     const net = Math.round((allowance - tax) * 100) / 100;
 
+    const person = registry.find(p => p.name === item.name);
+    const isResigned = person && person.status === 'resigned';
+    let displayNo = '';
+    if (isResigned) {
+      displayNo = '<span style="color: var(--text-secondary); opacity: 0.5;">-</span>';
+    } else {
+      activeCount++;
+      displayNo = activeCount;
+    }
+
     const tr = document.createElement('tr');
+    if (isResigned) tr.style.opacity = '0.7';
     tr.innerHTML = `
-      <td>${index + 1}</td>
+      <td>${displayNo}</td>
       <td style="font-weight: 700; color: var(--text-primary);">${item.name}</td>
       <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position} / ${item.duty || '-'}</span></td>
       <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
