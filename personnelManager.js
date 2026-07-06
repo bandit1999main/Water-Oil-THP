@@ -1797,17 +1797,62 @@ export function printPersonnelReport() {
     return;
   }
 
-  personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  // Filter based on active month resignation status
+  const currMoSelect = document.getElementById('globalMonth');
+  const currYrInput = document.getElementById('globalYear');
+  let activeMonth = 0;
+  let activeYear = 0;
+  if (currMoSelect && currYrInput) {
+    activeMonth = parseInt(currMoSelect.value);
+    activeYear = parseInt(currYrInput.value);
+  }
+
+  let filtered = [...personnel];
+  if (activeMonth && activeYear) {
+    filtered = filtered.filter(person => {
+      if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
+        if (activeYear > person.resignYear || (activeYear === person.resignYear && activeMonth > person.resignMonth)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  // Sort personnel by status (active first, resigned last) and then name in Thai alphabetical order (ก-ฮ)
+  filtered.sort((a, b) => {
+    const aRes = a.status === 'resigned' ? 1 : 0;
+    const bRes = b.status === 'resigned' ? 1 : 0;
+    if (aRes !== bRes) return aRes - bRes;
+    return a.name.localeCompare(b.name, 'th');
+  });
   
   let tableRowsHtml = '';
-  personnel.forEach((item, index) => {
+  let activeCount = 0;
+  filtered.forEach((item) => {
+    const isResigned = item.status === 'resigned';
+    let displayNo = '';
+    if (isResigned) {
+      displayNo = '<span style="color: #666;">-</span>';
+    } else {
+      activeCount++;
+      displayNo = activeCount;
+    }
+
     const restDaysStr = item.restDays && item.restDays.length > 0 
       ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')
       : 'ไม่มี';
+
+    const displayName = isResigned 
+      ? `${item.name} <span style="background: #feebeb; color: #ef4444; border: 1px solid #fecaca; padding: 1px 4px; border-radius: 3px; font-size: 7.5pt; font-weight: bold; margin-left: 4px;">ลาออก</span>`
+      : `<strong>${item.name}</strong>`;
+
+    const rowStyle = isResigned ? 'style="opacity: 0.65; background-color: #fafafa;"' : '';
+
     tableRowsHtml += `
-      <tr>
-        <td>${index + 1}</td>
-        <td><strong>${item.name}</strong></td>
+      <tr ${rowStyle}>
+        <td style="text-align: center;">${displayNo}</td>
+        <td>${displayName}</td>
         <td>${item.position}</td>
         <td>${item.department || 'ทั่วไป'}</td>
         <td>${item.duty || '-'}</td>
@@ -1815,7 +1860,7 @@ export function printPersonnelReport() {
         <td>${item.route ? 'ด้านจ่ายที่ ' + item.route : '-'}</td>
         <td>${item.vehicle || '-'}</td>
         <td>${restDaysStr}</td>
-        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #f7f4f4; font-weight: 300;">${item.signature || item.name}</span></td>
+        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #555; font-weight: 300;">${item.signature || item.name}</span></td>
       </tr>
     `;
   });
