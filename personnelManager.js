@@ -323,10 +323,29 @@ export function renderPersonnelTable() {
   // Sort personnel by name in Thai alphabetical order (ก-ฮ)
   personnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
 
-  // Filter based on search query
+  // Filter based on search query and active month resignation status
   const query = (window.personnelSearchQuery || '').toLowerCase().trim();
   const filtered = [];
+  
+  const currMoSelect = document.getElementById('globalMonth');
+  const currYrInput = document.getElementById('globalYear');
+  let activeMonth = 0;
+  let activeYear = 0;
+  if (currMoSelect && currYrInput) {
+    activeMonth = parseInt(currMoSelect.value);
+    activeYear = parseInt(currYrInput.value);
+  }
+
   personnel.forEach((person, originalIdx) => {
+    // Hide personnel who resigned BEFORE the active month/year
+    if (activeMonth && activeYear) {
+      if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
+        if (activeYear > person.resignYear || (activeYear === person.resignYear && activeMonth > person.resignMonth)) {
+          return; // Skip
+        }
+      }
+    }
+
     const matches = !query || 
       person.name.toLowerCase().includes(query) ||
       person.position.toLowerCase().includes(query) ||
