@@ -3155,6 +3155,10 @@ async function exportAttendanceToExcel() {
 }
 
 export function printAttendanceReport() {
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const attMakerName = configs.attendanceMakerName || "";
+  const attCheckerName = configs.attendanceCheckerName || "";
+
   const attMonthSelect = document.getElementById('attMonth');
   const attYearInput = document.getElementById('attYear');
   if (!attMonthSelect || !attYearInput) return;
@@ -3417,12 +3421,12 @@ export function printAttendanceReport() {
       <div class="signature-section">
         <div class="signature-block">
           <p>ลงชื่อ.................................................................. ผู้จัดทำ / หัวหน้าโซนนำจ่าย</p>
-          <p style="margin-top: 5px;">(..................................................................)</p>
+          <p style="margin-top: 5px;">( ${attMakerName || '..................................................................'} )</p>
           <p style="margin-top: 5px; font-size: 8pt; color: #555;">วันที่ .........../.........../...........</p>
         </div>
         <div class="signature-block">
           <p>ลงชื่อ.................................................................. ผู้ตรวจสอบ / หัวหน้าแผนก</p>
-          <p style="margin-top: 5px;">(..................................................................)</p>
+          <p style="margin-top: 5px;">( ${attCheckerName || '..................................................................'} )</p>
           <p style="margin-top: 5px; font-size: 8pt; color: #555;">วันที่ .........../.........../...........</p>
         </div>
       </div>

@@ -320,6 +320,19 @@ export function getAdminPanelTemplate() {
                   </div>
                 </div>
 
+                <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); margin-bottom: 0.75rem;">✍️ รายชื่อผู้รับผิดชอบใบลงเวลาปฏิบัติงาน</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.01); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 8px;">
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminAttendanceMakerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้จัดทำ (หัวหน้าโซนนำจ่าย):</label>
+                    <input type="text" id="adminAttendanceMakerName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น นายสมชาย ปลอดภัย" />
+                  </div>
+                  
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label for="adminAttendanceCheckerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้ตรวจสอบ (หัวหน้าแผนก):</label>
+                    <input type="text" id="adminAttendanceCheckerName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น นางสาวสมศรี ยินดี" />
+                  </div>
+                </div>
+
                 <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); margin-bottom: 0.75rem;">💵 อัตราอ้างอิงและเงินช่วยเหลือกลาง</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; background: rgba(0, 0, 0, 0.01); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 8px;">
                   <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
@@ -436,10 +449,15 @@ export async function initAdminPanel() {
 
   const configs = await fetchGlobalConfigs();
   
+  const attendanceMakerInput = document.getElementById('adminAttendanceMakerName');
+  const attendanceCheckerInput = document.getElementById('adminAttendanceCheckerName');
+
   if (officeInput) officeInput.value = configs.postOfficeName || "ไปรษณีย์ไทย";
   if (officeTaxIdInput) officeTaxIdInput.value = configs.postOfficeTaxId || "";
   if (officeBranchInput) officeBranchInput.value = configs.postOfficeBranch || "00000";
   if (officeAddressInput) officeAddressInput.value = configs.postOfficeAddress || "";
+  if (attendanceMakerInput) attendanceMakerInput.value = configs.attendanceMakerName || "";
+  if (attendanceCheckerInput) attendanceCheckerInput.value = configs.attendanceCheckerName || "";
   if (allowanceInput) allowanceInput.value = configs.waterAllowancePerDay || 30;
   if (fuelInput) fuelInput.value = configs.defaultFuelPrice !== undefined ? configs.defaultFuelPrice : 35.00;
 
@@ -526,6 +544,8 @@ export async function initAdminPanel() {
     const officeBranch = officeBranchInput ? officeBranchInput.value.trim() : "00000";
     const officeAddress = officeAddressInput ? officeAddressInput.value.trim() : "";
     const fuelPrice = parseFloat(fuelInput.value);
+    const attMakerName = attendanceMakerInput ? attendanceMakerInput.value.trim() : "";
+    const attCheckerName = attendanceCheckerInput ? attendanceCheckerInput.value.trim() : "";
 
     if (isNaN(allowance) || allowance <= 0) {
       window.showToast('กรุณาระบุตัวเลขค่าน้ำดื่มต่อวันที่ถูกต้อง!', 'error');
@@ -561,6 +581,8 @@ export async function initAdminPanel() {
       postOfficeTaxId: officeTaxId,
       postOfficeBranch: officeBranch,
       postOfficeAddress: officeAddress,
+      attendanceMakerName: attMakerName,
+      attendanceCheckerName: attCheckerName,
       defaultFuelPrice: fuelPrice,
       waterTaxBrackets: localBrackets
     });
