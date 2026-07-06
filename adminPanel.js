@@ -323,12 +323,12 @@ export function getAdminPanelTemplate() {
                 <h4 style="font-weight: 700; font-size: 0.95rem; color: var(--post-orange); margin-bottom: 0.75rem;">✍️ รายชื่อผู้รับผิดชอบใบลงเวลาปฏิบัติงาน</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem; background: rgba(0, 0, 0, 0.01); border: 1px solid var(--border-glass); padding: 1.2rem; border-radius: 8px;">
                   <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                    <label for="adminAttendanceMakerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้จัดทำ (หัวหน้าโซนนำจ่าย):</label>
+                    <label for="adminAttendanceMakerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้จัดทำ:</label>
                     <input type="text" id="adminAttendanceMakerName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น นายสมชาย ปลอดภัย" />
                   </div>
                   
                   <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                    <label for="adminAttendanceCheckerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้ตรวจสอบ (หัวหน้าแผนก):</label>
+                    <label for="adminAttendanceCheckerName" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">ผู้ตรวจสอบ:</label>
                     <input type="text" id="adminAttendanceCheckerName" class="form-input" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-primary);" placeholder="เช่น นางสาวสมศรี ยินดี" />
                   </div>
                 </div>
