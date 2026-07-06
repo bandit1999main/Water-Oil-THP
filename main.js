@@ -3034,8 +3034,6 @@ async function processCopy(prevList, isOverwrite) {
   }
 
   // Save list
-  const currMoSelect = document.getElementById('globalMonth');
-  const currYrInput = document.getElementById('globalYear');
   if (currMoSelect && currYrInput) {
     const month = parseInt(currMoSelect.value);
     const year = parseInt(currYrInput.value);
