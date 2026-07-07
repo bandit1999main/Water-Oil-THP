@@ -69,6 +69,14 @@ export function getLeaveTemplate() {
               <span class="card-icon">📋</span>
               <h3>รายการขอลาและสถานะการอนุมัติ</h3>
             </div>
+            <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" id="printAllLeavesBtn" class="btn btn-secondary btn-small">
+                🖨️ รายงานขอลาทั้งหมด
+              </button>
+              <button type="button" id="printApprovedLeavesBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
+                🖨️ รายงานการอนุมัติลา
+              </button>
+            </div>
           </div>
 
           <div class="table-container">
@@ -150,6 +158,12 @@ export function initLeaveManager() {
       window.showToast('บันทึกคำขอลาล้มเหลว!', 'error');
     }
   });
+
+  // Bind print buttons
+  const printAllBtn = document.getElementById('printAllLeavesBtn');
+  const printAppBtn = document.getElementById('printApprovedLeavesBtn');
+  if (printAllBtn) printAllBtn.addEventListener('click', printAllLeavesReport);
+  if (printAppBtn) printAppBtn.addEventListener('click', printApprovedLeavesReport);
 
   // Listen to Firestore updates
   if (unsubscribeLeaveRequests) unsubscribeLeaveRequests();
@@ -404,4 +418,196 @@ async function syncLeaveToAttendance(req) {
     console.error("❌ Failed to syncLeaveToAttendance:", error);
     return false;
   }
+}
+
+function printAllLeavesReport() {
+  if (leaveList.length === 0) {
+    window.showToast('ไม่มีข้อมูลการลาที่จะพิมพ์!', 'warning');
+    return;
+  }
+  const sorted = [...leaveList].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  let tableRowsHtml = '';
+  sorted.forEach((req, index) => {
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+    const days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const formatDate = (dStr) => {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0]) + 543;
+        return `${parts[2]}/${parts[1]}/${y}`;
+      }
+      return dStr;
+    };
+
+    let typeText = req.leaveType === 'sick' ? 'ลาป่วย' : (req.leaveType === 'personal' ? 'ลากิจ' : 'ลาพักผ่อน');
+    let statusText = req.status === 'pending' ? 'รออนุมัติ' : (req.status === 'approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธ');
+    
+    tableRowsHtml += `
+      <tr>
+        <td style="text-align: center;">${index + 1}</td>
+        <td><strong>${req.name}</strong></td>
+        <td style="text-align: center;">${typeText}</td>
+        <td style="text-align: center;">${formatDate(req.startDate)} - ${formatDate(req.endDate)}</td>
+        <td style="text-align: center; font-weight: bold;">${days} วัน</td>
+        <td>${req.reason}</td>
+        <td style="text-align: center; font-weight: bold;">${statusText}</td>
+      </tr>
+    `;
+  });
+
+  openPrintWindow("รายงานการขอลาทำงานของพนักงานทั้งหมด", tableRowsHtml, false);
+}
+
+function printApprovedLeavesReport() {
+  const approvedList = leaveList.filter(r => r.status === 'approved');
+  if (approvedList.length === 0) {
+    window.showToast('ไม่มีข้อมูลการลาที่อนุมัติแล้วที่จะพิมพ์!', 'warning');
+    return;
+  }
+  const sorted = [...approvedList].sort((a, b) => new Date(b.approvedAt || b.createdAt) - new Date(a.approvedAt || a.createdAt));
+
+  let tableRowsHtml = '';
+  sorted.forEach((req, index) => {
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+    const days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    const formatDate = (dStr) => {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0]) + 543;
+        return `${parts[2]}/${parts[1]}/${y}`;
+      }
+      return dStr;
+    };
+
+    let typeText = req.leaveType === 'sick' ? 'ลาป่วย' : (req.leaveType === 'personal' ? 'ลากิจ' : 'ลาพักผ่อน');
+    
+    let approvedDateStr = '-';
+    if (req.approvedAt) {
+      const d = new Date(req.approvedAt);
+      const y = d.getFullYear() + 543;
+      approvedDateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${y}`;
+    }
+
+    tableRowsHtml += `
+      <tr>
+        <td style="text-align: center;">${index + 1}</td>
+        <td><strong>${req.name}</strong></td>
+        <td style="text-align: center;">${typeText}</td>
+        <td style="text-align: center;">${formatDate(req.startDate)} - ${formatDate(req.endDate)}</td>
+        <td style="text-align: center; font-weight: bold;">${days} วัน</td>
+        <td>${req.reason}</td>
+        <td style="text-align: center;">${approvedDateStr}</td>
+      </tr>
+    `;
+  });
+
+  openPrintWindow("รายงานการอนุมัติการลาทำงานของพนักงาน", tableRowsHtml, true);
+}
+
+function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+  
+  const today = new Date();
+  const beYear = today.getFullYear() + 543;
+  const printDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${beYear}`;
+
+  printWindow.document.write(\`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>\${title}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.5cm !important;
+        }
+        @page {
+          size: A4 portrait;
+          margin: 0.5cm;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 0.6cm;
+          border-bottom: 2px solid #222;
+          padding-bottom: 0.3cm;
+        }
+        .print-header h2 {
+          margin: 0 0 5px 0;
+          font-size: 14pt;
+          font-weight: bold;
+        }
+        .print-header p {
+          margin: 0;
+          font-size: 10pt;
+          color: #333;
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 0.4cm;
+        }
+        .print-table th, 
+        .print-table td {
+          border: 1px solid #444444 !important;
+          padding: 6px 8px !important;
+          font-size: 9.5pt !important;
+          line-height: 1.3 !important;
+          color: black !important;
+          vertical-align: middle !important;
+        }
+        .print-table th {
+          font-weight: bold !important;
+          text-align: center !important;
+          background: #f2f2f2 !important;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <h2>\${title}</h2>
+        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลรายงาน ณ วันที่ \${printDateStr}</p>
+      </div>
+      
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th style="width: 6%;">ที่</th>
+            <th style="width: 24%;">ชื่อ - นามสกุล</th>
+            <th style="width: 14%;">ประเภทการลา</th>
+            <th style="width: 22%;">ระยะเวลาการลา</th>
+            <th style="width: 10%;">จำนวนวัน</th>
+            <th style="width: 14%;">สาเหตุ/เหตุผล</th>
+            <th style="width: 10%;">\${isApprovedOnly ? 'วันที่อนุมัติ' : 'สถานะ'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          \${tableRowsHtml}
+        </tbody>
+      </table>
+
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  \`);
+  printWindow.document.close();
 }
