@@ -550,11 +550,12 @@ async function syncLeaveToAttendance(req) {
 }
 
 function printAllLeavesReport() {
-  if (leaveList.length === 0) {
-    window.showToast('ไม่มีข้อมูลการลาที่จะพิมพ์!', 'warning');
+  const pendingOrRejectedList = leaveList.filter(req => req.status !== 'approved');
+  if (pendingOrRejectedList.length === 0) {
+    window.showToast('ไม่มีข้อมูลการขอลา (ที่ยังไม่ได้อนุมัติ) ที่จะพิมพ์!', 'warning');
     return;
   }
-  const sorted = [...leaveList].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const sorted = [...pendingOrRejectedList].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
   let tableRowsHtml = '';
   sorted.forEach((req, index) => {
