@@ -23,10 +23,9 @@ export function getLeaveTemplate() {
           
           <form id="leaveRequestForm" autocomplete="off">
             <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label for="leaveEmpName" class="form-label">เลือกรายชื่อพนักงาน</label>
-              <select id="leaveEmpName" class="form-select" required>
-                <option value="">-- เลือกรายชื่อ --</option>
-              </select>
+              <label for="leaveEmpName" class="form-label">พิมพ์ค้นหาชื่อพนักงาน</label>
+              <input type="text" id="leaveEmpName" class="form-input" list="leavePersonnelDatalist" placeholder="พิมพ์ชื่อพนักงานเพื่อค้นหา..." required />
+              <datalist id="leavePersonnelDatalist"></datalist>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
@@ -108,30 +107,37 @@ export function getLeaveTemplate() {
 
 export function initLeaveManager() {
   const form = document.getElementById('leaveRequestForm');
-  const employeeSelect = document.getElementById('leaveEmpName');
-  if (!form || !employeeSelect) return;
+  const employeeDatalist = document.getElementById('leavePersonnelDatalist');
+  if (!form || !employeeDatalist) return;
 
-  // Populate employee select dropdown
+  // Populate employee datalist for autocomplete
   const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
   const activePersonnel = registry.filter(p => p.status !== 'resigned');
   activePersonnel.sort((a, b) => a.name.localeCompare(b.name, 'th'));
   
-  employeeSelect.innerHTML = '<option value="">-- เลือกรายชื่อ --</option>';
+  employeeDatalist.innerHTML = '';
   activePersonnel.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.name;
-    opt.textContent = `${p.name} (${p.position})`;
-    employeeSelect.appendChild(opt);
+    opt.textContent = p.position; // shows the position next to the name in browser autocomplete dropdown
+    employeeDatalist.appendChild(opt);
   });
 
   // Handle Form Submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('leaveEmpName').value;
+    const name = document.getElementById('leaveEmpName').value.trim();
     const type = document.getElementById('leaveType').value;
     const start = document.getElementById('leaveStartDate').value;
     const end = document.getElementById('leaveEndDate').value;
     const reason = document.getElementById('leaveReason').value.trim();
+
+    // Validate that the entered name exists in active personnel
+    const exists = activePersonnel.some(p => p.name === name);
+    if (!exists) {
+      window.showToast('ไม่พบชื่อพนักงานคนนี้ในทะเบียนประวัติ กรุณาเลือกชื่อที่ถูกต้อง!', 'error');
+      return;
+    }
 
     if (new Date(start) > new Date(end)) {
       window.showToast('วันที่เริ่มต้นการลา ต้องไม่มากกว่าวันสิ้นสุด!', 'error');
