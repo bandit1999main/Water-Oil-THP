@@ -572,18 +572,38 @@ function printAllLeavesReport() {
       return dStr;
     };
 
-    let typeText = req.leaveType === 'sick' ? 'ลาป่วย' : (req.leaveType === 'personal' ? 'ลากิจ' : 'ลาพักผ่อน');
-    let statusText = req.status === 'pending' ? 'รออนุมัติ' : (req.status === 'approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธ');
+    let typeText = '';
+    let badgeStyle = '';
+    if (req.leaveType === 'sick') {
+      typeText = '🤒 ลาป่วย (ป)';
+      badgeStyle = 'color: #b91c1c; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);';
+    } else if (req.leaveType === 'personal') {
+      typeText = '💼 ลากิจ (ก)';
+      badgeStyle = 'color: #b45309; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);';
+    } else {
+      typeText = '🏖️ ลาพักผ่อน (พ)';
+      badgeStyle = 'color: #0369a1; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2);';
+    }
+
+    let statusText = '';
+    let statusStyle = '';
+    if (req.status === 'pending') {
+      statusText = '⏳ รออนุมัติ';
+      statusStyle = 'color: #d97706; background: rgba(245, 158, 11, 0.12);';
+    } else {
+      statusText = '❌ ปฏิเสธ';
+      statusStyle = 'color: #dc2626; background: rgba(239, 68, 68, 0.12);';
+    }
     
     tableRowsHtml += `
       <tr>
         <td style="text-align: center;">${index + 1}</td>
         <td><strong>${req.name}</strong></td>
-        <td style="text-align: center;">${typeText}</td>
+        <td style="text-align: center;"><span style="padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 8.5pt; ${badgeStyle}">${typeText}</span></td>
         <td style="text-align: center;">${formatDate(req.startDate)} - ${formatDate(req.endDate)}</td>
         <td style="text-align: center; font-weight: bold;">${days} วัน</td>
         <td>${req.reason}</td>
-        <td style="text-align: center; font-weight: bold;">${statusText}</td>
+        <td style="text-align: center;"><span style="padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 8.5pt; ${statusStyle}">${statusText}</span></td>
       </tr>
     `;
   });
@@ -614,7 +634,18 @@ function printApprovedLeavesReport() {
       return dStr;
     };
 
-    let typeText = req.leaveType === 'sick' ? 'ลาป่วย' : (req.leaveType === 'personal' ? 'ลากิจ' : 'ลาพักผ่อน');
+    let typeText = '';
+    let badgeStyle = '';
+    if (req.leaveType === 'sick') {
+      typeText = '🤒 ลาป่วย (ป)';
+      badgeStyle = 'color: #b91c1c; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);';
+    } else if (req.leaveType === 'personal') {
+      typeText = '💼 ลากิจ (ก)';
+      badgeStyle = 'color: #b45309; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);';
+    } else {
+      typeText = '🏖️ ลาพักผ่อน (พ)';
+      badgeStyle = 'color: #0369a1; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2);';
+    }
     
     let approvedDateStr = '-';
     if (req.approvedAt) {
@@ -627,11 +658,11 @@ function printApprovedLeavesReport() {
       <tr>
         <td style="text-align: center;">${index + 1}</td>
         <td><strong>${req.name}</strong></td>
-        <td style="text-align: center;">${typeText}</td>
+        <td style="text-align: center;"><span style="padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 8.5pt; ${badgeStyle}">${typeText}</span></td>
         <td style="text-align: center;">${formatDate(req.startDate)} - ${formatDate(req.endDate)}</td>
         <td style="text-align: center; font-weight: bold;">${days} วัน</td>
         <td>${req.reason}</td>
-        <td style="text-align: center;">${approvedDateStr}</td>
+        <td style="text-align: center; font-weight: bold; color: #059669;">${approvedDateStr}</td>
       </tr>
     `;
   });
@@ -647,6 +678,13 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
   const beYear = today.getFullYear() + 543;
   const printDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${beYear}`;
 
+  // Load signatures from config storage
+  const storedConfigs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const makerName = storedConfigs.attendanceMakerName || '';
+  const checkerName = storedConfigs.attendanceCheckerName || '';
+  const makerTitle = storedConfigs.attendanceMakerTitle || 'ผู้จัดทำ';
+  const checkerTitle = storedConfigs.attendanceCheckerTitle || 'ผู้ตรวจสอบ';
+
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -656,9 +694,13 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         body {
           background: white !important;
-          color: black !important;
+          color: #1e293b !important;
           font-family: 'Sarabun', sans-serif !important;
           margin: 0 !important;
           padding: 0.5cm !important;
@@ -668,46 +710,75 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
           margin: 0.5cm;
         }
         .print-header {
-          text-align: center;
-          margin-bottom: 0.6cm;
-          border-bottom: 2px solid #222;
-          padding-bottom: 0.3cm;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5cm;
+          border-bottom: 2.5px solid #ef4444;
+          padding-bottom: 0.2cm;
         }
         .print-header h2 {
-          margin: 0 0 5px 0;
-          font-size: 14pt;
-          font-weight: bold;
+          margin: 0 0 4px 0;
+          font-size: 13pt;
+          font-weight: 800;
+          color: #ef4444;
         }
         .print-header p {
           margin: 0;
-          font-size: 10pt;
-          color: #333;
+          font-size: 9.5pt;
+          color: #475569;
+          font-weight: 500;
         }
         .print-table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 0.4cm;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .print-table th, 
         .print-table td {
-          border: 1px solid #444444 !important;
-          padding: 6px 8px !important;
-          font-size: 9.5pt !important;
+          border: 1px solid #cbd5e1 !important;
+          padding: 7px 9px !important;
+          font-size: 9pt !important;
           line-height: 1.3 !important;
-          color: black !important;
+          color: #334155 !important;
           vertical-align: middle !important;
         }
         .print-table th {
-          font-weight: bold !important;
+          font-weight: 700 !important;
           text-align: center !important;
-          background: #f2f2f2 !important;
+          background: #f1f5f9 !important;
+          color: #334155 !important;
+        }
+        .signature-section {
+          margin-top: 0.8cm;
+          display: flex;
+          justify-content: space-between;
+          padding: 0 1.5cm;
+          page-break-inside: avoid;
+        }
+        .signature-block {
+          text-align: center;
+          width: 40%;
+          font-size: 9.5pt;
+        }
+        .signature-line {
+          margin-bottom: 10px;
+          border-bottom: 1.5px dotted #94a3b8;
+          width: 100%;
+          height: 25px;
         }
       </style>
     </head>
     <body>
       <div class="print-header">
-        <h2>${title}</h2>
-        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลรายงาน ณ วันที่ ${printDateStr}</p>
+        <div>
+          <h2>${title}</h2>
+          <p>ที่ทำการไปรษณีย์ไทย • รายงานสรุปเอกสารของหน่วยงาน</p>
+        </div>
+        <div style="text-align: right; font-size: 9pt; color: #64748b;">
+          วันที่พิมพ์: ${printDateStr}
+        </div>
       </div>
       
       <table class="print-table">
@@ -715,17 +786,31 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
           <tr>
             <th style="width: 6%;">ที่</th>
             <th style="width: 24%;">ชื่อ - นามสกุล</th>
-            <th style="width: 14%;">ประเภทการลา</th>
+            <th style="width: 16%;">ประเภทการลา</th>
             <th style="width: 22%;">ระยะเวลาการลา</th>
             <th style="width: 10%;">จำนวนวัน</th>
             <th style="width: 14%;">สาเหตุ/เหตุผล</th>
-            <th style="width: 10%;">${isApprovedOnly ? 'วันที่อนุมัติ' : 'สถานะ'}</th>
+            <th style="width: 12%;">${isApprovedOnly ? 'วันที่อนุมัติ' : 'สถานะ'}</th>
           </tr>
         </thead>
         <tbody>
           ${tableRowsHtml}
         </tbody>
       </table>
+
+      <!-- Signature Blocks -->
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p style="margin: 0; font-weight: bold;">( ${makerName || '..........................................................'} )</p>
+          <p style="margin: 2px 0 0 0; font-size: 8.5pt; color: #64748b;">ตำแหน่ง: ${storedConfigs.attendanceMakerPos || makerTitle}</p>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p style="margin: 0; font-weight: bold;">( ${checkerName || '..........................................................'} )</p>
+          <p style="margin: 2px 0 0 0; font-size: 8.5pt; color: #64748b;">ตำแหน่ง: ${storedConfigs.attendanceCheckerPos || checkerTitle}</p>
+        </div>
+      </div>
 
       <script>
         window.onload = function() {
