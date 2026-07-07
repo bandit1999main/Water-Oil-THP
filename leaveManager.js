@@ -9,6 +9,8 @@ import {
 
 let leaveList = [];
 let unsubscribeLeaveRequests = null;
+let currentViewMonth = new Date().getMonth() + 1;
+let currentViewYear = new Date().getFullYear() + 543;
 
 export function getLeaveTemplate() {
   return `
@@ -75,9 +77,14 @@ export function getLeaveTemplate() {
       <div class="panel-column">
         <div id="leaveTableCard" class="glass-card full-width">
           <div class="card-header table-header-flex" style="margin-bottom: 1rem;">
-            <div class="header-left">
+            <div class="header-left" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
               <span class="card-icon">📋</span>
-              <h3>รายการขอลาและสถานะการอนุมัติ</h3>
+              <h3 style="margin: 0;">รายการขอลาทำงาน</h3>
+              <!-- Toggle View Button Tabs -->
+              <div class="mode-selector-tabs" style="margin-left: 0.5rem; scale: 0.85; margin-right: 0; display: inline-flex;">
+                <button type="button" id="viewLeaveListBtn" class="mode-tab-btn active" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">📋 ตาราง</button>
+                <button type="button" id="viewLeaveCalendarBtn" class="mode-tab-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">📅 ปฏิทิน</button>
+              </div>
             </div>
             <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button type="button" id="printAllLeavesBtn" class="btn btn-secondary btn-small">
@@ -89,7 +96,8 @@ export function getLeaveTemplate() {
             </div>
           </div>
 
-          <div class="table-container">
+          <!-- Tab 1: Table List View -->
+          <div id="leaveListTabContent" class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
@@ -109,6 +117,30 @@ export function getLeaveTemplate() {
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Tab 2: Calendar View -->
+          <div id="leaveCalendarTabContent" class="hidden" style="padding: 0.5rem 1rem 1rem 1rem;">
+            <!-- Calendar Navigation Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; background: rgba(0,0,0,0.02); padding: 0.5rem; border-radius: var(--radius-small); border: 1px solid var(--border-glass);">
+              <button type="button" id="calPrevMonthBtn" class="btn btn-secondary btn-small" style="padding: 0.35rem 0.75rem;">◀️ เดือนก่อนหน้า</button>
+              <h4 id="calMonthTitle" style="margin: 0; font-family: var(--font-title); font-size: 1.1rem; font-weight: 800; color: var(--text-primary); text-align: center;">-</h4>
+              <button type="button" id="calNextMonthBtn" class="btn btn-secondary btn-small" style="padding: 0.35rem 0.75rem;">เดือนถัดไป ▶️</button>
+            </div>
+
+            <!-- Calendar Days Header -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; text-align: center; font-weight: 800; margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+              <div style="color: #ef4444;">อา.</div>
+              <div>จ.</div>
+              <div>อ.</div>
+              <div>พ.</div>
+              <div>พฤ.</div>
+              <div>ศ.</div>
+              <div style="color: #0ea5e9;">ส.</div>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div id="calendarGridBody" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.4rem; min-height: 350px;"></div>
           </div>
         </div>
       </div>
@@ -182,6 +214,53 @@ export function initLeaveManager() {
   if (printAllBtn) printAllBtn.addEventListener('click', printAllLeavesReport);
   if (printAppBtn) printAppBtn.addEventListener('click', printApprovedLeavesReport);
 
+  // View Toggle Tabs
+  const viewListBtn = document.getElementById('viewLeaveListBtn');
+  const viewCalendarBtn = document.getElementById('viewLeaveCalendarBtn');
+  const listTabContent = document.getElementById('leaveListTabContent');
+  const calendarTabContent = document.getElementById('leaveCalendarTabContent');
+
+  if (viewListBtn && viewCalendarBtn) {
+    viewListBtn.addEventListener('click', () => {
+      viewListBtn.classList.add('active');
+      viewCalendarBtn.classList.remove('active');
+      listTabContent.classList.remove('hidden');
+      calendarTabContent.classList.add('hidden');
+    });
+
+    viewCalendarBtn.addEventListener('click', () => {
+      viewCalendarBtn.classList.add('active');
+      viewListBtn.classList.remove('active');
+      listTabContent.classList.add('hidden');
+      calendarTabContent.classList.remove('hidden');
+      renderCalendarView();
+    });
+  }
+
+  // Calendar Month Navigation Buttons
+  const calPrevBtn = document.getElementById('calPrevMonthBtn');
+  const calNextBtn = document.getElementById('calNextMonthBtn');
+  if (calPrevBtn) {
+    calPrevBtn.addEventListener('click', () => {
+      currentViewMonth--;
+      if (currentViewMonth < 1) {
+        currentViewMonth = 12;
+        currentViewYear--;
+      }
+      renderCalendarView();
+    });
+  }
+  if (calNextBtn) {
+    calNextBtn.addEventListener('click', () => {
+      currentViewMonth++;
+      if (currentViewMonth > 12) {
+        currentViewMonth = 1;
+        currentViewYear++;
+      }
+      renderCalendarView();
+    });
+  }
+
   // Listen to Firestore updates
   if (unsubscribeLeaveRequests) unsubscribeLeaveRequests();
   
@@ -204,6 +283,12 @@ function renderLeaveTable() {
   if (!tableBody) return;
 
   renderLeaveStatistics();
+  
+  // Re-render calendar grid if it is currently open/visible
+  const viewCalendarBtn = document.getElementById('viewLeaveCalendarBtn');
+  if (viewCalendarBtn && viewCalendarBtn.classList.contains('active')) {
+    renderCalendarView();
+  }
 
   if (leaveList.length === 0) {
     tableBody.innerHTML = `
@@ -774,4 +859,94 @@ function renderLeaveStatistics() {
     `;
     container.appendChild(itemDiv);
   });
+}
+
+function renderCalendarView() {
+  const titleEl = document.getElementById('calMonthTitle');
+  const gridBody = document.getElementById('calendarGridBody');
+  if (!gridBody || !titleEl) return;
+
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  titleEl.textContent = `${thaiMonths[currentViewMonth - 1]} ${currentViewYear}`;
+
+  // Convert currentViewYear (BE) back to CE for Date calculations
+  const ceYear = currentViewYear - 543;
+  const firstDayIndex = new Date(ceYear, currentViewMonth - 1, 1).getDay(); // 0 (Sun) - 6 (Sat)
+  const totalDays = new Date(ceYear, currentViewMonth, 0).getDate(); // 28-31
+
+  gridBody.innerHTML = '';
+
+  // Render empty cells for days before the 1st of the month
+  for (let i = 0; i < firstDayIndex; i++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.style.cssText = 'background: rgba(0,0,0,0.01); border: 1px dashed rgba(255,255,255,0.02); border-radius: var(--radius-small); min-height: 80px;';
+    gridBody.appendChild(emptyCell);
+  }
+
+  // Render active days
+  for (let day = 1; day <= totalDays; day++) {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small); padding: 0.35rem; display: flex; flex-direction: column; gap: 0.25rem; min-height: 80px; position: relative; overflow-y: auto;';
+
+    // Day Number
+    const dayNum = document.createElement('div');
+    dayNum.style.cssText = 'font-weight: 700; font-size: 0.8rem; color: var(--text-secondary); text-align: right; margin-bottom: 0.15rem;';
+    dayNum.textContent = day;
+    
+    // Highlight weekends
+    const cellIndex = (firstDayIndex + day - 1) % 7;
+    if (cellIndex === 0) dayNum.style.color = '#ef4444'; // Sunday red
+    else if (cellIndex === 6) dayNum.style.color = '#0ea5e9'; // Saturday blue
+
+    cell.appendChild(dayNum);
+
+    // Find approved leaves for this day
+    const formattedTargetDate = `${ceYear}-${String(currentViewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const targetDate = new Date(formattedTargetDate);
+
+    const activeLeaves = leaveList.filter(req => {
+      if (req.status !== 'approved') return false;
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      // Zero out time part for exact date comparisons
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      targetDate.setHours(0,0,0,0);
+      return targetDate >= start && targetDate <= end;
+    });
+
+    activeLeaves.forEach(req => {
+      const badge = document.createElement('div');
+      
+      let typeCode = 'พ';
+      let typeClass = 'status-vacation';
+      if (req.leaveType === 'sick') {
+        typeCode = 'ป';
+        typeClass = 'status-sick';
+      } else if (req.leaveType === 'personal') {
+        typeCode = 'ก';
+        typeClass = 'status-personal';
+      }
+
+      badge.className = `badge ${typeClass}`;
+      badge.style.cssText = 'font-size: 0.65rem; padding: 0.05rem 0.25rem; border-radius: 4px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; text-align: left; font-weight: 700;';
+      badge.title = `${req.name} (${req.leaveType === 'sick' ? 'ลาป่วย' : (req.leaveType === 'personal' ? 'ลากิจ' : 'ลาพักผ่อน')}): ${req.reason}`;
+      badge.textContent = `${req.name.split(' ')[0]} (${typeCode})`;
+      cell.appendChild(badge);
+    });
+
+    gridBody.appendChild(cell);
+  }
+
+  // Fill in empty slots to complete the grid if necessary
+  const totalSlotsUsed = firstDayIndex + totalDays;
+  const remainingSlots = (7 - (totalSlotsUsed % 7)) % 7;
+  for (let i = 0; i < remainingSlots; i++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.style.cssText = 'background: rgba(0,0,0,0.01); border: 1px dashed rgba(255,255,255,0.02); border-radius: var(--radius-small); min-height: 80px;';
+    gridBody.appendChild(emptyCell);
+  }
 }
