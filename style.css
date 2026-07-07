@@ -2143,5 +2143,25 @@ tbody tr:hover td:first-child {
   border: 1px solid rgba(14, 165, 233, 0.25);
 }
 
+/* --- ATTENDANCE TD HIGHLIGHT BACKGROUNDS --- */
+td.status-bg-worked {
+  background-color: rgba(16, 185, 129, 0.04) !important;
+}
+td.status-bg-sick {
+  background-color: rgba(249, 115, 22, 0.05) !important;
+}
+td.status-bg-personal {
+  background-color: rgba(234, 179, 8, 0.05) !important;
+}
+td.status-bg-vacation {
+  background-color: rgba(14, 165, 233, 0.05) !important;
+}
+td.status-bg-absent {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+td.status-bg-holiday {
+  background-color: rgba(16, 185, 129, 0.06) !important;
+}
+
 
 
