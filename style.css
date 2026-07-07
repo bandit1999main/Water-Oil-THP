@@ -2126,5 +2126,22 @@ tbody tr:hover td:first-child {
   will-change: auto !important;
 }
 
+/* --- LEAVE STATUS BADGES --- */
+.status-sick {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.status-personal {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.status-vacation {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  color: #0ea5e9 !important;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
 
 

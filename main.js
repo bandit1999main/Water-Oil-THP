@@ -835,14 +835,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Bind Core Navigation & Switch Events
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  const modeFuelBtn = document.getElementById('modeFuelBtn');
-  const modeWaterBtn = document.getElementById('modeWaterBtn');
   const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+  const modeLeaveBtn = document.getElementById('modeLeaveBtn');
   if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
   if (modeFuelBtn) modeFuelBtn.addEventListener('click', () => switchAppMode('fuel'));
   if (modeWaterBtn) modeWaterBtn.addEventListener('click', () => switchAppMode('water'));
   if (modePersonnelBtn) modePersonnelBtn.addEventListener('click', () => switchAppMode('personnel'));
+  if (modeLeaveBtn) modeLeaveBtn.addEventListener('click', () => switchAppMode('leave'));
   if (document.getElementById('modeAdminBtn')) {
     document.getElementById('modeAdminBtn').addEventListener('click', () => switchAppMode('admin'));
   }
@@ -1518,8 +1517,9 @@ async function switchAppMode(mode) {
       const modeFuelBtn = document.getElementById('modeFuelBtn');
       const modeWaterBtn = document.getElementById('modeWaterBtn');
       const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeLeaveBtn = document.getElementById('modeLeaveBtn');
       const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn].forEach(b => b && b.classList.remove('active'));
+      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn, modeLeaveBtn].forEach(b => b && b.classList.remove('active'));
       if (modeAdminBtn) modeAdminBtn.classList.add('active');
       
       const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
@@ -1546,8 +1546,9 @@ async function switchAppMode(mode) {
       const modeFuelBtn = document.getElementById('modeFuelBtn');
       const modeWaterBtn = document.getElementById('modeWaterBtn');
       const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeLeaveBtn = document.getElementById('modeLeaveBtn');
       const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-      [modeFuelBtn, modeWaterBtn, modeAdminBtn, modeHistoryBtn, modePersonnelBtn].forEach(b => b && b.classList.remove('active'));
+      [modeFuelBtn, modeWaterBtn, modeAdminBtn, modeHistoryBtn, modePersonnelBtn, modeLeaveBtn].forEach(b => b && b.classList.remove('active'));
       if (modePersonnelBtn) modePersonnelBtn.classList.add('active');
       
       const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
@@ -1565,6 +1566,35 @@ async function switchAppMode(mode) {
       if (window._hideLoadingBar) window._hideLoadingBar();
       return;
     }
+  } else if (mode === 'leave') {
+    try {
+      const { getLeaveTemplate, initLeaveManager } = await import('./leaveManager.js');
+      renderDashboardView(getLeaveTemplate());
+
+      const modeAdminBtn = document.getElementById('modeAdminBtn');
+      const modeFuelBtn = document.getElementById('modeFuelBtn');
+      const modeWaterBtn = document.getElementById('modeWaterBtn');
+      const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeLeaveBtn = document.getElementById('modeLeaveBtn');
+      const modeHistoryBtn = document.getElementById('modeHistoryBtn');
+      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeHistoryBtn, modeAdminBtn, modeLeaveBtn].forEach(b => b && b.classList.remove('active'));
+      if (modeLeaveBtn) modeLeaveBtn.classList.add('active');
+      
+      const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
+      const welcomeHeadingH2 = document.querySelector('.welcome-heading h2');
+      const welcomeHeadingP = document.querySelector('.welcome-heading p');
+      if (headerBrandSubtitle) headerBrandSubtitle.textContent = 'Thailand Post Leave Manager v1.0';
+      if (welcomeHeadingH2) welcomeHeadingH2.textContent = 'ระบบบันทึกและอนุมัติการลาปฏิบัติงาน';
+      if (welcomeHeadingP) welcomeHeadingP.textContent = 'บันทึกวันลาหยุดพนักงาน ป่วย กิจ พักผ่อน และอนุมัติการซิงค์ข้อมูลตรงเข้าตารางลงเวลาทำงานประจำเดือน';
+      
+      initLeaveManager();
+      if (window._hideLoadingBar) window._hideLoadingBar();
+    } catch (err) {
+      console.error("Failed to load leave module:", err);
+      showModuleLoadError('activeDashboardView', 'ระบบขอลา (Leave Manager)', () => switchAppMode('leave'));
+      if (window._hideLoadingBar) window._hideLoadingBar();
+      return;
+    }
   } else if (mode === 'history') {
     try {
       const { getHistoryTemplate, initHistoryView } = await import('./historySummary.js');
@@ -1575,8 +1605,9 @@ async function switchAppMode(mode) {
       const modeFuelBtn = document.getElementById('modeFuelBtn');
       const modeWaterBtn = document.getElementById('modeWaterBtn');
       const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+      const modeLeaveBtn = document.getElementById('modeLeaveBtn');
       const modeHistoryBtn = document.getElementById('modeHistoryBtn');
-      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeAdminBtn, modeHistoryBtn].forEach(b => b && b.classList.remove('active'));
+      [modeFuelBtn, modeWaterBtn, modePersonnelBtn, modeAdminBtn, modeHistoryBtn, modeLeaveBtn].forEach(b => b && b.classList.remove('active'));
       if (modeHistoryBtn) modeHistoryBtn.classList.add('active');
 
       const headerBrandSubtitle = document.getElementById('headerBrandSubtitle');
@@ -1623,7 +1654,9 @@ async function switchAppMode(mode) {
     const modeFuelBtn = document.getElementById('modeFuelBtn');
     const modeWaterBtn = document.getElementById('modeWaterBtn');
     const modePersonnelBtn = document.getElementById('modePersonnelBtn');
+    const modeLeaveBtn = document.getElementById('modeLeaveBtn');
     if (modePersonnelBtn) modePersonnelBtn.classList.remove('active');
+    if (modeLeaveBtn) modeLeaveBtn.classList.remove('active');
     if (modeAdminBtn) modeAdminBtn.classList.remove('active');
     const modeHistoryBtn = document.getElementById('modeHistoryBtn');
     if (modeHistoryBtn) modeHistoryBtn.classList.remove('active');

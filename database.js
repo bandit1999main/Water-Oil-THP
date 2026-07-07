@@ -1142,4 +1142,83 @@ export async function fetchActivityLogs(limitCount = 50) {
   }
 }
 
+/**
+ * --- LEAVE REQUESTS CRUD ---
+ */
+export async function fetchLeaveRequests() {
+  if (!isCloudConnected()) {
+    return JSON.parse(localStorage.getItem('tp_leave_requests')) || [];
+  }
+  try {
+    const snap = await getDocs(collection(db, "leave_requests"));
+    const list = [];
+    snap.forEach((doc) => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+    localStorage.setItem('tp_leave_requests', JSON.stringify(list));
+    return list;
+  } catch (error) {
+    console.error("❌ Failed to fetchLeaveRequests:", error);
+    return JSON.parse(localStorage.getItem('tp_leave_requests')) || [];
+  }
+}
+
+export async function saveLeaveRequest(request) {
+  const localKey = 'tp_leave_requests';
+  const list = JSON.parse(localStorage.getItem(localKey)) || [];
+  
+  if (!request.id) {
+    request.id = `leave_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  }
+  
+  const idx = list.findIndex(r => r.id === request.id);
+  if (idx !== -1) {
+    list[idx] = request;
+  } else {
+    list.push(request);
+  }
+  localStorage.setItem(localKey, JSON.stringify(list));
+
+  if (!isCloudConnected()) return true;
+  try {
+    const docRef = doc(db, "leave_requests", request.id);
+    await setDoc(docRef, request);
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to saveLeaveRequest:", error);
+    return false;
+  }
+}
+
+export function listenToLeaveRequests(callback) {
+  if (!isCloudConnected()) return null;
+  return onSnapshot(collection(db, "leave_requests"), (snapshot) => {
+    const list = [];
+    snapshot.forEach((doc) => {
+      list.push({ id: doc.id, ...doc.data() });
+    });
+    localStorage.setItem('tp_leave_requests', JSON.stringify(list));
+    callback(list);
+  }, (error) => {
+    console.error("❌ listenToLeaveRequests error:", error);
+  });
+}
+
+export async function deleteLeaveRequest(requestId) {
+  const localKey = 'tp_leave_requests';
+  let list = JSON.parse(localStorage.getItem(localKey)) || [];
+  list = list.filter(r => r.id !== requestId);
+  localStorage.setItem(localKey, JSON.stringify(list));
+
+  if (!isCloudConnected()) return true;
+  try {
+    await deleteDoc(doc(db, "leave_requests", requestId));
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to deleteLeaveRequest:", error);
+    return false;
+  }
+}
+
+
 
