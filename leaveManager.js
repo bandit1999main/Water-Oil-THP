@@ -11,6 +11,7 @@ let leaveList = [];
 let unsubscribeLeaveRequests = null;
 let currentViewMonth = new Date().getMonth() + 1;
 let currentViewYear = new Date().getFullYear() + 543;
+let editingRequestId = null;
 
 export function getLeaveTemplate() {
   return `
@@ -201,10 +202,19 @@ export function initLeaveManager() {
       createdAt: new Date().toISOString()
     };
 
+    if (editingRequestId) {
+      const original = leaveList.find(r => r.id === editingRequestId);
+      if (original) {
+        requestData.id = editingRequestId;
+        requestData.createdAt = original.createdAt;
+        requestData.status = original.status;
+      }
+    }
+
     const success = await saveLeaveRequest(requestData);
     if (success) {
-      window.showToast('บันทึกคำขอลาสำเร็จ! รออนุมัติ', 'success');
-      form.reset();
+      window.showToast(editingRequestId ? 'ปรับปรุงข้อมูลสำเร็จ!' : 'บันทึกคำขอลาสำเร็จ! รออนุมัติ', 'success');
+      resetLeaveForm();
       renderLeaveTable();
     } else {
       window.showToast('บันทึกคำขอลาล้มเหลว!', 'error');
@@ -347,6 +357,7 @@ function renderLeaveTable() {
       statusHtml = `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: bold; border-radius: 4px; padding: 0.2rem 0.5rem;">⏳ รออนุมัติ</span>`;
       actionButtonsHtml = `
         <button class="btn btn-primary btn-small approve-btn" data-id="${req.id}" style="background: var(--post-emerald); border-color: var(--post-emerald); padding: 0.25rem 0.5rem; font-size: 0.75rem;">✔️ อนุมัติ</button>
+        <button class="btn btn-secondary btn-small edit-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">✏️ แก้ไข</button>
         <button class="btn btn-danger btn-small reject-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">❌ ปฏิเสธ</button>
       `;
     } else if (req.status === 'approved') {
@@ -393,6 +404,10 @@ function renderLeaveTable() {
     }
     if (cancelApproveBtn) {
       cancelApproveBtn.addEventListener('click', () => handleCancelLeaveApproval(req));
+    }
+    const editBtn = tr.querySelector('.edit-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => startEditingLeave(req));
     }
 
     tableBody.appendChild(tr);
@@ -1153,4 +1168,52 @@ function printCalendarReport() {
     </html>
   `);
   printWindow.document.close();
+}
+
+function startEditingLeave(req) {
+  editingRequestId = req.id;
+  document.getElementById('leaveEmpName').value = req.name;
+  document.getElementById('leaveType').value = req.leaveType;
+  document.getElementById('leaveStartDate').value = req.startDate;
+  document.getElementById('leaveEndDate').value = req.endDate;
+  document.getElementById('leaveReason').value = req.reason === '-' ? '' : req.reason;
+
+  const submitBtn = document.getElementById('submitLeaveBtn');
+  if (submitBtn) {
+    submitBtn.textContent = '💾 บันทึกการแก้ไข';
+    submitBtn.className = 'btn btn-primary btn-full';
+    submitBtn.style.background = 'var(--post-emerald)';
+    submitBtn.style.borderColor = 'var(--post-emerald)';
+  }
+
+  let cancelBtn = document.getElementById('cancelEditLeaveBtn');
+  if (!cancelBtn) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancelEditLeaveBtn';
+    cancelBtn.className = 'btn btn-secondary btn-full';
+    cancelBtn.style.marginTop = '0.5rem';
+    cancelBtn.textContent = 'ยกเลิกการแก้ไข';
+    cancelBtn.addEventListener('click', resetLeaveForm);
+    submitBtn.parentNode.appendChild(cancelBtn);
+  }
+}
+
+function resetLeaveForm() {
+  editingRequestId = null;
+  const form = document.getElementById('leaveRequestForm');
+  if (form) form.reset();
+
+  const submitBtn = document.getElementById('submitLeaveBtn');
+  if (submitBtn) {
+    submitBtn.textContent = '➕ ส่งคำขอลาทำงาน';
+    submitBtn.className = 'btn btn-primary btn-full';
+    submitBtn.style.background = '';
+    submitBtn.style.borderColor = '';
+  }
+
+  const cancelBtn = document.getElementById('cancelEditLeaveBtn');
+  if (cancelBtn) {
+    cancelBtn.remove();
+  }
 }
