@@ -523,11 +523,11 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
   const beYear = today.getFullYear() + 543;
   const printDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${beYear}`;
 
-  printWindow.document.write(\`
+  printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>\${title}</title>
+      <title>${title}</title>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -582,8 +582,8 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
     </head>
     <body>
       <div class="print-header">
-        <h2>\${title}</h2>
-        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลรายงาน ณ วันที่ \${printDateStr}</p>
+        <h2>${title}</h2>
+        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลรายงาน ณ วันที่ ${printDateStr}</p>
       </div>
       
       <table class="print-table">
@@ -595,11 +595,11 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
             <th style="width: 22%;">ระยะเวลาการลา</th>
             <th style="width: 10%;">จำนวนวัน</th>
             <th style="width: 14%;">สาเหตุ/เหตุผล</th>
-            <th style="width: 10%;">\${isApprovedOnly ? 'วันที่อนุมัติ' : 'สถานะ'}</th>
+            <th style="width: 10%;">${isApprovedOnly ? 'วันที่อนุมัติ' : 'สถานะ'}</th>
           </tr>
         </thead>
         <tbody>
-          \${tableRowsHtml}
+          ${tableRowsHtml}
         </tbody>
       </table>
 
@@ -614,6 +614,6 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
       </script>
     </body>
     </html>
-  \`);
+  `);
   printWindow.document.close();
 }
