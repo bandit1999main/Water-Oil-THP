@@ -93,6 +93,9 @@ export function getLeaveTemplate() {
               <button type="button" id="printApprovedLeavesBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
                 🖨️ รายงานการอนุมัติลา
               </button>
+              <button type="button" id="printCalendarReportBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(245, 158, 11, 0.05);">
+                🖨️ พิมพ์รายงานปฏิทิน
+              </button>
             </div>
           </div>
 
@@ -211,8 +214,10 @@ export function initLeaveManager() {
   // Bind print buttons
   const printAllBtn = document.getElementById('printAllLeavesBtn');
   const printAppBtn = document.getElementById('printApprovedLeavesBtn');
+  const printCalBtn = document.getElementById('printCalendarReportBtn');
   if (printAllBtn) printAllBtn.addEventListener('click', printAllLeavesReport);
   if (printAppBtn) printAppBtn.addEventListener('click', printApprovedLeavesReport);
+  if (printCalBtn) printCalBtn.addEventListener('click', printCalendarReport);
 
   // View Toggle Tabs
   const viewListBtn = document.getElementById('viewLeaveListBtn');
@@ -949,4 +954,203 @@ function renderCalendarView() {
     emptyCell.style.cssText = 'background: rgba(0,0,0,0.01); border: 1px dashed rgba(255,255,255,0.02); border-radius: var(--radius-small); min-height: 80px;';
     gridBody.appendChild(emptyCell);
   }
+}
+
+function printCalendarReport() {
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  const title = `รายงานปฏิทินแสดงวันลาทำงาน ประจำเดือน ${thaiMonths[currentViewMonth - 1]} พ.ศ. ${currentViewYear}`;
+  
+  const ceYear = currentViewYear - 543;
+  const firstDayIndex = new Date(ceYear, currentViewMonth - 1, 1).getDay(); // 0 (Sun) - 6 (Sat)
+  const totalDays = new Date(ceYear, currentViewMonth, 0).getDate(); // 28-31
+  
+  let gridHtml = '';
+  
+  // Empty cells at start of month
+  for (let i = 0; i < firstDayIndex; i++) {
+    gridHtml += `<td style="background: #f9f9f9;"></td>`;
+  }
+  
+  // Date cells
+  for (let day = 1; day <= totalDays; day++) {
+    const formattedTargetDate = `${ceYear}-${String(currentViewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const targetDate = new Date(formattedTargetDate);
+    
+    // Find approved leaves for this day
+    const activeLeaves = leaveList.filter(req => {
+      if (req.status !== 'approved') return false;
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      start.setHours(0,0,0,0);
+      end.setHours(0,0,0,0);
+      targetDate.setHours(0,0,0,0);
+      return targetDate >= start && targetDate <= end;
+    });
+
+    let leavesListHtml = '';
+    activeLeaves.forEach(req => {
+      let typeCode = 'พ';
+      let color = '#0284c7';
+      let bg = '#e0f2fe';
+      if (req.leaveType === 'sick') {
+        typeCode = 'ป';
+        color = '#b91c1c';
+        bg = '#feebeb';
+      } else if (req.leaveType === 'personal') {
+        typeCode = 'ก';
+        color = '#b45309';
+        bg = '#fef3c7';
+      }
+      
+      leavesListHtml += `
+        <div style="font-size: 7.5pt; color: ${color}; background: ${bg}; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.08); margin-bottom: 2px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${req.name.split(' ')[0]} (${typeCode})
+        </div>
+      `;
+    });
+
+    // Check if weekend to apply styling
+    const cellIndex = (firstDayIndex + day - 1) % 7;
+    let dayStyle = 'font-weight: bold; font-size: 9.5pt; text-align: right; margin-bottom: 4px;';
+    if (cellIndex === 0) dayStyle += ' color: #b91c1c;';
+    else if (cellIndex === 6) dayStyle += ' color: #0369a1;';
+    
+    gridHtml += `
+      <td style="height: 1.6cm; vertical-align: top; padding: 4px; border: 1px solid #444;">
+        <div style="${dayStyle}">${day}</div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          ${leavesListHtml}
+        </div>
+      </td>
+    `;
+    
+    // Break into new row every Saturday
+    if ((firstDayIndex + day) % 7 === 0 && day !== totalDays) {
+      gridHtml += `</tr><tr>`;
+    }
+  }
+
+  // Empty cells at end of month
+  const totalSlotsUsed = firstDayIndex + totalDays;
+  const remainingSlots = (7 - (totalSlotsUsed % 7)) % 7;
+  for (let i = 0; i < remainingSlots; i++) {
+    gridHtml += `<td style="background: #f9f9f9;"></td>`;
+  }
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const today = new Date();
+  const printDateStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear() + 543}`;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${title}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        body {
+          background: white !important;
+          color: black !important;
+          font-family: 'Sarabun', sans-serif !important;
+          margin: 0 !important;
+          padding: 0.4cm !important;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 0.4cm;
+        }
+        .print-header {
+          text-align: center;
+          margin-bottom: 0.4cm;
+          border-bottom: 2px solid #222;
+          padding-bottom: 0.2cm;
+        }
+        .print-header h2 {
+          margin: 0 0 4px 0;
+          font-size: 13pt;
+          font-weight: bold;
+        }
+        .print-header p {
+          margin: 0;
+          font-size: 9.5pt;
+          color: #333;
+        }
+        .cal-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+          margin-bottom: 0.2cm;
+        }
+        .cal-table th {
+          border: 1px solid #444 !important;
+          padding: 6px 4px !important;
+          font-size: 9.5pt !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          background: #f2f2f2 !important;
+          color: black !important;
+        }
+        .legend {
+          display: flex;
+          gap: 1.5rem;
+          font-size: 8.5pt;
+          justify-content: center;
+          margin-top: 0.3cm;
+          border-top: 1px dashed #ccc;
+          padding-top: 0.2cm;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="print-header">
+        <h2>${title}</h2>
+        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลอนุมัติวันลาพนักงาน • วันที่ออกรายงาน ${printDateStr}</p>
+      </div>
+      
+      <table class="cal-table">
+        <thead>
+          <tr>
+            <th style="color: #b91c1c; width: 14.28%;">อาทิตย์</th>
+            <th style="width: 14.28%;">จันทร์</th>
+            <th style="width: 14.28%;">อังคาร</th>
+            <th style="width: 14.28%;">พุธ</th>
+            <th style="width: 14.28%;">พฤหัสบดี</th>
+            <th style="width: 14.28%;">ศุกร์</th>
+            <th style="color: #0369a1; width: 14.28%;">เสาร์</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            ${gridHtml}
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="legend">
+        <strong>คำอธิบายวันหยุด:</strong>
+        <span style="color: #b91c1c;">🤒 (ป) = ลาป่วย</span>
+        <span style="color: #b45309;">💼 (ก) = ลากิจ</span>
+        <span style="color: #0284c7;">🏖️ (พ) = ลาพักผ่อน</span>
+      </div>
+
+      <script>
+        window.onload = function() {
+          window.print();
+          window.onafterprint = function() {
+            window.close();
+          };
+          setTimeout(function() { window.close(); }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
