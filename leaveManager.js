@@ -976,17 +976,24 @@ function printCalendarReport() {
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
   ];
-  const title = `รายงานปฏิทินแสดงวันลาทำงาน ประจำเดือน ${thaiMonths[currentViewMonth - 1]} พ.ศ. ${currentViewYear}`;
+  const title = `รายงานปฏิทินแสดงวันลาทำงานพนักงาน ประจำเดือน ${thaiMonths[currentViewMonth - 1]} พ.ศ. ${currentViewYear}`;
   
   const ceYear = currentViewYear - 543;
   const firstDayIndex = new Date(ceYear, currentViewMonth - 1, 1).getDay(); // 0 (Sun) - 6 (Sat)
   const totalDays = new Date(ceYear, currentViewMonth, 0).getDate(); // 28-31
   
+  // Load signatures from config storage
+  const storedConfigs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const makerName = storedConfigs.attendanceMakerName || '';
+  const checkerName = storedConfigs.attendanceCheckerName || '';
+  const makerTitle = storedConfigs.attendanceMakerTitle || 'ผู้จัดทำ';
+  const checkerTitle = storedConfigs.attendanceCheckerTitle || 'ผู้ตรวจสอบ';
+
   let gridHtml = '';
   
   // Empty cells at start of month
   for (let i = 0; i < firstDayIndex; i++) {
-    gridHtml += `<td style="background: #f9f9f9;"></td>`;
+    gridHtml += `<td style="background: #f8fafc; border: 1px solid #e2e8f0;"></td>`;
   }
   
   // Date cells
@@ -1008,35 +1015,47 @@ function printCalendarReport() {
     let leavesListHtml = '';
     activeLeaves.forEach(req => {
       let typeCode = 'พ';
-      let color = '#0284c7';
-      let bg = '#e0f2fe';
+      let color = '#0369a1';
+      let bg = 'rgba(14, 165, 233, 0.08)';
+      let border = 'rgba(14, 165, 233, 0.2)';
+      let emoji = '🏖️';
       if (req.leaveType === 'sick') {
         typeCode = 'ป';
         color = '#b91c1c';
-        bg = '#feebeb';
+        bg = 'rgba(239, 68, 68, 0.08)';
+        border = 'rgba(239, 68, 68, 0.2)';
+        emoji = '🤒';
       } else if (req.leaveType === 'personal') {
         typeCode = 'ก';
         color = '#b45309';
-        bg = '#fef3c7';
+        bg = 'rgba(245, 158, 11, 0.08)';
+        border = 'rgba(245, 158, 11, 0.2)';
+        emoji = '💼';
       }
       
       leavesListHtml += `
-        <div style="font-size: 7.5pt; color: ${color}; background: ${bg}; padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.08); margin-bottom: 2px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${req.name.split(' ')[0]} (${typeCode})
+        <div style="font-size: 8pt; color: ${color}; background: ${bg}; border: 1px solid ${border}; padding: 3px 6px; border-radius: 4px; margin-bottom: 3px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2;">
+          ${emoji} ${req.name.split(' ')[0]} (${typeCode})
         </div>
       `;
     });
 
     // Check if weekend to apply styling
     const cellIndex = (firstDayIndex + day - 1) % 7;
-    let dayStyle = 'font-weight: bold; font-size: 9.5pt; text-align: right; margin-bottom: 4px;';
-    if (cellIndex === 0) dayStyle += ' color: #b91c1c;';
-    else if (cellIndex === 6) dayStyle += ' color: #0369a1;';
+    let cellBg = '#ffffff';
+    let dayStyle = 'font-weight: 800; font-size: 10pt; text-align: right; margin-bottom: 6px; color: #475569;';
+    if (cellIndex === 0) {
+      cellBg = '#fef2f2'; // Soft Sunday red
+      dayStyle += ' color: #ef4444;';
+    } else if (cellIndex === 6) {
+      cellBg = '#f0f9ff'; // Soft Saturday blue
+      dayStyle += ' color: #0ea5e9;';
+    }
     
     gridHtml += `
-      <td style="height: 1.6cm; vertical-align: top; padding: 4px; border: 1px solid #444;">
+      <td style="height: 2.2cm; vertical-align: top; padding: 6px; border: 1px solid #cbd5e1; background: ${cellBg}; transition: background 0.2s;">
         <div style="${dayStyle}">${day}</div>
-        <div style="display: flex; flex-direction: column; gap: 1px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
           ${leavesListHtml}
         </div>
       </td>
@@ -1052,7 +1071,7 @@ function printCalendarReport() {
   const totalSlotsUsed = firstDayIndex + totalDays;
   const remainingSlots = (7 - (totalSlotsUsed % 7)) % 7;
   for (let i = 0; i < remainingSlots; i++) {
-    gridHtml += `<td style="background: #f9f9f9;"></td>`;
+    gridHtml += `<td style="background: #f8fafc; border: 1px solid #e2e8f0;"></td>`;
   }
 
   const printWindow = window.open('', '_blank');
@@ -1072,73 +1091,108 @@ function printCalendarReport() {
       <style>
         body {
           background: white !important;
-          color: black !important;
+          color: #1e293b !important;
           font-family: 'Sarabun', sans-serif !important;
           margin: 0 !important;
-          padding: 0.4cm !important;
+          padding: 0.5cm !important;
         }
         @page {
           size: A4 landscape;
-          margin: 0.4cm;
+          margin: 0.5cm;
         }
         .print-header {
-          text-align: center;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 0.4cm;
-          border-bottom: 2px solid #222;
-          padding-bottom: 0.2cm;
+          border-bottom: 2.5px solid #ef4444;
+          padding-bottom: 0.25cm;
         }
-        .print-header h2 {
+        .print-header-left h2 {
           margin: 0 0 4px 0;
-          font-size: 13pt;
-          font-weight: bold;
+          font-size: 14pt;
+          font-weight: 800;
+          color: #ef4444;
         }
-        .print-header p {
+        .print-header-left p {
           margin: 0;
-          font-size: 9.5pt;
-          color: #333;
+          font-size: 10pt;
+          color: #475569;
+          font-weight: 500;
+        }
+        .print-header-right {
+          text-align: right;
+          font-size: 9pt;
+          color: #64748b;
         }
         .cal-table {
           width: 100%;
           border-collapse: collapse;
           table-layout: fixed;
-          margin-bottom: 0.2cm;
+          margin-bottom: 0.3cm;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .cal-table th {
-          border: 1px solid #444 !important;
-          padding: 6px 4px !important;
-          font-size: 9.5pt !important;
-          font-weight: bold !important;
+          border: 1px solid #cbd5e1 !important;
+          padding: 8px 4px !important;
+          font-size: 10pt !important;
+          font-weight: 700 !important;
           text-align: center !important;
-          background: #f2f2f2 !important;
-          color: black !important;
+          background: #f1f5f9 !important;
+          color: #334155 !important;
         }
         .legend {
           display: flex;
           gap: 1.5rem;
-          font-size: 8.5pt;
+          font-size: 9pt;
           justify-content: center;
-          margin-top: 0.3cm;
-          border-top: 1px dashed #ccc;
-          padding-top: 0.2cm;
+          margin-top: 0.4cm;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 0.25cm;
+          color: #475569;
+        }
+        .signature-section {
+          margin-top: 0.6cm;
+          display: flex;
+          justify-content: space-between;
+          padding: 0 2cm;
+          page-break-inside: avoid;
+        }
+        .signature-block {
+          text-align: center;
+          width: 40%;
+          font-size: 10pt;
+        }
+        .signature-line {
+          margin-bottom: 10px;
+          border-bottom: 1.5px dotted #94a3b8;
+          width: 100%;
+          height: 25px;
         }
       </style>
     </head>
     <body>
       <div class="print-header">
-        <h2>${title}</h2>
-        <p>ที่ทำการไปรษณีย์ไทย • ข้อมูลอนุมัติวันลาพนักงาน • วันที่ออกรายงาน ${printDateStr}</p>
+        <div class="print-header-left">
+          <h2>${title}</h2>
+          <p>ที่ทำการไปรษณีย์ไทย • แผนกจัดส่งพัสดุภัณฑ์และค่าน้ำมันน้ำดื่ม</p>
+        </div>
+        <div class="print-header-right">
+          <div>วันที่ออกรายงาน: ${printDateStr}</div>
+          <div style="margin-top: 2px; font-weight: bold; color: #ef4444;">เอกสารทางการของ ปณ.</div>
+        </div>
       </div>
       
       <table class="cal-table">
         <thead>
           <tr>
-            <th style="color: #b91c1c; width: 14.28%;">อาทิตย์</th>
+            <th style="color: #ef4444; width: 14.28%;">อาทิตย์</th>
             <th style="width: 14.28%;">จันทร์</th>
             <th style="width: 14.28%;">อังคาร</th>
             <th style="width: 14.28%;">พุธ</th>
             <th style="width: 14.28%;">พฤหัสบดี</th>
             <th style="width: 14.28%;">ศุกร์</th>
-            <th style="color: #0369a1; width: 14.28%;">เสาร์</th>
+            <th style="color: #0ea5e9; width: 14.28%;">เสาร์</th>
           </tr>
         </thead>
         <tbody>
@@ -1149,10 +1203,24 @@ function printCalendarReport() {
       </table>
 
       <div class="legend">
-        <strong>คำอธิบายวันหยุด:</strong>
-        <span style="color: #b91c1c;">🤒 (ป) = ลาป่วย</span>
-        <span style="color: #b45309;">💼 (ก) = ลากิจ</span>
-        <span style="color: #0284c7;">🏖️ (พ) = ลาพักผ่อน</span>
+        <strong>คำอธิบายประเภทวันลา:</strong>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:8px; height:8px; background:#feebeb; border: 1px solid #fca5a5; border-radius:50%;"></span> 🤒 (ป) = ลาป่วย</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:8px; height:8px; background:#fef3c7; border: 1px solid #fcd34d; border-radius:50%;"></span> 💼 (ก) = ลากิจ</span>
+        <span style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:8px; height:8px; background:#e0f2fe; border: 1px solid #7dd3fc; border-radius:50%;"></span> 🏖️ (พ) = ลาพักผ่อน</span>
+      </div>
+
+      <!-- Signature Blocks -->
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p style="margin: 0; font-weight: bold;">( ${makerName || '..........................................................'} )</p>
+          <p style="margin: 2px 0 0 0; font-size: 9pt; color: #64748b;">ตำแหน่ง: ${storedConfigs.attendanceMakerPos || makerTitle}</p>
+        </div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <p style="margin: 0; font-weight: bold;">( ${checkerName || '..........................................................'} )</p>
+          <p style="margin: 2px 0 0 0; font-size: 9pt; color: #64748b;">ตำแหน่ง: ${storedConfigs.attendanceCheckerPos || checkerTitle}</p>
+        </div>
       </div>
 
       <script>
