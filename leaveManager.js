@@ -191,6 +191,30 @@ export function initLeaveManager() {
       return;
     }
 
+    // Check overlapping dates with existing approved or pending leaves
+    const newStart = new Date(start);
+    const newEnd = new Date(end);
+    const hasOverlap = leaveList.some(req => {
+      if (editingRequestId && req.id === editingRequestId) return false;
+      if (req.status === 'rejected') return false;
+      if (req.name !== name) return false;
+
+      const extStart = new Date(req.startDate);
+      const extEnd = new Date(req.endDate);
+
+      newStart.setHours(0,0,0,0);
+      newEnd.setHours(0,0,0,0);
+      extStart.setHours(0,0,0,0);
+      extEnd.setHours(0,0,0,0);
+
+      return newStart <= extEnd && extStart <= newEnd;
+    });
+
+    if (hasOverlap) {
+      window.showToast('พนักงานคนนี้มีประวัติการยื่นใบลา (รออนุมัติ หรือ อนุมัติแล้ว) คร่อมช่วงเวลาดังกล่าวอยู่แล้ว!', 'error');
+      return;
+    }
+
     window.showToast('กำลังส่งรายการขอลา...', 'info');
     const requestData = {
       name,
