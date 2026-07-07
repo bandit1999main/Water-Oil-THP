@@ -58,6 +58,17 @@ export function getLeaveTemplate() {
             </button>
           </form>
         </div>
+
+        <!-- Leave Statistics Card -->
+        <div class="glass-card full-width" style="margin-top: 1.5rem; padding: 1.25rem;">
+          <div class="card-header" style="margin-bottom: 1rem;">
+            <span class="card-icon">📊</span>
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">สถิติการอนุมัติวันลาในปีนี้ (พ.ศ. <span id="leaveStatsYear"></span>)</h3>
+          </div>
+          <div id="leaveStatsContainer" style="max-height: 250px; overflow-y: auto; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="text-align: center; color: var(--text-secondary); padding: 1rem 0;">ไม่มีข้อมูลประวัติการอนุมัติวันลาในปีนี้</div>
+          </div>
+        </div>
       </div>
 
       <!-- Right Panel: Leave Request Queue & History -->
@@ -192,6 +203,8 @@ function renderLeaveTable() {
   const tableBody = document.getElementById('leaveTableBody');
   if (!tableBody) return;
 
+  renderLeaveStatistics();
+
   if (leaveList.length === 0) {
     tableBody.innerHTML = `
       <tr>
@@ -249,7 +262,8 @@ function renderLeaveTable() {
     } else if (req.status === 'approved') {
       statusHtml = `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: bold; border-radius: 4px; padding: 0.2rem 0.5rem;">✔️ อนุมัติแล้ว</span>`;
       actionButtonsHtml = `
-        <button class="btn btn-danger btn-small delete-leave-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">🗑️ ลบ</button>
+        <button class="btn btn-secondary btn-small cancel-approve-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #dc2626; border-color: rgba(220, 38, 38, 0.3); background: rgba(220, 38, 38, 0.03);">↩️ ยกเลิกอนุมัติ</button>
+        <button class="btn btn-danger btn-small delete-leave-btn" data-id="${req.id}" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem;">🗑️ ลบ</button>
       `;
     } else {
       statusHtml = `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #dc2626; font-weight: bold; border-radius: 4px; padding: 0.2rem 0.5rem;">❌ ปฏิเสธการลา</span>`;
@@ -276,6 +290,7 @@ function renderLeaveTable() {
     const approveBtn = tr.querySelector('.approve-btn');
     const rejectBtn = tr.querySelector('.reject-btn');
     const deleteBtn = tr.querySelector('.delete-leave-btn');
+    const cancelApproveBtn = tr.querySelector('.cancel-approve-btn');
 
     if (approveBtn) {
       approveBtn.addEventListener('click', () => handleApproveLeave(req));
@@ -285,6 +300,9 @@ function renderLeaveTable() {
     }
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => handleDeleteLeave(req.id));
+    }
+    if (cancelApproveBtn) {
+      cancelApproveBtn.addEventListener('click', () => handleCancelLeaveApproval(req));
     }
 
     tableBody.appendChild(tr);
@@ -616,4 +634,144 @@ function openPrintWindow(title, tableRowsHtml, isApprovedOnly) {
     </html>
   `);
   printWindow.document.close();
+}
+
+async function handleCancelLeaveApproval(req) {
+  if (confirm(`คุณต้องการยกเลิกการอนุมัติการลาของ "${req.name}" ใช่หรือไม่? (ระบบจะดึงวันหยุดนี้ออกและกู้คืนวันทำงานกลับเข้าสู่ตารางลงเวลาให้)`)) {
+    window.showToast('กำลังยกเลิกการอนุมัติและล้างวันลา...', 'info');
+    
+    // 1. Rollback attendance records
+    const rollbackSuccess = await rollbackLeaveFromAttendance(req);
+    if (!rollbackSuccess) {
+      window.showToast('การยกเลิกการซิงค์ตารางลงเวลาล้มเหลว!', 'error');
+      return;
+    }
+
+    // 2. Set status to pending
+    req.status = 'pending';
+    delete req.approvedAt;
+
+    const success = await saveLeaveRequest(req);
+    if (success) {
+      window.showToast('ยกเลิกการอนุมัติการลาเรียบร้อยแล้ว!', 'success');
+      renderLeaveTable();
+    } else {
+      window.showToast('บันทึกสถานะการยกเลิกอนุมัติล้มเหลว!', 'error');
+    }
+  }
+}
+
+async function rollbackLeaveFromAttendance(req) {
+  try {
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+
+    const currentDate = new Date(start);
+    const monthsToUpdate = {};
+    
+    while (currentDate <= end) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      const day = currentDate.getDate();
+      
+      const beYear = year + 543;
+      const key = `${beYear}_${month}`;
+      
+      if (!monthsToUpdate[key]) {
+        monthsToUpdate[key] = {
+          year: beYear,
+          month: month,
+          days: []
+        };
+      }
+      monthsToUpdate[key].days.push(day);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    for (const key in monthsToUpdate) {
+      const target = monthsToUpdate[key];
+      const attendance = await fetchAttendanceList(target.year, target.month);
+      
+      let empRecord = attendance.find(a => a.name === req.name);
+      if (empRecord) {
+        const checkedDaysSet = new Set(empRecord.checkedDays);
+        if (!empRecord.dayStatuses) empRecord.dayStatuses = {};
+
+        target.days.forEach(day => {
+          // Remove from dayStatuses
+          delete empRecord.dayStatuses[String(day)];
+          // Add back to checkedDays
+          checkedDaysSet.add(day);
+        });
+
+        empRecord.checkedDays = Array.from(checkedDaysSet).sort((a, b) => a - b);
+        await saveAttendanceList(target.year, target.month, attendance);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to rollbackLeaveFromAttendance:", error);
+    return false;
+  }
+}
+
+function renderLeaveStatistics() {
+  const container = document.getElementById('leaveStatsContainer');
+  const yearLabel = document.getElementById('leaveStatsYear');
+  if (!container) return;
+
+  const globalYearSelect = document.getElementById('globalYear');
+  const currentYear = globalYearSelect ? parseInt(globalYearSelect.value) : (new Date().getFullYear() + 543);
+  if (yearLabel) yearLabel.textContent = currentYear;
+
+  const approvedLeaves = leaveList.filter(req => {
+    if (req.status !== 'approved') return false;
+    const parts = req.startDate.split('-');
+    if (parts.length === 3) {
+      const beYear = parseInt(parts[0]) + 543;
+      return beYear === currentYear;
+    }
+    return false;
+  });
+
+  if (approvedLeaves.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-secondary); padding: 1rem 0;">
+        ไม่มีข้อมูลประวัติการอนุมัติวันลาในปี พ.ศ. ${currentYear}
+      </div>
+    `;
+    return;
+  }
+
+  const stats = {};
+  approvedLeaves.forEach(req => {
+    if (!stats[req.name]) {
+      stats[req.name] = { sick: 0, personal: 0, vacation: 0 };
+    }
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+    const days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    if (req.leaveType === 'sick') stats[req.name].sick += days;
+    else if (req.leaveType === 'personal') stats[req.name].personal += days;
+    else if (req.leaveType === 'vacation') stats[req.name].vacation += days;
+  });
+
+  const sortedNames = Object.keys(stats).sort((a, b) => a.localeCompare(b, 'th'));
+
+  container.innerHTML = '';
+  sortedNames.forEach(name => {
+    const item = stats[name];
+    const itemDiv = document.createElement('div');
+    itemDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.6rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-small);';
+    itemDiv.innerHTML = `
+      <div style="font-weight: 700; color: var(--text-primary);">${name}</div>
+      <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+        <span class="badge status-sick" style="padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">🤒 ป่วย: ${item.sick} วัน</span>
+        <span class="badge status-personal" style="padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">💼 กิจ: ${item.personal} วัน</span>
+        <span class="badge status-vacation" style="padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">🏖️ พักร้อน: ${item.vacation} วัน</span>
+      </div>
+    `;
+    container.appendChild(itemDiv);
+  });
 }
