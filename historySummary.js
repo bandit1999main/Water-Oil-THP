@@ -1392,7 +1392,7 @@ function printHistorical50Tawi(idx) {
   const poAddress = configs.postOfficeAddress || "";
 
   const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
-  const person = registry.find(p => p.name === employee.name);
+  const person = registry.find(p => p.name.trim().replace(/\s+/g, ' ') === employee.name.trim().replace(/\s+/g, ' '));
   const empTaxId = person ? (person.taxId || "") : "";
   const empBranch = person ? (person.branch || "00000") : "00000";
   const empAddress = person ? (person.address || "") : "";
