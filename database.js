@@ -125,16 +125,16 @@ export function checkIsAdmin(user) {
 export function getActiveEmployeesCollectionName() {
   const yrEl = document.getElementById('globalYear');
   const moEl = document.getElementById('globalMonth');
-  const yr = yrEl ? yrEl.value : '2569';
-  const mo = moEl ? moEl.value.padStart(2, '0') : '05';
+  const yr = window.activeYear || (yrEl ? yrEl.value : '2569');
+  const mo = String(window.activeMonth || (moEl ? moEl.value : '05')).padStart(2, '0');
   return `employees_${yr}_${mo}`;
 }
 
 export function getActiveWaterEmployeesCollectionName() {
   const yrEl = document.getElementById('globalYear');
   const moEl = document.getElementById('globalMonth');
-  const yr = yrEl ? yrEl.value : '2569';
-  const mo = moEl ? moEl.value.padStart(2, '0') : '05';
+  const yr = window.activeYear || (yrEl ? yrEl.value : '2569');
+  const mo = String(window.activeMonth || (moEl ? moEl.value : '05')).padStart(2, '0');
   return `water_employees_${yr}_${mo}`;
 }
 
