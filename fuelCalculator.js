@@ -1926,25 +1926,13 @@ export function getCalculatorsTemplate() {
                   <label for="globalMonth" style="margin: 0;">รอบประจำเดือน</label>
                   <span id="monthLockBadge" style="font-size: 0.72rem; font-weight: bold; cursor: pointer; padding: 0.1rem 0.35rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.15rem; transition: all 0.2s ease; user-select: none;"></span>
                 </div>
-                <select id="globalMonth" class="form-select">
-                  <option value="1">มกราคม</option>
-                  <option value="2">กุมภาพันธ์</option>
-                  <option value="3">มีนาคม</option>
-                  <option value="4">เมษายน</option>
-                  <option value="5" selected>พฤษภาคม</option>
-                  <option value="6">มิถุนายน</option>
-                  <option value="7">กรกฎาคม</option>
-                  <option value="8">สิงหาคม</option>
-                  <option value="9">กันยายน</option>
-                  <option value="10">ตุลาคม</option>
-                  <option value="11">พฤศจิกายน</option>
-                  <option value="12">ธันวาคม</option>
-                  <option value="13">รอบพิเศษ 1</option>
-                  <option value="14">รอบพิเศษ 2</option>
-                  <option value="15">รอบพิเศษ 3</option>
-                  <option value="16">รอบพิเศษ 4</option>
-                  <option value="17">รอบพิเศษ 5</option>
-                </select>
+                <div style="display: flex; gap: 0.25rem; align-items: center; width: 100%;">
+                  <select id="globalMonth" class="form-select" style="flex: 1;">
+                    <!-- Will be populated dynamically -->
+                  </select>
+                  <button type="button" id="addCustomCycleBtn" class="btn btn-secondary" style="padding: 0.45rem 0.6rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass);" title="เพิ่มรอบประจำเดือนพิเศษ">➕ เพิ่มรอบพิเศษ</button>
+                  <button type="button" id="deleteCustomCycleBtn" class="btn btn-danger hidden" style="padding: 0.45rem 0.6rem; font-size: 0.8rem; border-radius: 8px;" title="ลบรอบประจำเดือนพิเศษนี้">❌ ลบรอบ</button>
+                </div>
               </div>
               <div class="form-group">
                 <label for="globalYear">ปี พ.ศ.</label>

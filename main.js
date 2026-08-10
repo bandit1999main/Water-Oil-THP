@@ -385,6 +385,11 @@ function setupCalculatorDOMReferencesAndEvents() {
     addCycleBtn.addEventListener('click', handleAddCustomCycle);
   }
 
+  const deleteCycleBtn = document.getElementById('deleteCustomCycleBtn');
+  if (deleteCycleBtn) {
+    deleteCycleBtn.addEventListener('click', handleDeleteCustomCycle);
+  }
+
   copyFromPrevMonthBtn = document.getElementById('copyFromPrevMonthBtn');
   loadFromRegistryBtn = document.getElementById('loadFromRegistryBtn');
   globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
@@ -500,6 +505,16 @@ function setupCalculatorDOMReferencesAndEvents() {
     globalMonthSelect.addEventListener('change', () => {
       const val = globalMonthSelect.value;
       window.activeMonth = val;
+
+      const deleteBtn = document.getElementById('deleteCustomCycleBtn');
+      if (deleteBtn) {
+        if (parseInt(val) > 12) {
+          deleteBtn.classList.remove('hidden');
+        } else {
+          deleteBtn.classList.add('hidden');
+        }
+      }
+
       if (activeMode === 'fuel') {
         saveGlobalSetting('fuelMonth', { value: val });
       } else if (activeMode === 'water') {
@@ -3319,6 +3334,15 @@ export function populateMonthDropdown(selectedYear) {
     globalMonthSelect.value = "5"; // default to May
     window.activeMonth = "5";
   }
+
+  const deleteBtn = document.getElementById('deleteCustomCycleBtn');
+  if (deleteBtn) {
+    if (parseInt(globalMonthSelect.value) > 12) {
+      deleteBtn.classList.remove('hidden');
+    } else {
+      deleteBtn.classList.add('hidden');
+    }
+  }
 }
 
 async function handleAddCustomCycle() {
@@ -3355,5 +3379,46 @@ async function handleAddCustomCycle() {
   } else {
     showToast('บันทึกข้อมูลล้มเหลว!', 'error');
   }
+}
+
+async function handleDeleteCustomCycle() {
+  const globalMonthSelect = document.getElementById('globalMonth');
+  if (!globalMonthSelect) return;
+  const currentVal = parseInt(globalMonthSelect.value);
+  if (currentVal <= 12) return;
+
+  const currentText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+  const yearVal = document.getElementById('globalYear')?.value || '2569';
+  const yearNum = parseInt(yearVal);
+
+  window.showConfirm({
+    title: 'ยืนยันการลบรอบพิเศษ',
+    message: `คุณต้องการลบรอบพิเศษ "${currentText}" ของปี พ.ศ. ${yearNum} ใช่หรือไม่? (ข้อมูลตารางที่คีย์ไปแล้วจะไม่ถูกลบออกจากฐานข้อมูล แต่รอบนี้จะหายไปจากเมนูตัวเลือก)`,
+    icon: '🗑️',
+    okText: 'ลบรอบการทำงาน',
+    onConfirm: async () => {
+      const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+      if (!configs.customCycles) configs.customCycles = [];
+
+      configs.customCycles = configs.customCycles.filter(c => !(String(c.value) === String(currentVal) && String(c.year) === String(yearNum)));
+
+      const success = await saveGlobalConfigs(configs);
+      if (success) {
+        localStorage.setItem('tp_global_configs', JSON.stringify(configs));
+        showToast(`ลบรอบพิเศษ "${currentText}" สำเร็จ!`, 'success');
+        
+        window.activeMonth = "5";
+        populateMonthDropdown(yearNum);
+        
+        const globalMonthSelectNew = document.getElementById('globalMonth');
+        if (globalMonthSelectNew) {
+          globalMonthSelectNew.value = "5";
+          globalMonthSelectNew.dispatchEvent(new Event('change'));
+        }
+      } else {
+        showToast('ลบข้อมูลล้มเหลว!', 'error');
+      }
+    }
+  });
 }
 
