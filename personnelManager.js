@@ -2603,6 +2603,43 @@ async function getXLSX() {
   return xlsxCache;
 }
 
+export function populateAttMonthDropdown(selectedYear) {
+  const attMonthSelect = document.getElementById('attMonth');
+  if (!attMonthSelect) return;
+
+  const currentVal = attMonthSelect.value || window.activeMonth || "5";
+
+  attMonthSelect.innerHTML = '';
+
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  thaiMonths.forEach((mName, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx + 1);
+    opt.textContent = mName;
+    attMonthSelect.appendChild(opt);
+  });
+
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  
+  const yearCycles = customCycles.filter(c => String(c.year) === String(selectedYear));
+  yearCycles.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = String(c.value);
+    opt.textContent = c.text;
+    attMonthSelect.appendChild(opt);
+  });
+
+  if ([...attMonthSelect.options].some(o => o.value === currentVal)) {
+    attMonthSelect.value = currentVal;
+  } else {
+    attMonthSelect.value = "5"; // default to May
+  }
+}
+
 function initAttendanceGrid() {
   const attMonthSelect = document.getElementById('attMonth');
   const attYearInput = document.getElementById('attYear');
@@ -2613,8 +2650,11 @@ function initAttendanceGrid() {
   const activeMonthVal = (globalMonth && globalMonth.value) || window.activeMonth;
   const activeYearVal = (globalYear && globalYear.value) || window.activeYear;
   
-  if (attMonthSelect && activeMonthVal) attMonthSelect.value = activeMonthVal;
   if (attYearInput && activeYearVal) attYearInput.value = activeYearVal;
+  if (attMonthSelect) {
+    populateAttMonthDropdown(activeYearVal);
+    if (activeMonthVal) attMonthSelect.value = activeMonthVal;
+  }
   
   setupAttendanceEventsAndListeners();
   bindAttendanceDataListeners();
@@ -2655,6 +2695,7 @@ function setupAttendanceEventsAndListeners() {
     attYearInput.addEventListener('change', (e) => {
       const val = e.target.value;
       window.activeYear = val;
+      populateAttMonthDropdown(val);
       
       const globalYear = document.getElementById('globalYear');
       if (globalYear) {
@@ -2746,8 +2787,10 @@ async function bindAttendanceDataListeners() {
   const attYearInput = document.getElementById('attYear');
   if (!attMonthSelect || !attYearInput) return;
   
-  const month = parseInt(attMonthSelect.value);
-  const year = parseInt(attYearInput.value);
+  let month = parseInt(attMonthSelect.value);
+  let year = parseInt(attYearInput.value);
+  if (isNaN(month) || month <= 0) month = new Date().getMonth() + 1;
+  if (isNaN(year) || year <= 0) year = new Date().getFullYear() + 543;
   
   if (unsubscribeAttendance) {
     unsubscribeAttendance();
