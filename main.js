@@ -3349,36 +3349,45 @@ async function handleAddCustomCycle() {
   const name = prompt("กรุณาระบุชื่อรอบพิเศษ (เช่น 'รอบตกค้าง ม.ค. - มี.ค. 69'):");
   if (!name || !name.trim()) return;
 
+  const trimmedName = name.trim();
   const yearVal = document.getElementById('globalYear')?.value || '2569';
   const yearNum = parseInt(yearVal);
   
-  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
-  if (!configs.customCycles) configs.customCycles = [];
+  window.showConfirm({
+    title: 'ยืนยันการเพิ่มรอบพิเศษ',
+    message: `คุณต้องการเพิ่มรอบพิเศษ "${trimmedName}" ประจำปี พ.ศ. ${yearNum} ลงในระบบใช่หรือไม่?`,
+    icon: '➕',
+    okText: 'เพิ่มรอบทำงาน',
+    onConfirm: async () => {
+      const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+      if (!configs.customCycles) configs.customCycles = [];
 
-  const nextVal = configs.customCycles.reduce((max, c) => Math.max(max, c.value), 12) + 1;
+      const nextVal = configs.customCycles.reduce((max, c) => Math.max(max, c.value), 12) + 1;
 
-  const newCycle = {
-    value: nextVal,
-    text: name.trim(),
-    year: yearNum
-  };
+      const newCycle = {
+        value: nextVal,
+        text: trimmedName,
+        year: yearNum
+      };
 
-  configs.customCycles.push(newCycle);
+      configs.customCycles.push(newCycle);
 
-  const success = await saveGlobalConfigs(configs);
-  if (success) {
-    localStorage.setItem('tp_global_configs', JSON.stringify(configs));
-    showToast(`เพิ่มรอบพิเศษ "${newCycle.text}" สำเร็จ!`, 'success');
-    populateMonthDropdown(yearNum);
-    const globalMonthSelect = document.getElementById('globalMonth');
-    if (globalMonthSelect) {
-      globalMonthSelect.value = String(nextVal);
-      window.activeMonth = String(nextVal);
-      globalMonthSelect.dispatchEvent(new Event('change'));
+      const success = await saveGlobalConfigs(configs);
+      if (success) {
+        localStorage.setItem('tp_global_configs', JSON.stringify(configs));
+        showToast(`เพิ่มรอบพิเศษ "${newCycle.text}" สำเร็จ!`, 'success');
+        populateMonthDropdown(yearNum);
+        const globalMonthSelect = document.getElementById('globalMonth');
+        if (globalMonthSelect) {
+          globalMonthSelect.value = String(nextVal);
+          window.activeMonth = String(nextVal);
+          globalMonthSelect.dispatchEvent(new Event('change'));
+        }
+      } else {
+        showToast('บันทึกข้อมูลล้มเหลว!', 'error');
+      }
     }
-  } else {
-    showToast('บันทึกข้อมูลล้มเหลว!', 'error');
-  }
+  });
 }
 
 async function handleDeleteCustomCycle() {
