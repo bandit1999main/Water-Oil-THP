@@ -1427,7 +1427,6 @@ function printHistorical50Tawi(idx) {
   }
   const yearText = String(year);
 
-  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
   const poTaxId = configs.postOfficeTaxId || "";
   const poBranch = configs.postOfficeBranch || "00000";
   const poAddress = configs.postOfficeAddress || "";
