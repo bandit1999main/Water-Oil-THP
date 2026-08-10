@@ -1942,19 +1942,18 @@ export function getCalculatorsTemplate() {
               <button type="button" id="addCustomCycleBtn" class="btn btn-secondary" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 0.25rem;" title="เพิ่มรอบประจำเดือนพิเศษ">➕ เพิ่มรอบพิเศษ</button>
             </div>
 
-            <div class="form-row-2" style="margin-top: 1rem;">
-              <div class="form-group">
-                <label for="globalPostOfficeName">ชื่อที่ทำการไปรษณีย์ / ปณ.</label>
-                <input type="text" id="globalPostOfficeName" class="form-input" placeholder="เช่น มาบตาพุด" value="${window.postOfficeName || 'มาบตาพุด'}" disabled />
-              </div>
-              <div class="form-group">
-                <label for="globalFuelPrice">ราคาน้ำมันอ้างอิง (บาท/ลิตร)</label>
-                <div class="input-with-action">
-                  <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="${window.defaultFuelPrice !== undefined ? window.defaultFuelPrice : '35.00'}" step="0.01" />
-                  <button type="button" id="openAvgCalcBtn" class="btn btn-secondary btn-small" style="white-space: nowrap; padding: 0.5rem 0.6rem;">
-                    🧮 คำนวณถัวเฉลี่ย
-                  </button>
-                </div>
+            <div class="form-group" style="margin-top: 1rem; width: 100%;">
+              <label for="globalPostOfficeName">ชื่อที่ทำการไปรษณีย์ / ปณ.</label>
+              <input type="text" id="globalPostOfficeName" class="form-input" placeholder="เช่น มาบตาพุด" value="${window.postOfficeName || 'มาบตาพุด'}" disabled style="width: 100%;" />
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem; width: 100%;">
+              <label for="globalFuelPrice">ราคาน้ำมันอ้างอิง (บาท/ลิตร)</label>
+              <div style="display: flex; gap: 0.4rem; align-items: center; width: 100%;">
+                <input type="number" id="globalFuelPrice" class="form-input text-highlight" value="${window.defaultFuelPrice !== undefined ? window.defaultFuelPrice : '35.00'}" step="0.01" style="flex: 1;" />
+                <button type="button" id="openAvgCalcBtn" class="btn btn-secondary" style="white-space: nowrap; padding: 0.45rem 0.75rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 0.25rem;">
+                  🧮 คำนวณถัวเฉลี่ย
+                </button>
               </div>
             </div>
             <p class="input-tip" style="margin-top: 0.25rem;">สามารถระบุชื่อ ปณ. และราคาน้ำมันอ้างอิงเพื่อใช้ในการคำนวณและออกรายงาน</p>
