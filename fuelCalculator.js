@@ -1922,22 +1922,24 @@ export function getCalculatorsTemplate() {
             
             <div class="form-row-2">
               <div class="form-group">
+                <label for="globalYear">ปี พ.ศ.</label>
+                <input type="number" id="globalYear" class="form-input" placeholder="เช่น 2569" value="2569" min="2500" max="3000" />
+              </div>
+              <div class="form-group">
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 0.25rem;">
                   <label for="globalMonth" style="margin: 0;">รอบประจำเดือน</label>
                   <span id="monthLockBadge" style="font-size: 0.72rem; font-weight: bold; cursor: pointer; padding: 0.1rem 0.35rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.15rem; transition: all 0.2s ease; user-select: none;"></span>
                 </div>
-                <div style="display: flex; gap: 0.25rem; align-items: center; width: 100%;">
-                  <select id="globalMonth" class="form-select" style="flex: 1;">
-                    <!-- Will be populated dynamically -->
-                  </select>
-                  <button type="button" id="addCustomCycleBtn" class="btn btn-secondary" style="padding: 0.45rem 0.6rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass);" title="เพิ่มรอบประจำเดือนพิเศษ">➕ เพิ่มรอบพิเศษ</button>
-                  <button type="button" id="deleteCustomCycleBtn" class="btn btn-danger hidden" style="padding: 0.45rem 0.6rem; font-size: 0.8rem; border-radius: 8px;" title="ลบรอบประจำเดือนพิเศษนี้">❌ ลบรอบ</button>
-                </div>
+                <select id="globalMonth" class="form-select" style="width: 100%;">
+                  <!-- Will be populated dynamically -->
+                </select>
               </div>
-              <div class="form-group">
-                <label for="globalYear">ปี พ.ศ.</label>
-                <input type="number" id="globalYear" class="form-input" placeholder="เช่น 2569" value="2569" min="2500" max="3000" />
-              </div>
+            </div>
+
+            <!-- Action buttons for Month cycles on a new row below the selects -->
+            <div style="display: flex; gap: 0.4rem; margin-top: 0.4rem; justify-content: flex-end; width: 100%;">
+              <button type="button" id="deleteCustomCycleBtn" class="btn btn-danger hidden" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 0.25rem;" title="ลบรอบประจำเดือนพิเศษนี้">❌ ลบรอบพิเศษ</button>
+              <button type="button" id="addCustomCycleBtn" class="btn btn-secondary" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; border-radius: 8px; border: 1px solid var(--border-glass); display: flex; align-items: center; gap: 0.25rem;" title="เพิ่มรอบประจำเดือนพิเศษ">➕ เพิ่มรอบพิเศษ</button>
             </div>
 
             <div class="form-row-2" style="margin-top: 1rem;">
