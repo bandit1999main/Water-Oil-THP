@@ -2898,7 +2898,7 @@ function renderAttendanceTableRows() {
     const tr = document.createElement('tr');
     
     const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [] };
-    const checkedDaysSet = new Set(attRec.checkedDays);
+    const checkedDaysSet = new Set(attRec.checkedDays || []);
     
     let rowHtml = `
       <td class="att-sticky-col" style="text-align: center; color: var(--text-secondary);">${idx + 1}</td>
@@ -2944,7 +2944,7 @@ function renderAttendanceTableRows() {
     
     rowHtml += `
       <td style="text-align: center; font-weight: bold; color: var(--post-orange); font-size: 1rem;" id="att-total-${person.name}">
-        ${attRec.checkedDays.length}
+        ${(attRec.checkedDays || []).length}
       </td>
     `;
     
@@ -2960,7 +2960,7 @@ function renderAttendanceTableRows() {
         const name = e.target.getAttribute('data-name');
         const day = parseInt(e.target.getAttribute('data-day'));
         const attRec = attendanceList.find(item => item.name === name) || { checkedDays: [], dayStatuses: {} };
-        const originalStatus = attRec.dayStatuses ? (attRec.dayStatuses[day] || '') : (attRec.checkedDays.includes(day) ? '/' : '');
+        const originalStatus = attRec.dayStatuses ? (attRec.dayStatuses[day] || '') : ((attRec.checkedDays || []).includes(day) ? '/' : '');
         e.target.value = originalStatus;
         return;
       }
@@ -3300,7 +3300,18 @@ export function printAttendanceReport() {
     window.showToast('ไม่มีข้อมูลรายชื่อพนักงานที่จะพิมพ์!', 'warning');
     return;
   }
-  const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  const sorted = [...personnel].filter(p => {
+    if (p.status === 'resigned') {
+      if (p.resignYear && p.resignMonth) {
+        if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }).sort((a, b) => a.name.localeCompare(b.name, 'th'));
   
   // Header row for days 1 to 31
   let daysHeaderHtml = '';
