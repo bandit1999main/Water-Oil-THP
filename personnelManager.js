@@ -2869,8 +2869,12 @@ function renderAttendanceTableRows() {
   
   const searchQuery = (document.getElementById('attSearchInput')?.value || '').toLowerCase().trim();
   const filtered = sortedPersonnel.filter(p => {
-    if (p.status === 'resigned' && p.resignYear && p.resignMonth) {
-      if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+    if (p.status === 'resigned') {
+      if (p.resignYear && p.resignMonth) {
+        if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+          return false;
+        }
+      } else {
         return false;
       }
     }

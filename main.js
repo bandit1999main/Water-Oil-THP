@@ -3278,9 +3278,12 @@ function filterAndEnrichResignedEmployees(list, year, month) {
       if (person.vehicle === 'ไม่ได้ใช้งาน') {
         return false;
       }
-      if (person.status === 'resigned' && person.resignYear && person.resignMonth) {
-        // If resigned BEFORE active month/year, filter them out
-        if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
+      if (person.status === 'resigned') {
+        if (person.resignYear && person.resignMonth) {
+          if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
+            return false;
+          }
+        } else {
           return false;
         }
       }
