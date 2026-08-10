@@ -1055,7 +1055,7 @@ export function renderPeriodTable() {
   const avgPrice = sumDays > 0 ? (sumWeight / sumDays) : 0;
   if (avgCalcTotalDays) avgCalcTotalDays.textContent = sumDays;
   if (avgCalcTotalSum) avgCalcTotalSum.textContent = sumWeight.toFixed(2);
-  if (avgCalcResultPrice) avgCalcResultPrice.textContent = avgPrice.toFixed(4);
+  if (avgCalcResultPrice) avgCalcResultPrice.textContent = avgPrice.toFixed(2);
 
   // Auto-apply to global fuel price input and database
   const globalFuelPriceInput = document.getElementById('globalFuelPrice');
@@ -1063,10 +1063,10 @@ export function renderPeriodTable() {
   
   if (sumDays > 0 && avgPrice > 0) {
     if (globalFuelPriceInput) {
-      globalFuelPriceInput.value = avgPrice.toFixed(4);
+      globalFuelPriceInput.value = avgPrice.toFixed(2);
     }
     if (typeof window.saveGlobalSetting === 'function') {
-      window.saveGlobalSetting('fuelPrice', { value: parseFloat(avgPrice.toFixed(4)) });
+      window.saveGlobalSetting('fuelPrice', { value: parseFloat(avgPrice.toFixed(2)) });
     }
     // Re-render main table with new price
     setTimeout(() => {
