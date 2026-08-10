@@ -622,9 +622,17 @@ function renderSummariesDashboard() {
   // Render Table Timeline Rows
   let tableHtml = '';
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+
   summariesList.forEach((summary, index) => {
-    const labelMonth = summary.month > 12 ? `รอบพิเศษ ${summary.month - 12}` : (monthNames[summary.month] || '-');
+    let labelMonth = '';
+    if (summary.month > 12) {
+      const cyc = customCycles.find(c => String(c.value) === String(summary.month) && String(c.year) === String(summary.year));
+      labelMonth = cyc ? cyc.text : `รอบพิเศษ ${summary.month - 12}`;
+    } else {
+      labelMonth = monthNames[summary.month] || '-';
+    }
     const labelPeriod = `${labelMonth} ${summary.year}`;
     const fuelVal = (summary.fuelTotalNet || 0);
     const waterVal = (summary.waterTotalCost || 0);
@@ -809,7 +817,15 @@ async function openMonthlyDetails(summaryIdx) {
   if (!modal || !modalTitle) return;
 
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const monthLabel = summary.month > 12 ? `รอบพิเศษ ${summary.month - 12}` : monthNames[summary.month];
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  let monthLabel = '';
+  if (summary.month > 12) {
+    const cyc = customCycles.find(c => String(c.value) === String(summary.month) && String(c.year) === String(summary.year));
+    monthLabel = cyc ? cyc.text : `รอบพิเศษ ${summary.month - 12}`;
+  } else {
+    monthLabel = monthNames[summary.month];
+  }
   modalTitle.textContent = `รายละเอียดและใบเสร็จประวัติ - เดือน ${monthLabel} พ.ศ. ${summary.year}`;
 
   window.showToast('กำลังโหลดรายละเอียดข้อมูลของเดือน...', 'info');
@@ -984,7 +1000,15 @@ function printHistoricalFuelReport(year, month, list) {
   }
   
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : monthNames[month];
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  let monthText = '';
+  if (month > 12) {
+    const cyc = customCycles.find(c => String(c.value) === String(month) && String(c.year) === String(year));
+    monthText = cyc ? cyc.text : `รอบพิเศษ ${month - 12}`;
+  } else {
+    monthText = monthNames[month];
+  }
   
   let totalFuel = 0;
   let totalMaint = 0;
@@ -1134,7 +1158,15 @@ function printHistoricalWaterReport(year, month, list) {
   }
   
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : monthNames[month];
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  let monthText = '';
+  if (month > 12) {
+    const cyc = customCycles.find(c => String(c.value) === String(month) && String(c.year) === String(year));
+    monthText = cyc ? cyc.text : `รอบพิเศษ ${month - 12}`;
+  } else {
+    monthText = monthNames[month];
+  }
   
   let totalCost = 0;
   let totalTax = 0;
@@ -1384,7 +1416,15 @@ function printHistorical50Tawi(idx) {
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
   ];
-  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : (monthNames[month - 1] || '');
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  let monthText = '';
+  if (month > 12) {
+    const cyc = customCycles.find(c => String(c.value) === String(month) && String(c.year) === String(year));
+    monthText = cyc ? cyc.text : `รอบพิเศษ ${month - 12}`;
+  } else {
+    monthText = monthNames[month - 1] || '';
+  }
   const yearText = String(year);
 
   const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};

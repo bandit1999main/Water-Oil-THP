@@ -29,6 +29,7 @@ import {
   saveGlobalSetting,
   listenToGlobalSettings,
   fetchGlobalConfigs,
+  saveGlobalConfigs,
   fetchPersonnelList,
   savePersonnelList,
   listenToPersonnel,
@@ -373,8 +374,17 @@ function setupCalculatorDOMReferencesAndEvents() {
   if (!window.activeMonth) window.activeMonth = currentMonthStr;
   if (!window.activeYear) window.activeYear = currentYearBEStr;
 
-  if (globalMonthSelect) globalMonthSelect.value = window.activeMonth;
+  if (globalMonthSelect) {
+    populateMonthDropdown(window.activeYear || currentYearBEStr);
+    globalMonthSelect.value = window.activeMonth;
+  }
   if (globalYearSelect) globalYearSelect.value = window.activeYear;
+
+  const addCycleBtn = document.getElementById('addCustomCycleBtn');
+  if (addCycleBtn) {
+    addCycleBtn.addEventListener('click', handleAddCustomCycle);
+  }
+
   copyFromPrevMonthBtn = document.getElementById('copyFromPrevMonthBtn');
   loadFromRegistryBtn = document.getElementById('loadFromRegistryBtn');
   globalPostOfficeNameInput = document.getElementById('globalPostOfficeName');
@@ -503,6 +513,7 @@ function setupCalculatorDOMReferencesAndEvents() {
     globalYearSelect.addEventListener('change', () => {
       const val = globalYearSelect.value;
       window.activeYear = val;
+      populateMonthDropdown(val);
       if (activeMode === 'fuel') {
         saveGlobalSetting('fuelYear', { value: val });
       } else if (activeMode === 'water') {
@@ -3270,5 +3281,79 @@ function filterAndEnrichResignedEmployees(list, year, month) {
     }
     return emp;
   });
+}
+
+export function populateMonthDropdown(selectedYear) {
+  const globalMonthSelect = document.getElementById('globalMonth');
+  if (!globalMonthSelect) return;
+
+  const currentVal = globalMonthSelect.value || window.activeMonth || "5";
+
+  globalMonthSelect.innerHTML = '';
+
+  const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  thaiMonths.forEach((mName, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx + 1);
+    opt.textContent = mName;
+    globalMonthSelect.appendChild(opt);
+  });
+
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const customCycles = configs.customCycles || [];
+  
+  const yearCycles = customCycles.filter(c => String(c.year) === String(selectedYear));
+  yearCycles.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = String(c.value);
+    opt.textContent = c.text;
+    globalMonthSelect.appendChild(opt);
+  });
+
+  if ([...globalMonthSelect.options].some(o => o.value === currentVal)) {
+    globalMonthSelect.value = currentVal;
+  } else {
+    globalMonthSelect.value = "5"; // default to May
+    window.activeMonth = "5";
+  }
+}
+
+async function handleAddCustomCycle() {
+  const name = prompt("กรุณาระบุชื่อรอบพิเศษ (เช่น 'รอบตกค้าง ม.ค. - มี.ค. 69'):");
+  if (!name || !name.trim()) return;
+
+  const yearVal = document.getElementById('globalYear')?.value || '2569';
+  const yearNum = parseInt(yearVal);
+  
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  if (!configs.customCycles) configs.customCycles = [];
+
+  const nextVal = configs.customCycles.reduce((max, c) => Math.max(max, c.value), 12) + 1;
+
+  const newCycle = {
+    value: nextVal,
+    text: name.trim(),
+    year: yearNum
+  };
+
+  configs.customCycles.push(newCycle);
+
+  const success = await saveGlobalConfigs(configs);
+  if (success) {
+    localStorage.setItem('tp_global_configs', JSON.stringify(configs));
+    showToast(`เพิ่มรอบพิเศษ "${newCycle.text}" สำเร็จ!`, 'success');
+    populateMonthDropdown(yearNum);
+    const globalMonthSelect = document.getElementById('globalMonth');
+    if (globalMonthSelect) {
+      globalMonthSelect.value = String(nextVal);
+      window.activeMonth = String(nextVal);
+      globalMonthSelect.dispatchEvent(new Event('change'));
+    }
+  } else {
+    showToast('บันทึกข้อมูลล้มเหลว!', 'error');
+  }
 }
 
