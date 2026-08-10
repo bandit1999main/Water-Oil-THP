@@ -1322,6 +1322,9 @@ function applyGlobalSettingsToDOM() {
 }
 
 function bindMonthlyDataListeners() {
+  if (typeof cancelEdit === 'function' && document.getElementById('employeeForm')) {
+    cancelEdit();
+  }
   if (unsubscribeEmployees) {
     unsubscribeEmployees();
     unsubscribeEmployees = null;
