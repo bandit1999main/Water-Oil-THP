@@ -624,7 +624,7 @@ function renderSummariesDashboard() {
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
   
   summariesList.forEach((summary, index) => {
-    const labelMonth = monthNames[summary.month] || '-';
+    const labelMonth = summary.month > 12 ? `รอบพิเศษ ${summary.month - 12}` : (monthNames[summary.month] || '-');
     const labelPeriod = `${labelMonth} ${summary.year}`;
     const fuelVal = (summary.fuelTotalNet || 0);
     const waterVal = (summary.waterTotalCost || 0);
@@ -809,7 +809,8 @@ async function openMonthlyDetails(summaryIdx) {
   if (!modal || !modalTitle) return;
 
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  modalTitle.textContent = `รายละเอียดและใบเสร็จประวัติ - เดือน ${monthNames[summary.month]} พ.ศ. ${summary.year}`;
+  const monthLabel = summary.month > 12 ? `รอบพิเศษ ${summary.month - 12}` : monthNames[summary.month];
+  modalTitle.textContent = `รายละเอียดและใบเสร็จประวัติ - เดือน ${monthLabel} พ.ศ. ${summary.year}`;
 
   window.showToast('กำลังโหลดรายละเอียดข้อมูลของเดือน...', 'info');
 
@@ -983,7 +984,7 @@ function printHistoricalFuelReport(year, month, list) {
   }
   
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const monthText = monthNames[month];
+  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : monthNames[month];
   
   let totalFuel = 0;
   let totalMaint = 0;
@@ -1133,7 +1134,7 @@ function printHistoricalWaterReport(year, month, list) {
   }
   
   const monthNames = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-  const monthText = monthNames[month];
+  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : monthNames[month];
   
   let totalCost = 0;
   let totalTax = 0;
@@ -1383,7 +1384,7 @@ function printHistorical50Tawi(idx) {
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
   ];
-  const monthText = monthNames[month - 1] || '';
+  const monthText = month > 12 ? `รอบพิเศษ ${month - 12}` : (monthNames[month - 1] || '');
   const yearText = String(year);
 
   const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};

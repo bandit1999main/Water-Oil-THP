@@ -2766,6 +2766,7 @@ async function bindAttendanceDataListeners() {
 }
 
 function getDaysInMonth(year, month) {
+  if (month > 12) return 31;
   const ceYear = year - 543;
   return new Date(ceYear, month, 0).getDate();
 }

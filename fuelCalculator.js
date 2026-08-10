@@ -1939,6 +1939,11 @@ export function getCalculatorsTemplate() {
                   <option value="10">ตุลาคม</option>
                   <option value="11">พฤศจิกายน</option>
                   <option value="12">ธันวาคม</option>
+                  <option value="13">รอบพิเศษ 1</option>
+                  <option value="14">รอบพิเศษ 2</option>
+                  <option value="15">รอบพิเศษ 3</option>
+                  <option value="16">รอบพิเศษ 4</option>
+                  <option value="17">รอบพิเศษ 5</option>
                 </select>
               </div>
               <div class="form-group">
