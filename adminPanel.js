@@ -260,6 +260,11 @@ export function getAdminPanelTemplate() {
                 <span class="card-icon">🔑</span>
                 <h3>จัดการสิทธิ์ผู้ใช้งานระบบ (User Management)</h3>
               </div>
+              <div class="header-actions" style="display: flex; gap: 0.5rem;">
+                <button type="button" id="exportAdminUsersExcelBtn" class="btn btn-secondary btn-small" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; border-color: var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.08); font-weight: 700; cursor: pointer;">
+                  📤 ส่งออกรายงานผู้ดูแลระบบ (Excel)
+                </button>
+              </div>
             </div>
             <div style="padding: 1rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; background: rgba(0, 0, 0, 0.02); border-bottom: 1px solid var(--border-glass); border-radius: var(--radius-small) var(--radius-small) 0 0;">
               💡 <strong>คู่มือดูแลระบบ:</strong> รายการผู้ใช้งานจะปรากฏที่นี่เมื่อพวกเขาเข้าสู่ระบบครั้งแรก บัญชีแอดมินหลัก <strong style="color: var(--post-orange);">bandit1999main@gmail.com</strong> จะไม่สามารถเปลี่ยนสิทธิ์หรือลบออกได้เพื่อความปลอดภัยสูงสุด
@@ -404,12 +409,15 @@ export function getAdminPanelTemplate() {
 
   <div class="panel-column full-width-column" style="width: 100%; margin-top: 1.5rem;">
           <div id="adminActivityLogsCard" class="glass-card full-width" style="padding: 1.5rem;">
-            <div class="card-header" style="margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div class="card-header" style="margin-bottom: 1.2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span class="card-icon">📜</span>
                 <h3 style="font-size: 1.1rem; font-weight: 700;">ประวัติกิจกรรมของระบบ (System Activity Logs)</h3>
               </div>
-              <button id="refreshActivityLogsBtn" class="btn btn-secondary btn-small" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-color: var(--post-orange); color: var(--post-orange); cursor: pointer;">🔄 รีเฟรชข้อมูล</button>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" id="exportActivityLogsExcelBtn" class="btn btn-secondary btn-small" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-color: var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.08); font-weight: 700; cursor: pointer;">📤 ส่งออก Excel</button>
+                <button id="refreshActivityLogsBtn" class="btn btn-secondary btn-small" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-color: var(--post-orange); color: var(--post-orange); cursor: pointer;">🔄 รีเฟรชข้อมูล</button>
+              </div>
             </div>
             
             <div class="table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass); max-height: 300px; overflow-y: auto;">
@@ -698,7 +706,223 @@ export async function initAdminPanel() {
   if (refreshLogsBtn) {
     refreshLogsBtn.addEventListener('click', renderActivityLogs);
   }
+  const exportAdminUsersExcelBtn = document.getElementById('exportAdminUsersExcelBtn');
+  if (exportAdminUsersExcelBtn) {
+    exportAdminUsersExcelBtn.addEventListener('click', exportAdminReportToExcel);
+  }
+  const exportActivityLogsExcelBtn = document.getElementById('exportActivityLogsExcelBtn');
+  if (exportActivityLogsExcelBtn) {
+    exportActivityLogsExcelBtn.addEventListener('click', exportAdminReportToExcel);
+  }
   renderActivityLogs();
+}
+
+export async function exportAdminReportToExcel() {
+  try {
+    window.showToast('กำลังเตรียมรายงานผู้ดูแลระบบ (Excel)...', 'info');
+    const XLSX = await window.getXLSX();
+    const configs = await fetchGlobalConfigs();
+    const logs = await fetchActivityLogs(200);
+    const postOfficeName = configs.postOfficeName || 'ไปรษณีย์ไทย';
+
+    const styleSheet = (ws, bannerHex, headerHex, colWidths) => {
+      ws['!cols'] = colWidths;
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const rowsH = [];
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        if (R === 0) rowsH.push({ hpx: 34 });
+        else if (R === 1) rowsH.push({ hpx: 22 });
+        else if (R === 2) rowsH.push({ hpx: 26 });
+        else rowsH.push({ hpx: 21 });
+
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          let cell = ws[cellRef];
+          if (!cell) {
+            cell = { t: 's', v: '' };
+            ws[cellRef] = cell;
+          }
+          cell.s = {
+            font: { name: 'Sarabun', sz: 10.5 },
+            alignment: { vertical: 'center', horizontal: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+          if (R === 0) {
+            cell.s.fill = { fgColor: { rgb: bannerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 13.5, bold: true, color: { rgb: 'FFFFFF' } };
+            cell.s.border = {};
+          } else if (R === 1) {
+            cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
+            cell.s.font = { name: 'Sarabun', sz: 10, color: { rgb: '334155' } };
+            cell.s.border = {};
+          } else if (R === 2) {
+            cell.s.fill = { fgColor: { rgb: headerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: 'FFFFFF' } };
+          } else {
+            if (C === 1 || C === 2 || C === range.e.c) {
+              cell.s.alignment.horizontal = 'left';
+            }
+          }
+        }
+      }
+      ws['!rows'] = rowsH;
+    };
+
+    const wb = XLSX.utils.book_new();
+
+    // =========================================================================
+    // SHEET 1: ประวัติกิจกรรมระบบ (Audit Log)
+    // =========================================================================
+    const logHeaders = ['ลำดับ', 'วัน-เวลา', 'ชื่อผู้ดำเนินการ', 'อีเมลผู้ดำเนินการ', 'หมวดหมู่กิจกรรม', 'รายละเอียดการดำเนินการ'];
+    const logData = [
+      [`รายงานประวัติกิจกรรมของระบบ (System Activity Audit Log) - ${postOfficeName}`],
+      [`ดึงข้อมูลล่าสุดเมื่อ: ${new Date().toLocaleString('th-TH')}  |  จำนวน ${logs.length} รายการ`],
+      logHeaders
+    ];
+
+    const getActionLabel = (type = '') => {
+      if (type.includes('lock')) return 'ปิดยอด / ปลดล็อก';
+      if (type.includes('backup')) return 'สำรอง / กู้คืนข้อมูล';
+      if (type.includes('personnel')) return 'จัดการบุคลากร';
+      if (type.includes('attendance')) return 'เวลาเข้างาน';
+      if (type.includes('route')) return 'จัดการด้านจ่าย';
+      return 'ระบบ / อื่นๆ';
+    };
+
+    logs.forEach((log, idx) => {
+      let timeText = '-';
+      if (log.timestamp) {
+        const d = new Date(log.timestamp);
+        const thYear = d.getFullYear() + 543;
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        timeText = `${day}/${month}/${thYear} ${hours}:${minutes}`;
+      }
+      logData.push([
+        idx + 1,
+        timeText,
+        log.actorName || '-',
+        log.actorEmail || '-',
+        getActionLabel(log.actionType),
+        log.description || '-'
+      ]);
+    });
+
+    const wsLogs = XLSX.utils.aoa_to_sheet(logData);
+    wsLogs['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: logHeaders.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: logHeaders.length - 1 } }
+    ];
+    styleSheet(wsLogs, 'F04E23', '1E293B', [
+      { wch: 8 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 28 },
+      { wch: 20 },
+      { wch: 52 }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsLogs, '1.ประวัติกิจกรรมระบบ');
+
+    // =========================================================================
+    // SHEET 2: รายชื่อผู้ใช้งานและสิทธิ์ (User Management)
+    // =========================================================================
+    const userHeaders = ['ลำดับ', 'ชื่อผู้ใช้งาน', 'อีเมล', 'สถานะการอนุมัติ', 'หน้าที่รับผิดชอบ', 'ระดับสิทธิ์ (Role)', 'เข้าใช้งานล่าสุด'];
+    const userData = [
+      [`ตารางรายชื่อผู้ใช้งานและสิทธิ์การเข้าถึงระบบ - ${postOfficeName}`],
+      [`จำนวนผู้ใช้งานในระบบทั้งหมด ${appUsersList.length} บัญชี`],
+      userHeaders
+    ];
+
+    appUsersList.forEach((user, idx) => {
+      const isMainAdmin = user.email === 'bandit1999main@gmail.com';
+      const isApproved = user.approved === true || isMainAdmin;
+      const isAdminRole = user.role === 'admin' || isMainAdmin;
+      const duties = Array.isArray(user.duties) ? user.duties : [];
+      const dutyLabels = [];
+      if (duties.includes('fuel') || isMainAdmin) dutyLabels.push('ค่าน้ำมัน');
+      if (duties.includes('water') || isMainAdmin) dutyLabels.push('ค่าน้ำดื่ม');
+      const lastLoginText = user.lastLogin ? new Date(user.lastLogin).toLocaleString('th-TH') : '-';
+
+      userData.push([
+        idx + 1,
+        user.displayName || 'พนักงานไปรษณีย์',
+        user.email || '-',
+        isMainAdmin ? 'Admin หลัก' : (isApproved ? 'อนุมัติแล้ว' : 'รออนุมัติ'),
+        dutyLabels.length > 0 ? dutyLabels.join(', ') : '-',
+        isAdminRole ? 'Admin (จัดการข้อมูล)' : 'User (ดูข้อมูล)',
+        lastLoginText
+      ]);
+    });
+
+    const wsUsers = XLSX.utils.aoa_to_sheet(userData);
+    wsUsers['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: userHeaders.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: userHeaders.length - 1 } }
+    ];
+    styleSheet(wsUsers, '1E3A8A', '1E3A8A', [
+      { wch: 8 },
+      { wch: 26 },
+      { wch: 30 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 22 },
+      { wch: 24 }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsUsers, '2.รายชื่อผู้ใช้งาน');
+
+    // =========================================================================
+    // SHEET 3: ตั้งค่าระบบและฐานภาษี (System Config & Tax Brackets)
+    // =========================================================================
+    const cfgHeaders = ['ลำดับ', 'รายการตั้งค่า / ช่วงฐานเงินเดือน', 'ค่าที่กำหนด / เงินเดือนเริ่มต้น', 'รายละเอียดเพิ่มเติม / เงินเดือนสิ้นสุด', 'อัตราภาษี / หมายเหตุ'];
+    const cfgData = [
+      [`สรุปการตั้งค่าตัวแปรกลางและโครงสร้างฐานภาษีหัก ณ ที่จ่าย - ${postOfficeName}`],
+      [`ข้อมูลผู้มีหน้าที่หักภาษี ณ ที่จ่าย และเกณฑ์การคำนวณสวัสดิการ`],
+      cfgHeaders,
+      [1, 'ชื่อหน่วยงาน / ผู้จ่ายเงิน', configs.postOfficeName || '-', 'สาขาที่: ' + (configs.postOfficeBranch || '00000'), 'หน่วยงาน ปณ.'],
+      [2, 'เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)', configs.postOfficeTaxId || '-', configs.postOfficeAddress || '-', 'สำหรับพิมพ์ 50 ทวิ'],
+      [3, 'ผู้รับผิดชอบใบลงเวลาปฏิบัติงาน', `ผู้จัดทำ: ${configs.attendanceMakerName || '-'}`, `ผู้ตรวจสอบ: ${configs.attendanceCheckerName || '-'}`, 'ท้ายรายงานลงเวลา'],
+      [4, 'อัตราเงินสวัสดิการและราคาน้ำมันเริ่มต้น', `ค่าน้ำดื่ม: ${configs.waterAllowancePerDay || 30} บาท/วัน`, `ราคาน้ำมันเริ่มต้น: ${configs.defaultFuelPrice || 35} บาท/ลิตร`, 'ค่าเริ่มต้นของระบบ']
+    ];
+
+    const brackets = Array.isArray(configs.waterTaxBrackets) ? configs.waterTaxBrackets : [];
+    brackets.forEach((b, idx) => {
+      cfgData.push([
+        idx + 5,
+        `ฐานภาษีค่าน้ำดื่ม ช่วงที่ ${idx + 1}`,
+        `${Number(b.minSalary || 0).toLocaleString()} บาท`,
+        `${Number(b.maxSalary || 0).toLocaleString()} บาท`,
+        `${((Number(b.rate || 0)) * 100).toFixed(1)}%`
+      ]);
+    });
+
+    const wsCfg = XLSX.utils.aoa_to_sheet(cfgData);
+    wsCfg['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: cfgHeaders.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: cfgHeaders.length - 1 } }
+    ];
+    styleSheet(wsCfg, '0F766E', '0F766E', [
+      { wch: 8 },
+      { wch: 34 },
+      { wch: 28 },
+      { wch: 36 },
+      { wch: 22 }
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsCfg, '3.ตั้งค่าระบบและฐานภาษี');
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `รายงานผู้ดูแลระบบและประวัติกิจกรรม_${postOfficeName}_${dateStr}.xlsx`);
+    window.showToast('ส่งออกรายงานผู้ดูแลระบบ (Excel 3 ชีต) สำเร็จ!', 'success');
+  } catch (err) {
+    console.error('Failed to export admin report:', err);
+    window.showToast('เกิดข้อผิดพลาดในการส่งออกรายงานผู้ดูแลระบบ', 'error');
+  }
 }
 
 export async function renderActivityLogs() {

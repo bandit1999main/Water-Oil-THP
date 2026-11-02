@@ -3433,166 +3433,449 @@ async function exportAttendanceToExcel() {
   const month = parseInt(attMonthSelect.value);
   const year = parseInt(attYearInput.value);
   const daysCount = getDaysInMonth(year, month);
+  const ceYear = year - 543;
+  const monthText = attMonthSelect.options[attMonthSelect.selectedIndex]?.text || String(month);
+  const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  const postOfficeName = configs.postOfficeName || 'ไปรษณีย์ไทย';
+  const attMakerName = configs.attendanceMakerName || '';
+  const attCheckerName = configs.attendanceCheckerName || '';
   
-  window.showToast('กำลังเตรียมข้อมูลส่งออก...', 'info');
+  window.showToast('กำลังเตรียมข้อมูลส่งออก Excel แยกหมวดหมู่...', 'info');
   
   try {
     const XLSX = await getXLSX();
     const personnel = getPersonnel();
-    const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
-    
+    const activePersonnel = personnel.filter(p => {
+      if (p.status === 'resigned') {
+        if (p.resignYear && p.resignMonth) {
+          if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+      return true;
+    });
+    const sorted = [...activePersonnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+
+    const classifyPerson = (item) => {
+      const pos = (item.position || '').trim();
+      const duty = (item.duty || '').trim();
+      const dept = (item.department || '').trim();
+      if (duty.includes('หัวหน้าโซน') || pos.includes('ชนจ') || dept.includes('ชนจ')) {
+        return 'supervisor';
+      }
+      if (pos === 'ลูกจ้างเหมา') {
+        return 'contractor';
+      }
+      if (pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ' || pos === 'หน.ปณ.') {
+        return 'staff';
+      }
+      return 'worker';
+    };
+
+    const categoryDefs = [
+      {
+        key: 'staff',
+        sheetName: '1.พนง-ลูกจ้างประจำ',
+        sectionTitle: '1. พนักงาน และ ลูกจ้างประจำ',
+        headerFill: '1E3A8A',
+        subHeaderFill: 'DBEAFE',
+        subHeaderFont: '1E3A8A'
+      },
+      {
+        key: 'worker',
+        sheetName: '2.ลูกจ้าง',
+        sectionTitle: '2. ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว',
+        headerFill: '0F766E',
+        subHeaderFill: 'CCFBF1',
+        subHeaderFont: '0F766E'
+      },
+      {
+        key: 'contractor',
+        sheetName: '3.ลูกจ้างเหมา',
+        sectionTitle: '3. ลูกจ้างเหมาบริการนำจ่าย',
+        headerFill: 'B45309',
+        subHeaderFill: 'FEF3C7',
+        subHeaderFont: '92400E'
+      },
+      {
+        key: 'supervisor',
+        sheetName: '4.ชนจ.',
+        sectionTitle: '4. หัวหน้าโซนนำจ่าย (ชนจ.)',
+        headerFill: '3730A3',
+        subHeaderFill: 'E0E7FF',
+        subHeaderFont: '312E81'
+      }
+    ];
+
     const headers = ['ลำดับ', 'ชื่อ-นามสกุล'];
     for (let d = 1; d <= daysCount; d++) {
       headers.push(String(d));
     }
-    headers.push('รวมมาทำงาน');
-    
-    const data = [
-      ['แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)'],
-      ['คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้ารับวันมาทำงาน)'],
-      headers
-    ];
-    
-    sorted.forEach((person, idx) => {
+    headers.push('รวมมาทำงาน', 'ลาป่วย (ป)', 'ลากิจ (ก)', 'พักผ่อน (พ)', 'ขาดงาน (ข)', 'วันหยุด (ย)', 'ตำแหน่ง');
+    const colsCount = headers.length;
+    const workSumColIdx = 2 + daysCount;
+    const lastDayColLetter = XLSX.utils.encode_col(2 + daysCount - 1);
+
+    const buildPersonRow = (person, seqNum, xlRowNum) => {
       const attRec = attendanceList.find(item => item.name === person.name) || { checkedDays: [], dayStatuses: {} };
-      const row = [idx + 1, person.name];
       const statuses = attRec.dayStatuses || {};
+      const row = [seqNum, person.name];
+      let workCount = 0, sickCount = 0, personalCount = 0, vacCount = 0, absentCount = 0, restCount = 0;
+
       for (let d = 1; d <= daysCount; d++) {
         let val = '';
         if (statuses[d]) {
           val = statuses[d];
-        } else if (attRec.checkedDays.includes(d)) {
+        } else if (attRec.checkedDays && attRec.checkedDays.includes(d)) {
           val = '/';
         }
         row.push(val);
+        if (val === '/') workCount++;
+        else if (val === 'ป') sickCount++;
+        else if (val === 'ก') personalCount++;
+        else if (val === 'พ') vacCount++;
+        else if (val === 'ข') absentCount++;
+        else if (val === 'ย') restCount++;
       }
-      row.push(attRec.checkedDays.length);
-      data.push(row);
-    });
-    
-    // Add 15 extra empty rows for visual alignment
-    const startIdx = sorted.length;
-    for (let i = 0; i < 15; i++) {
-      const row = [startIdx + i + 1, ''];
+
+      if (xlRowNum) {
+        const rangeRef = `C${xlRowNum}:${lastDayColLetter}${xlRowNum}`;
+        row.push(
+          { t: 'n', f: `COUNTIF(${rangeRef},"/")`, v: workCount },
+          { t: 'n', f: `COUNTIF(${rangeRef},"ป")`, v: sickCount },
+          { t: 'n', f: `COUNTIF(${rangeRef},"ก")`, v: personalCount },
+          { t: 'n', f: `COUNTIF(${rangeRef},"พ")`, v: vacCount },
+          { t: 'n', f: `COUNTIF(${rangeRef},"ข")`, v: absentCount },
+          { t: 'n', f: `COUNTIF(${rangeRef},"ย")`, v: restCount }
+        );
+      } else {
+        row.push(workCount, sickCount, personalCount, vacCount, absentCount, restCount);
+      }
+      row.push(person.position || '-');
+      return {
+        row,
+        counts: { workCount, sickCount, personalCount, vacCount, absentCount, restCount }
+      };
+    };
+
+    const styleAttendanceSheet = (ws, rowMeta, bannerHex = 'F04E23', headerHex = '2B2B2B') => {
+      const colsW = [{ wch: 6 }, { wch: 26 }];
       for (let d = 1; d <= daysCount; d++) {
-        row.push('');
+        colsW.push({ wch: 3.6 });
       }
-      row.push('');
-      data.push(row);
-    }
-    
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const colsCount = 2 + daysCount + 1;
-    
-    // Merge title banner and subtitle
-    ws['!merges'] = [
+      colsW.push(
+        { wch: 12 }, // รวมมาทำงาน
+        { wch: 10 }, // ลาป่วย
+        { wch: 10 }, // ลากิจ
+        { wch: 10 }, // พักผ่อน
+        { wch: 10 }, // ขาดงาน
+        { wch: 10 }, // วันหยุด
+        { wch: 16 }  // ตำแหน่ง
+      );
+      ws['!cols'] = colsW;
+
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const rowsH = [];
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        const meta = rowMeta[R] || { type: 'data' };
+        if (meta.type === 'title') rowsH.push({ hpx: 34 });
+        else if (meta.type === 'subtitle') rowsH.push({ hpx: 22 });
+        else if (meta.type === 'header') rowsH.push({ hpx: 26 });
+        else if (meta.type === 'groupHeader') rowsH.push({ hpx: 24 });
+        else if (meta.type === 'subtotal' || meta.type === 'grandTotal') rowsH.push({ hpx: 24 });
+        else rowsH.push({ hpx: 20 });
+
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+          let cell = ws[cell_ref];
+          if (!cell) {
+            cell = { t: 's', v: '' };
+            ws[cell_ref] = cell;
+          }
+
+          cell.s = {
+            border: {
+              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+            },
+            font: { name: 'Sarabun', sz: 10 },
+            alignment: { vertical: 'center', horizontal: 'center' }
+          };
+
+          if (meta.type === 'title') {
+            cell.s.fill = { fgColor: { rgb: bannerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 13, bold: true, color: { rgb: 'FFFFFF' } };
+            cell.s.border = {};
+          } else if (meta.type === 'subtitle') {
+            cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
+            cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '444444' } };
+            cell.s.border = {};
+          } else if (meta.type === 'header') {
+            cell.s.fill = { fgColor: { rgb: headerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 9.5, bold: true, color: { rgb: 'FFFFFF' } };
+            cell.s.border = {
+              top: { style: 'thin', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '444444' } },
+              right: { style: 'thin', color: { rgb: '444444' } }
+            };
+          } else if (meta.type === 'groupHeader') {
+            cell.s.fill = { fgColor: { rgb: meta.bgHex || 'DBEAFE' } };
+            cell.s.font = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: meta.fontHex || '1E3A8A' } };
+            cell.s.alignment = { vertical: 'center', horizontal: 'left' };
+          } else if (meta.type === 'subtotal') {
+            cell.s.fill = { fgColor: { rgb: 'F8FAFC' } };
+            cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: '0F172A' } };
+            cell.s.border.top = { style: 'thin', color: { rgb: '64748B' } };
+            cell.s.border.bottom = { style: 'double', color: { rgb: '64748B' } };
+            if (C === 1) cell.s.alignment.horizontal = 'right';
+          } else if (meta.type === 'grandTotal') {
+            cell.s.fill = { fgColor: { rgb: 'FEF2F2' } };
+            cell.s.font = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: 'B91C1C' } };
+            cell.s.border.top = { style: 'medium', color: { rgb: 'B91C1C' } };
+            cell.s.border.bottom = { style: 'double', color: { rgb: 'B91C1C' } };
+            if (C === 1) cell.s.alignment.horizontal = 'right';
+          } else if (meta.type === 'signatory' || meta.type === 'blank') {
+            cell.s.border = {};
+            cell.s.font = { name: 'Sarabun', sz: 10, bold: meta.bold === true };
+          } else {
+            if (C === 1) {
+              cell.s.alignment.horizontal = 'left';
+            }
+            if (C === workSumColIdx) {
+              cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
+              cell.s.fill = { fgColor: { rgb: 'FFF5F5' } };
+            } else if (C > workSumColIdx && C < colsCount - 1) {
+              cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '334155' } };
+              cell.s.fill = { fgColor: { rgb: 'F8FAFC' } };
+            }
+            if (C >= 2 && C < 2 + daysCount) {
+              const d = C - 1;
+              const dateObj = new Date(ceYear, month - 1, d);
+              const dayOfWeek = dateObj.getDay();
+              const person = meta.person || null;
+              const isRestDay = person
+                ? checkIsRestDayForDate(person, ceYear, month, d)
+                : (dayOfWeek === 0 || dayOfWeek === 6);
+              const isHighlightRed = isRestDay || cell.v === 'ย';
+              if (isHighlightRed) {
+                if (cell.v === 'ย' || dayOfWeek === 0) {
+                  cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
+                  if (cell.v === 'ย') {
+                    cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'E11D48' } };
+                  }
+                } else if (dayOfWeek === 6) {
+                  cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
+                } else {
+                  cell.s.fill = { fgColor: { rgb: 'EDEDED' } };
+                }
+              } else if (cell.v === 'ป' || cell.v === 'ก' || cell.v === 'พ' || cell.v === 'ข') {
+                cell.s.fill = { fgColor: { rgb: 'FEF3C7' } };
+                cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'B45309' } };
+              }
+            }
+          }
+        }
+      }
+      ws['!rows'] = rowsH;
+    };
+
+    const appendSignatoryBlock = (dataArr, rowMetaArr) => {
+      const blankRow = new Array(colsCount).fill('');
+      dataArr.push([...blankRow]);
+      rowMetaArr.push({ type: 'blank' });
+
+      const sigRow1 = new Array(colsCount).fill('');
+      const makerCol = Math.max(2, Math.floor(colsCount * 0.2));
+      const checkerCol = Math.max(makerCol + 6, Math.floor(colsCount * 0.65));
+      sigRow1[makerCol] = 'ลงชื่อ .................................................... ผู้จัดทำ';
+      sigRow1[checkerCol] = 'ลงชื่อ .................................................... ผู้ตรวจสอบ';
+      dataArr.push(sigRow1);
+      rowMetaArr.push({ type: 'signatory' });
+
+      const sigRow2 = new Array(colsCount).fill('');
+      sigRow2[makerCol] = `(${attMakerName || '....................................................'})`;
+      sigRow2[checkerCol] = `(${attCheckerName || '....................................................'})`;
+      dataArr.push(sigRow2);
+      rowMetaArr.push({ type: 'signatory', bold: true });
+    };
+
+    const wb = XLSX.utils.book_new();
+
+    // =========================================================================
+    // SHEET 1: รวมทั้งหมด (นำเข้าได้)
+    // =========================================================================
+    const sheet1Data = [
+      [`แบบบันทึกวันมาทำงานบุคลากร ${postOfficeName} ประจำเดือน ${monthText} พ.ศ. ${year} (สำหรับนำเข้าข้อมูลเข้าระบบ)`],
+      ['คำชี้แจง: / = มาทำงานปกติ, ย = วันหยุด, ป = ลาป่วย, ก = ลากิจ, พ = พักผ่อน, ข = ขาดงาน (สามารถแก้ไขแล้วอัปโหลดไฟล์นี้กลับเข้าระบบได้ทันที)'],
+      headers
+    ];
+    const sheet1Meta = [
+      { type: 'title' },
+      { type: 'subtitle' },
+      { type: 'header' }
+    ];
+
+    sorted.forEach((person, idx) => {
+      const xlRow = sheet1Data.length + 1;
+      const { row } = buildPersonRow(person, idx + 1, xlRow);
+      sheet1Data.push(row);
+      sheet1Meta.push({ type: 'data', person });
+    });
+
+    const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+    ws1['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
     ];
+    styleAttendanceSheet(ws1, sheet1Meta, 'F04E23', '2B2B2B');
+    XLSX.utils.book_append_sheet(wb, ws1, 'รวมทั้งหมด (นำเข้าได้)');
+
+    // =========================================================================
+    // SHEET 2: สรุปแยกหมวดหมู่ (All Categories Grouped with Subtotals)
+    // =========================================================================
+    const sheet2Data = [
+      [`ตารางสรุปเวลาปฏิบัติงานและวันลาแยกตามหมวดหมู่ ${postOfficeName} ประจำเดือน ${monthText} พ.ศ. ${year}`],
+      ['แยกหมวดหมู่: 1. พนักงาน/ลูกจ้างประจำ  |  2. ลูกจ้าง  |  3. ลูกจ้างเหมา  |  4. หัวหน้าโซนนำจ่าย (ชนจ.)'],
+      headers
+    ];
+    const sheet2Meta = [
+      { type: 'title' },
+      { type: 'subtitle' },
+      { type: 'header' }
+    ];
+    const sheet2Merges = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
+    ];
+
+    let grandTotals = { workCount: 0, sickCount: 0, personalCount: 0, vacCount: 0, absentCount: 0, restCount: 0 };
+
+    categoryDefs.forEach(cat => {
+      const groupItems = sorted.filter(p => classifyPerson(p) === cat.key);
+      if (groupItems.length === 0) return;
+
+      const groupRowIdx = sheet2Data.length;
+      const groupTitleRow = new Array(colsCount).fill('');
+      groupTitleRow[0] = `📌 ${cat.sectionTitle} (จำนวน ${groupItems.length} คน)`;
+      sheet2Data.push(groupTitleRow);
+      sheet2Meta.push({ type: 'groupHeader', bgHex: cat.subHeaderFill, fontHex: cat.subHeaderFont });
+      sheet2Merges.push({ s: { r: groupRowIdx, c: 0 }, e: { r: groupRowIdx, c: colsCount - 1 } });
+
+      let grpTotals = { workCount: 0, sickCount: 0, personalCount: 0, vacCount: 0, absentCount: 0, restCount: 0 };
+      groupItems.forEach((person, idx) => {
+        const xlRow = sheet2Data.length + 1;
+        const { row, counts } = buildPersonRow(person, idx + 1, xlRow);
+        sheet2Data.push(row);
+        sheet2Meta.push({ type: 'data', person });
+        grpTotals.workCount += counts.workCount;
+        grpTotals.sickCount += counts.sickCount;
+        grpTotals.personalCount += counts.personalCount;
+        grpTotals.vacCount += counts.vacCount;
+        grpTotals.absentCount += counts.absentCount;
+        grpTotals.restCount += counts.restCount;
+      });
+
+      grandTotals.workCount += grpTotals.workCount;
+      grandTotals.sickCount += grpTotals.sickCount;
+      grandTotals.personalCount += grpTotals.personalCount;
+      grandTotals.vacCount += grpTotals.vacCount;
+      grandTotals.absentCount += grpTotals.absentCount;
+      grandTotals.restCount += grpTotals.restCount;
+
+      const subRow = new Array(colsCount).fill('');
+      subRow[1] = `รวมเฉพาะกลุ่ม ${cat.sectionTitle} (${groupItems.length} คน)`;
+      subRow[workSumColIdx] = grpTotals.workCount;
+      subRow[workSumColIdx + 1] = grpTotals.sickCount;
+      subRow[workSumColIdx + 2] = grpTotals.personalCount;
+      subRow[workSumColIdx + 3] = grpTotals.vacCount;
+      subRow[workSumColIdx + 4] = grpTotals.absentCount;
+      subRow[workSumColIdx + 5] = grpTotals.restCount;
+      sheet2Data.push(subRow);
+      sheet2Meta.push({ type: 'subtotal' });
+    });
+
+    const grandRow = new Array(colsCount).fill('');
+    grandRow[1] = `รวมทั้งสิ้นทุกหมวดหมู่ (${sorted.length} คน)`;
+    grandRow[workSumColIdx] = grandTotals.workCount;
+    grandRow[workSumColIdx + 1] = grandTotals.sickCount;
+    grandRow[workSumColIdx + 2] = grandTotals.personalCount;
+    grandRow[workSumColIdx + 3] = grandTotals.vacCount;
+    grandRow[workSumColIdx + 4] = grandTotals.absentCount;
+    grandRow[workSumColIdx + 5] = grandTotals.restCount;
+    sheet2Data.push(grandRow);
+    sheet2Meta.push({ type: 'grandTotal' });
+
+    appendSignatoryBlock(sheet2Data, sheet2Meta);
+
+    const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+    ws2['!merges'] = sheet2Merges;
+    styleAttendanceSheet(ws2, sheet2Meta, '1E293B', '334155');
+    XLSX.utils.book_append_sheet(wb, ws2, 'สรุปแยกหมวดหมู่');
+
+    // =========================================================================
+    // SHEETS 3..6: Individual Category Sheets
+    // =========================================================================
+    categoryDefs.forEach(cat => {
+      const groupItems = sorted.filter(p => classifyPerson(p) === cat.key);
+      if (groupItems.length === 0) return;
+
+      const catData = [
+        [`ตารางลงเวลาปฏิบัติงาน [${cat.sectionTitle}] ${postOfficeName} ประจำเดือน ${monthText} พ.ศ. ${year}`],
+        ['คำชี้แจง: / = มาทำงานปกติ, ย = วันหยุดประจำสัปดาห์, ป = ลาป่วย, ก = ลากิจ, พ = พักผ่อน, ข = ขาดงาน'],
+        headers
+      ];
+      const catMeta = [
+        { type: 'title' },
+        { type: 'subtitle' },
+        { type: 'header' }
+      ];
+
+      let grpTotals = { workCount: 0, sickCount: 0, personalCount: 0, vacCount: 0, absentCount: 0, restCount: 0 };
+      groupItems.forEach((person, idx) => {
+        const xlRow = catData.length + 1;
+        const { row, counts } = buildPersonRow(person, idx + 1, xlRow);
+        catData.push(row);
+        catMeta.push({ type: 'data', person });
+        grpTotals.workCount += counts.workCount;
+        grpTotals.sickCount += counts.sickCount;
+        grpTotals.personalCount += counts.personalCount;
+        grpTotals.vacCount += counts.vacCount;
+        grpTotals.absentCount += counts.absentCount;
+        grpTotals.restCount += counts.restCount;
+      });
+
+      const subRow = new Array(colsCount).fill('');
+      subRow[1] = `รวมทั้งสิ้น (${groupItems.length} คน)`;
+      subRow[workSumColIdx] = grpTotals.workCount;
+      subRow[workSumColIdx + 1] = grpTotals.sickCount;
+      subRow[workSumColIdx + 2] = grpTotals.personalCount;
+      subRow[workSumColIdx + 3] = grpTotals.vacCount;
+      subRow[workSumColIdx + 4] = grpTotals.absentCount;
+      subRow[workSumColIdx + 5] = grpTotals.restCount;
+      catData.push(subRow);
+      catMeta.push({ type: 'grandTotal' });
+
+      appendSignatoryBlock(catData, catMeta);
+
+      const wsCat = XLSX.utils.aoa_to_sheet(catData);
+      wsCat['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
+      ];
+      styleAttendanceSheet(wsCat, catMeta, cat.headerFill, cat.headerFill);
+      XLSX.utils.book_append_sheet(wb, wsCat, cat.sheetName);
+    });
     
-    // Set column widths
-    const colsW = [{ wch: 6 }, { wch: 28 }];
-    for (let d = 1; d <= daysCount; d++) {
-      colsW.push({ wch: 3.5 });
-    }
-    colsW.push({ wch: 15 });
-    ws['!cols'] = colsW;
-    
-    // Set row heights
-    const totalRows = data.length;
-    const rowsH = [{ hpx: 35 }, { hpx: 24 }, { hpx: 26 }];
-    for (let r = 3; r < totalRows; r++) {
-      rowsH.push({ hpx: 20 });
-    }
-    ws['!rows'] = rowsH;
-    
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cell_address = { c: C, r: R };
-        const cell_ref = XLSX.utils.encode_cell(cell_address);
-        let cell = ws[cell_ref];
-        if (!cell) {
-          cell = { t: 's', v: '' };
-          ws[cell_ref] = cell;
-        }
-        
-        cell.s = {
-          border: {
-            top: { style: 'thin', color: { rgb: 'CCCCCC' } },
-            bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
-            left: { style: 'thin', color: { rgb: 'CCCCCC' } },
-            right: { style: 'thin', color: { rgb: 'CCCCCC' } }
-          },
-          font: { name: 'Sarabun', sz: 10 },
-          alignment: { vertical: 'center', horizontal: 'center' }
-        };
-        
-        if (R === 0) {
-          cell.s.fill = { fgColor: { rgb: 'F04E23' } };
-          cell.s.font = { name: 'Sarabun', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
-          cell.s.border = {};
-        } else if (R === 1) {
-          cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
-          cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '444444' } };
-          cell.s.border = {};
-        } else if (R === 2) {
-          cell.s.fill = { fgColor: { rgb: '2B2B2B' } };
-          cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
-          cell.s.border = {
-            top: { style: 'thin', color: { rgb: '000000' } },
-            bottom: { style: 'thin', color: { rgb: '000000' } },
-            left: { style: 'thin', color: { rgb: '444444' } },
-            right: { style: 'thin', color: { rgb: '444444' } }
-          };
-        } else {
-          if (C === 1) {
-            cell.s.alignment.horizontal = 'left';
-          }
-          if (C === colsCount - 1) {
-            cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
-            cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
-          }
-          if (C >= 2 && C < colsCount - 1) {
-            const d = C - 1;
-            const ceYear = year - 543;
-            const dateObj = new Date(ceYear, month - 1, d);
-            const dayOfWeek = dateObj.getDay();
-            let isRestDay = false;
-            const personIdx = R - 3;
-            if (personIdx < sorted.length) {
-              const person = sorted[personIdx];
-              isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
-            } else {
-              if (dayOfWeek === 0 || dayOfWeek === 6) {
-                isRestDay = true;
-              }
-            }
-            const isHighlightRed = isRestDay || cell.v === 'ย';
-            if (isHighlightRed) {
-              if (cell.v === 'ย' || dayOfWeek === 0) {
-                cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
-                if (cell.v === 'ย') {
-                  cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'E11D48' } };
-                }
-              } else if (dayOfWeek === 6) {
-                cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
-              } else {
-                cell.s.fill = { fgColor: { rgb: 'EDEDED' } };
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
-    
-    const filename = `attendance_${year}_${String(month).padStart(2, '0')}.xlsx`;
+    const filename = `ตารางลงเวลาทำงาน_${monthText}_${year}.xlsx`;
     XLSX.writeFile(wb, filename);
-    logActivity('attendance_export', `ส่งออกไฟล์ลงเวลาทำงาน Excel ประจำรอบ ${month}/${year}`);
-    window.showToast('ส่งออกตารางลงเวลาสำเร็จ!', 'success');
+    logActivity('attendance_export', `ส่งออกไฟล์ลงเวลาทำงาน Excel แยกหมวดหมู่ ประจำรอบ ${monthText} ${year}`);
+    window.showToast('ส่งออกตารางลงเวลา Excel (แยกชีตตามหมวดหมู่) สำเร็จ!', 'success');
   } catch (error) {
     console.error("Failed to export attendance:", error);
     window.showToast('เกิดข้อผิดพลาดในการส่งออกข้อมูล', 'error');
@@ -3910,46 +4193,88 @@ async function downloadAttTemplateXlsx() {
   const month = parseInt(attMonthSelect.value);
   const year = parseInt(attYearInput.value);
   const daysCount = getDaysInMonth(year, month);
+  const ceYear = year - 543;
+  const monthText = attMonthSelect.options[attMonthSelect.selectedIndex]?.text || String(month);
   
   try {
     const XLSX = await getXLSX();
     const personnel = getPersonnel();
-    const sorted = [...personnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    const activePersonnel = personnel.filter(p => {
+      if (p.status === 'resigned') {
+        if (p.resignYear && p.resignMonth) {
+          if (year > p.resignYear || (year === p.resignYear && month > p.resignMonth)) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+      return true;
+    });
+    const sorted = [...activePersonnel].sort((a, b) => a.name.localeCompare(b.name, 'th'));
     
     const headers = ['ลำดับ', 'ชื่อ-นามสกุล'];
     for (let d = 1; d <= daysCount; d++) {
       headers.push(String(d));
     }
-    headers.push('รวมมาทำงาน');
+    headers.push('รวมมาทำงาน', 'ลาป่วย (ป)', 'ลากิจ (ก)', 'พักผ่อน (พ)', 'ขาดงาน (ข)', 'วันหยุด (ย)');
+    const colsCount = headers.length;
+    const workSumColIdx = 2 + daysCount;
+    const lastDayColLetter = XLSX.utils.encode_col(2 + daysCount - 1);
     
     const data = [
-      ['แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)'],
-      ['คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้ารับวันมาทำงาน)'],
+      [`เทมเพลตบันทึกวันมาทำงานพนักงาน ประจำเดือน ${monthText} พ.ศ. ${year} (สำหรับนำเข้าข้อมูลเข้าระบบ)`],
+      ['คำชี้แจง: / = มาทำงานปกติ, ย = วันหยุดประจำสัปดาห์, ป = ลาป่วย, ก = ลากิจ, พ = พักผ่อน, ข = ขาดงาน (ระบบเติมวันหยุดประจำสัปดาห์ให้อัตโนมัติแล้ว)'],
       headers
     ];
     
     sorted.forEach((person, idx) => {
+      const xlRow = data.length + 1;
       const row = [idx + 1, person.name];
+      let workCount = 0, restCount = 0;
       for (let d = 1; d <= daysCount; d++) {
-        row.push('');
+        const isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
+        if (isRestDay) {
+          row.push('ย');
+          restCount++;
+        } else {
+          row.push('/');
+          workCount++;
+        }
       }
-      row.push('');
+      const rangeRef = `C${xlRow}:${lastDayColLetter}${xlRow}`;
+      row.push(
+        { t: 'n', f: `COUNTIF(${rangeRef},"/")`, v: workCount },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ป")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ก")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"พ")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ข")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ย")`, v: restCount }
+      );
       data.push(row);
     });
     
-    // Add 25 empty template rows
+    // Add 10 empty template rows with live formulas
     const startIdx = sorted.length;
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 10; i++) {
+      const xlRow = data.length + 1;
       const row = [startIdx + i + 1, ''];
       for (let d = 1; d <= daysCount; d++) {
         row.push('');
       }
-      row.push('');
+      const rangeRef = `C${xlRow}:${lastDayColLetter}${xlRow}`;
+      row.push(
+        { t: 'n', f: `COUNTIF(${rangeRef},"/")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ป")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ก")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"พ")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ข")`, v: 0 },
+        { t: 'n', f: `COUNTIF(${rangeRef},"ย")`, v: 0 }
+      );
       data.push(row);
     }
     
     const ws = XLSX.utils.aoa_to_sheet(data);
-    const colsCount = 2 + daysCount + 1;
     
     // Merge title banner and subtitle
     ws['!merges'] = [
@@ -3960,9 +4285,16 @@ async function downloadAttTemplateXlsx() {
     // Set column widths
     const colsW = [{ wch: 6 }, { wch: 28 }];
     for (let d = 1; d <= daysCount; d++) {
-      colsW.push({ wch: 3.5 });
+      colsW.push({ wch: 3.6 });
     }
-    colsW.push({ wch: 15 });
+    colsW.push(
+      { wch: 13 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 },
+      { wch: 10 }
+    );
     ws['!cols'] = colsW;
     
     // Set row heights
@@ -3997,7 +4329,7 @@ async function downloadAttTemplateXlsx() {
         
         if (R === 0) {
           cell.s.fill = { fgColor: { rgb: 'F04E23' } };
-          cell.s.font = { name: 'Sarabun', sz: 14, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.font = { name: 'Sarabun', sz: 13.5, bold: true, color: { rgb: 'FFFFFF' } };
           cell.s.border = {};
         } else if (R === 1) {
           cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
@@ -4005,7 +4337,7 @@ async function downloadAttTemplateXlsx() {
           cell.s.border = {};
         } else if (R === 2) {
           cell.s.fill = { fgColor: { rgb: '2B2B2B' } };
-          cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'FFFFFF' } };
+          cell.s.font = { name: 'Sarabun', sz: 9.5, bold: true, color: { rgb: 'FFFFFF' } };
           cell.s.border = {
             top: { style: 'thin', color: { rgb: '000000' } },
             bottom: { style: 'thin', color: { rgb: '000000' } },
@@ -4016,30 +4348,34 @@ async function downloadAttTemplateXlsx() {
           if (C === 1) {
             cell.s.alignment.horizontal = 'left';
           }
-          if (C === colsCount - 1) {
+          if (C === workSumColIdx) {
             cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'C00000' } };
+            cell.s.fill = { fgColor: { rgb: 'FFF5F5' } };
             cell.s.border.bottom = { style: 'double', color: { rgb: 'C00000' } };
+          } else if (C > workSumColIdx) {
+            cell.s.font = { name: 'Sarabun', sz: 9.5, color: { rgb: '334155' } };
+            cell.s.fill = { fgColor: { rgb: 'F8FAFC' } };
           }
-          if (C >= 2 && C < colsCount - 1) {
+          if (C >= 2 && C < workSumColIdx) {
             const d = C - 1;
-            const ceYear = year - 543;
             const dateObj = new Date(ceYear, month - 1, d);
             const dayOfWeek = dateObj.getDay();
             let isRestDay = false;
             const personIdx = R - 3;
             if (personIdx < sorted.length) {
               const person = sorted[personIdx];
-              if (person && person.restDays && person.restDays.includes(dayOfWeek)) {
-                isRestDay = true;
-              }
+              isRestDay = checkIsRestDayForDate(person, ceYear, month, d);
             } else {
               if (dayOfWeek === 0 || dayOfWeek === 6) {
                 isRestDay = true;
               }
             }
-            if (isRestDay) {
-              if (dayOfWeek === 0) {
+            if (isRestDay || cell.v === 'ย') {
+              if (cell.v === 'ย' || dayOfWeek === 0) {
                 cell.s.fill = { fgColor: { rgb: 'FFE8E8' } };
+                if (cell.v === 'ย') {
+                  cell.s.font = { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'E11D48' } };
+                }
               } else if (dayOfWeek === 6) {
                 cell.s.fill = { fgColor: { rgb: 'FFF0E0' } };
               } else {
@@ -4052,9 +4388,9 @@ async function downloadAttTemplateXlsx() {
     }
     
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.utils.book_append_sheet(wb, ws, 'เทมเพลตลงเวลา');
     
-    XLSX.writeFile(wb, `attendance_template_${year}_${String(month).padStart(2, '0')}.xlsx`);
+    XLSX.writeFile(wb, `เทมเพลตลงเวลาทำงาน_${monthText}_${year}.xlsx`);
     window.showToast('ดาวน์โหลดเทมเพลตสำเร็จ!', 'success');
   } catch (error) {
     console.error(error);
@@ -4172,7 +4508,7 @@ function parseAttRows(rows) {
     if (!row || row.length <= nameColIdx) continue;
     
     const name = String(row[nameColIdx] || '').trim();
-    if (!name || name === 'undefined' || name === 'ชื่อ-นามสกุล') continue;
+    if (!name || name === 'undefined' || name === 'ชื่อ-นามสกุล' || name.startsWith('รวม') || name.startsWith('ลงชื่อ') || name.startsWith('(') || name.startsWith('📌')) continue;
     
     const checkedDays = [];
     const dayStatuses = {};

@@ -3219,7 +3219,12 @@ export function getCalculatorsTemplate() {
           </div>
 
           <!-- All Routes Scrollable Table -->
-          <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.9rem;">📋 ตารางข้อมูลด้านจ่ายปัจจุบัน (ทั้งหมด <span id="routeTotalCountBadge">40</span> ด้าน)</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="font-weight: 700; font-size: 0.9rem;">📋 ตารางข้อมูลด้านจ่ายปัจจุบัน (ทั้งหมด <span id="routeTotalCountBadge">40</span> ด้าน)</div>
+            <button type="button" id="exportRoutesExcelBtn" class="btn btn-secondary btn-small" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; border-color: var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.08); font-weight: 700; cursor: pointer;">
+              📤 ส่งออกตารางด้านจ่าย (Excel)
+            </button>
+          </div>
           <div class="modal-table-container" style="max-height: 250px;">
             <table class="modal-table">
               <thead>

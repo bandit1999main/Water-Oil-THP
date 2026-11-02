@@ -892,6 +892,10 @@ function setupCalculatorDOMReferencesAndEvents() {
   editRouteSelect.addEventListener('change', loadSelectedRouteToEditorForm);
   saveSingleRouteBtn.addEventListener('click', saveSingleRouteSettings);
   resetAllRoutesBtn.addEventListener('click', resetRouteDataDefaults);
+  const exportRoutesExcelBtn = document.getElementById('exportRoutesExcelBtn');
+  if (exportRoutesExcelBtn) {
+    exportRoutesExcelBtn.addEventListener('click', exportRoutesToExcel);
+  }
 
   const toggleAddRouteModeBtn = document.getElementById('toggleAddRouteModeBtn');
   if (toggleAddRouteModeBtn) {
@@ -2852,6 +2856,202 @@ async function resetRouteDataDefaults() {
   });
 }
 
+async function exportRoutesToExcel() {
+  try {
+    const XLSX = await getXLSX();
+    const sortedRoutes = getSortedRouteKeys();
+    if (sortedRoutes.length === 0) {
+      showToast('ไม่มีข้อมูลด้านจ่ายให้ส่งออก', 'warning');
+      return;
+    }
+
+    const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+    const postOfficeName = configs.postOfficeName || 'ไปรษณีย์ไทย';
+
+    const headers = [
+      'ลำดับ',
+      'ด้านจ่ายที่',
+      'ประเภทยานพาหนะหลัก',
+      'ระยะทางลูกจ้าง (กม./วัน)',
+      'น้ำมันลูกจ้าง (ลิตร/วัน)',
+      'ระยะทางพนักงาน (กม./เดือน)',
+      'น้ำมันพนักงาน (ลิตร/เดือน)',
+      'เกณฑ์ค่าบำรุงรักษาลูกจ้าง (บาท/วัน)',
+      'เกณฑ์ค่าบำรุงรักษาพนักงาน (บาท/เดือน)'
+    ];
+
+    const getMaintInfo = (info) => {
+      const d = Number(info.workerDist || 0);
+      const m = Number(info.staffDist || 0);
+      if (info.hasCar) {
+        return {
+          workerMaint: Number((d * 2.25).toFixed(2)),
+          staffMaint: Number((m * 2.25).toFixed(2))
+        };
+      }
+      if (d <= 40) return { workerMaint: 51, staffMaint: 1155 };
+      if (d <= 70) return { workerMaint: 53, staffMaint: 1210 };
+      if (d <= 100) return { workerMaint: 55, staffMaint: 1265 };
+      return { workerMaint: 57, staffMaint: 1320 };
+    };
+
+    const buildRouteSheet = (routeKeys, titleText, bannerHex, headerHex) => {
+      const aoa = [
+        [titleText],
+        [`หน่วยงาน: ${postOfficeName}  |  จำนวนทั้งหมด ${routeKeys.length} ด้านจ่าย`],
+        headers
+      ];
+
+      let sumWorkerDist = 0, sumWorkerLiters = 0, sumStaffDist = 0, sumStaffLiters = 0;
+
+      routeKeys.forEach((route, idx) => {
+        const info = ROUTE_DATA[route] || {};
+        const wDist = Number(info.workerDist || 0);
+        const wLit = Number(info.workerLiters || 0);
+        const sDist = Number(info.staffDist || 0);
+        const sLit = Number(info.staffLiters || 0);
+        const { workerMaint, staffMaint } = getMaintInfo(info);
+
+        sumWorkerDist += wDist;
+        sumWorkerLiters += wLit;
+        sumStaffDist += sDist;
+        sumStaffLiters += sLit;
+
+        aoa.push([
+          idx + 1,
+          `ด้านจ่ายที่ ${route}`,
+          info.hasCar ? 'รถยนต์' : 'รถจักรยานยนต์',
+          wDist,
+          wLit,
+          sDist,
+          sLit,
+          workerMaint,
+          staffMaint
+        ]);
+      });
+
+      aoa.push([
+        '',
+        `รวมทั้งสิ้น (${routeKeys.length} ด้านจ่าย)`,
+        '',
+        Number(sumWorkerDist.toFixed(2)),
+        Number(sumWorkerLiters.toFixed(2)),
+        Number(sumStaffDist.toFixed(2)),
+        Number(sumStaffLiters.toFixed(2)),
+        '',
+        ''
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }
+      ];
+      ws['!cols'] = [
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 22 },
+        { wch: 22 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 28 },
+        { wch: 28 }
+      ];
+
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const rowsH = [];
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        if (R === 0) rowsH.push({ hpx: 34 });
+        else if (R === 1) rowsH.push({ hpx: 22 });
+        else if (R === 2) rowsH.push({ hpx: 26 });
+        else if (R === range.e.r) rowsH.push({ hpx: 24 });
+        else rowsH.push({ hpx: 20 });
+
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+          let cell = ws[cellRef];
+          if (!cell) {
+            cell = { t: 's', v: '' };
+            ws[cellRef] = cell;
+          }
+          cell.s = {
+            font: { name: 'Sarabun', sz: 10.5 },
+            alignment: { vertical: 'center', horizontal: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+              right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+            }
+          };
+
+          if (R === 0) {
+            cell.s.fill = { fgColor: { rgb: bannerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 13.5, bold: true, color: { rgb: 'FFFFFF' } };
+            cell.s.border = {};
+          } else if (R === 1) {
+            cell.s.fill = { fgColor: { rgb: 'FEF8E7' } };
+            cell.s.font = { name: 'Sarabun', sz: 10, color: { rgb: '334155' } };
+            cell.s.border = {};
+          } else if (R === 2) {
+            cell.s.fill = { fgColor: { rgb: headerHex } };
+            cell.s.font = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: 'FFFFFF' } };
+          } else if (R === range.e.r) {
+            cell.s.fill = { fgColor: { rgb: 'FEF2F2' } };
+            cell.s.font = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: 'B91C1C' } };
+            cell.s.border.top = { style: 'medium', color: { rgb: 'B91C1C' } };
+            cell.s.border.bottom = { style: 'double', color: { rgb: 'B91C1C' } };
+            if (C >= 3 && C <= 6) {
+              cell.z = '#,##0.00';
+              cell.s.alignment.horizontal = 'right';
+            }
+          } else {
+            if (C === 1) cell.s.alignment.horizontal = 'left';
+            if (C >= 3 && C <= 8) {
+              cell.z = '#,##0.00';
+              cell.s.alignment.horizontal = 'right';
+            }
+          }
+        }
+      }
+      ws['!rows'] = rowsH;
+      return ws;
+    };
+
+    const wb = XLSX.utils.book_new();
+    const motoRoutes = sortedRoutes.filter(r => !ROUTE_DATA[r]?.hasCar);
+    const carRoutes = sortedRoutes.filter(r => ROUTE_DATA[r]?.hasCar);
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      buildRouteSheet(sortedRoutes, 'ตารางอ้างอิงสถิติระยะทางและโควตาน้ำมันประจำด้านจ่าย (รวมทั้งหมด)', 'F04E23', '1E293B'),
+      'รวมทุกด้านจ่าย'
+    );
+    if (motoRoutes.length > 0) {
+      XLSX.utils.book_append_sheet(
+        wb,
+        buildRouteSheet(motoRoutes, 'ตารางอ้างอิงด้านจ่าย [1. รถจักรยานยนต์]', '0F766E', '0F766E'),
+        '1.รถจักรยานยนต์'
+      );
+    }
+    if (carRoutes.length > 0) {
+      XLSX.utils.book_append_sheet(
+        wb,
+        buildRouteSheet(carRoutes, 'ตารางอ้างอิงด้านจ่าย [2. รถยนต์]', '1E3A8A', '1E3A8A'),
+        '2.รถยนต์'
+      );
+    }
+
+    XLSX.writeFile(wb, `ตารางอ้างอิงด้านจ่ายและระยะทาง_${postOfficeName}.xlsx`);
+    logActivity('route_export', `ส่งออกตารางอ้างอิงด้านจ่ายและระยะทาง Excel (${sortedRoutes.length} ด้านจ่าย)`);
+    showToast('ส่งออกตารางอ้างอิงด้านจ่าย (Excel แยกชีต) สำเร็จ!', 'success');
+  } catch (err) {
+    console.error('Export routes failed:', err);
+    showToast('เกิดข้อผิดพลาดในการส่งออกตารางด้านจ่าย', 'error');
+  }
+}
+
 /* --- SIGNATORY INPUTS LOCK/UNLOCK TOGGLE --- */
 function toggleSignatoryInputsLock() {
   const inputs = [
@@ -3170,87 +3370,166 @@ async function handleConfirmImport() {
 
 async function downloadAttendanceTemplateXlsx() {
   const XLSX = await getXLSX();
+  const selectedYearBE = parseInt(document.getElementById('globalYear')?.value) || 2569;
+  const selectedYearAD = selectedYearBE - 543;
+  const selectedMonthNum = parseInt(globalMonthSelect?.value) || 1;
+  const selectedMonthJS = selectedMonthNum - 1;
+  const monthText = globalMonthSelect?.options[globalMonthSelect.selectedIndex]?.text || String(selectedMonthNum);
+  const daysCount = new Date(selectedYearAD, selectedMonthNum, 0).getDate();
+
+  const isResignedBeforeMonth = (person) => {
+    if (!person || person.status !== 'resigned') return false;
+    if (person.resignYear && person.resignMonth) {
+      return selectedYearBE > person.resignYear || (selectedYearBE === person.resignYear && selectedMonthNum > person.resignMonth);
+    }
+    return true;
+  };
+
   const nameSet = new Set();
   const uniqueEmployees = [];
   employees.forEach(emp => {
+    const reg = personnel.find(p => p.name.trim().toLowerCase() === emp.name.trim().toLowerCase());
+    if (isResignedBeforeMonth(reg)) return;
     if (!nameSet.has(emp.name)) {
       nameSet.add(emp.name);
       uniqueEmployees.push({ name: emp.name });
     }
   });
   waterEmployees.forEach(emp => {
+    const reg = personnel.find(p => p.name.trim().toLowerCase() === emp.name.trim().toLowerCase());
+    if (isResignedBeforeMonth(reg)) return;
     if (!nameSet.has(emp.name)) {
       nameSet.add(emp.name);
       uniqueEmployees.push({ name: emp.name });
     }
   });
   if (uniqueEmployees.length === 0) {
+    personnel.forEach(p => {
+      if (!isResignedBeforeMonth(p) && !nameSet.has(p.name)) {
+        nameSet.add(p.name);
+        uniqueEmployees.push({ name: p.name });
+      }
+    });
+  }
+  if (uniqueEmployees.length === 0) {
     uniqueEmployees.push({ name: "นายนิพล ทรัพย์หมื่นแสน" }, { name: "นางสาวสมหญิง สุจริต" });
   }
+  uniqueEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+
+  const headers = ["ลำดับ", "ชื่อ-นามสกุล"];
+  for (let i = 1; i <= daysCount; i++) headers.push(String(i));
+  headers.push("รวมมาทำงาน", "ลาป่วย (ป)", "ลากิจ (ก)", "พักผ่อน (พ)", "ขาดงาน (ข)", "วันหยุด (ย)");
+  const colsCount = headers.length;
+  const workSumColIdx = 2 + daysCount;
+  const lastDayColLetter = XLSX.utils.encode_col(2 + daysCount - 1);
+
   const wb = XLSX.utils.book_new();
   const ws_data = [
-    ["แบบบันทึกวันมาทำงานพนักงาน (สำหรับนำเข้าข้อมูลเข้าระบบ)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-    ["คำชี้แจง: / = มาทำงานปกติ (ระบบคำนวณนับเฉพาะเครื่องหมาย / นี้เท่านั้นเพื่อนำเข้าวันมาทำงาน)", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    [`แบบบันทึกวันมาทำงานพนักงาน ประจำเดือน ${monthText} พ.ศ. ${selectedYearBE} (สำหรับนำเข้าข้อมูลเข้าระบบ)`],
+    ["คำชี้แจง: / = มาทำงานปกติ, ย = วันหยุดประจำสัปดาห์, ป = ลาป่วย, ก = ลากิจ, พ = พักผ่อน, ข = ขาดงาน (ระบบคำนวณนับเครื่องหมาย / อัตโนมัติ)"],
+    headers
   ];
-  const headers = ["ลำดับ", "ชื่อ-สกุล"];
-  for (let i = 1; i <= 31; i++) headers.push(String(i));
-  headers.push("รวมมาทำงาน");
-  ws_data.push(headers);
-  const selectedYearBE = parseInt(document.getElementById('globalYear').value) || 2569;
-  const selectedYearAD = selectedYearBE - 543;
-  const selectedMonthJS = parseInt(globalMonthSelect.value) - 1;
 
   uniqueEmployees.forEach((emp, index) => {
     const rowIdx = index + 1;
-    const xlRow = index + 4;
+    const xlRow = ws_data.length + 1;
     const rowData = [rowIdx, emp.name];
     const registryPerson = personnel.find(p => p.name.trim().toLowerCase() === emp.name.trim().toLowerCase());
     const restDays = registryPerson ? (registryPerson.restDays || []) : [];
-    for (let d = 1; d <= 31; d++) {
+    let workCount = 0, restCount = 0;
+    for (let d = 1; d <= daysCount; d++) {
       const date = new Date(selectedYearAD, selectedMonthJS, d);
-      if (date.getMonth() !== selectedMonthJS) {
-        rowData.push("");
+      if (restDays.includes(date.getDay())) {
+        rowData.push("ย");
+        restCount++;
       } else {
-        rowData.push(restDays.includes(date.getDay()) ? "ย" : "/");
+        rowData.push("/");
+        workCount++;
       }
     }
-    rowData.push({ f: `COUNTIF(C${xlRow}:AG${xlRow},"/")` });
+    const rangeRef = `C${xlRow}:${lastDayColLetter}${xlRow}`;
+    rowData.push(
+      { t: 'n', f: `COUNTIF(${rangeRef},"/")`, v: workCount },
+      { t: 'n', f: `COUNTIF(${rangeRef},"ป")`, v: 0 },
+      { t: 'n', f: `COUNTIF(${rangeRef},"ก")`, v: 0 },
+      { t: 'n', f: `COUNTIF(${rangeRef},"พ")`, v: 0 },
+      { t: 'n', f: `COUNTIF(${rangeRef},"ข")`, v: 0 },
+      { t: 'n', f: `COUNTIF(${rangeRef},"ย")`, v: restCount }
+    );
     ws_data.push(rowData);
   });
+
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 33 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 33 } }];
-  const colWidths = [{ wch: 8 }, { wch: 30 }];
-  for (let d = 1; d <= 31; d++) colWidths.push({ wch: 5 });
-  colWidths.push({ wch: 15 });
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: colsCount - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: colsCount - 1 } }
+  ];
+  const colWidths = [{ wch: 6 }, { wch: 28 }];
+  for (let d = 1; d <= daysCount; d++) colWidths.push({ wch: 3.8 });
+  colWidths.push({ wch: 13 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 });
   ws['!cols'] = colWidths;
-  
-  // Style config
+
   const range = XLSX.utils.decode_range(ws['!ref']);
-  const titleStyle = { font: { name: "Segoe UI", sz: 16, bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "F55E0B" } }, alignment: { horizontal: "center", vertical: "center" } };
-  const descStyle = { font: { name: "Segoe UI", sz: 11, italic: true, color: { rgb: "555555" } }, fill: { fgColor: { rgb: "FFF3E0" } }, alignment: { horizontal: "center", vertical: "center" } };
-  const headerStyle = { font: { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "212121" } }, alignment: { horizontal: "center", vertical: "center" }, border: { top: { style: "medium", color: { rgb: "000000" } }, bottom: { style: "medium", color: { rgb: "000000" } } } };
-  const dataNameStyle = { font: { name: "Segoe UI", sz: 11 }, alignment: { horizontal: "left", vertical: "center" }, border: { bottom: { style: "thin", color: { rgb: "E0E0E0" } }, left: { style: "thin", color: { rgb: "E0E0E0" } }, right: { style: "thin", color: { rgb: "E0E0E0" } } } };
-  const dataCenterStyle = { font: { name: "Segoe UI", sz: 11 }, alignment: { horizontal: "center", vertical: "center" }, border: { bottom: { style: "thin", color: { rgb: "E0E0E0" } }, left: { style: "thin", color: { rgb: "E0E0E0" } }, right: { style: "thin", color: { rgb: "E0E0E0" } } } };
-  const sumStyle = { font: { name: "Segoe UI", sz: 11, bold: true, color: { rgb: "D32F2F" } }, fill: { fgColor: { rgb: "FFEBEE" } }, alignment: { horizontal: "center", vertical: "center" }, border: { bottom: { style: "double", color: { rgb: "D32F2F" } }, left: { style: "thin", color: { rgb: "E0E0E0" } }, right: { style: "thin", color: { rgb: "E0E0E0" } } } };
+  const rowsH = [{ hpx: 36 }, { hpx: 24 }, { hpx: 26 }];
+  for (let r = 3; r <= range.e.r; r++) rowsH.push({ hpx: 20 });
+  ws['!rows'] = rowsH;
 
   for (let r = range.s.r; r <= range.e.r; r++) {
     for (let c = range.s.c; c <= range.e.c; c++) {
-      const cell = ws[XLSX.utils.encode_cell({ r, c })];
-      if (!cell) continue;
-      if (r === 0) cell.s = titleStyle;
-      else if (r === 1) cell.s = descStyle;
-      else if (r === 2) cell.s = headerStyle;
-      else {
-        if (c === 0) cell.s = dataCenterStyle;
-        else if (c === 1) cell.s = dataNameStyle;
-        else if (c === 33) cell.s = sumStyle;
-        else cell.s = dataCenterStyle;
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      let cell = ws[cellRef];
+      if (!cell) {
+        cell = { t: 's', v: '' };
+        ws[cellRef] = cell;
+      }
+      cell.s = {
+        font: { name: "Sarabun", sz: 10 },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "CCCCCC" } },
+          bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+          left: { style: "thin", color: { rgb: "CCCCCC" } },
+          right: { style: "thin", color: { rgb: "CCCCCC" } }
+        }
+      };
+      if (r === 0) {
+        cell.s.fill = { fgColor: { rgb: "F04E23" } };
+        cell.s.font = { name: "Sarabun", sz: 13.5, bold: true, color: { rgb: "FFFFFF" } };
+        cell.s.border = {};
+      } else if (r === 1) {
+        cell.s.fill = { fgColor: { rgb: "FEF8E7" } };
+        cell.s.font = { name: "Sarabun", sz: 9.5, color: { rgb: "444444" } };
+        cell.s.border = {};
+      } else if (r === 2) {
+        cell.s.fill = { fgColor: { rgb: "2B2B2B" } };
+        cell.s.font = { name: "Sarabun", sz: 9.5, bold: true, color: { rgb: "FFFFFF" } };
+      } else {
+        if (c === 1) cell.s.alignment.horizontal = "left";
+        if (c === workSumColIdx) {
+          cell.s.font = { name: "Sarabun", sz: 10, bold: true, color: { rgb: "C00000" } };
+          cell.s.fill = { fgColor: { rgb: "FFF5F5" } };
+          cell.s.border.bottom = { style: "double", color: { rgb: "C00000" } };
+        } else if (c > workSumColIdx) {
+          cell.s.font = { name: "Sarabun", sz: 9.5, color: { rgb: "334155" } };
+          cell.s.fill = { fgColor: { rgb: "F8FAFC" } };
+        } else if (c >= 2 && c < workSumColIdx) {
+          const d = c - 1;
+          const dateObj = new Date(selectedYearAD, selectedMonthJS, d);
+          const dayOfWeek = dateObj.getDay();
+          if (cell.v === "ย" || dayOfWeek === 0) {
+            cell.s.fill = { fgColor: { rgb: "FFE8E8" } };
+            if (cell.v === "ย") {
+              cell.s.font = { name: "Sarabun", sz: 10, bold: true, color: { rgb: "E11D48" } };
+            }
+          } else if (dayOfWeek === 6) {
+            cell.s.fill = { fgColor: { rgb: "FFF0E0" } };
+          }
+        }
       }
     }
   }
-  ws['!rows'] = [{ hpx: 40 }, { hpx: 25 }, { hpx: 30 }];
   XLSX.utils.book_append_sheet(wb, ws, "บันทึกเวลาทำงาน");
-  XLSX.writeFile(wb, "เทมเพลตบันทึกเวลาทำงาน.xlsx");
+  XLSX.writeFile(wb, `เทมเพลตบันทึกเวลาทำงาน_${monthText}_${selectedYearBE}.xlsx`);
   showToast('ดาวน์โหลดเทมเพลต Excel (.xlsx) เรียบร้อย!', 'success');
 }
 
@@ -3362,15 +3641,27 @@ function processUploadedFile(file) {
       const targetRadio = document.querySelector('input[name="importTargetMode"]:checked');
       const targetMode = targetRadio ? targetRadio.value : 'both';
       
-      for (let r = 3; r < rows.length; r++) {
+      let headerIdx = 2;
+      for (let i = 0; i < Math.min(5, rows.length); i++) {
+        if (rows[i] && rows[i].some(cell => String(cell).includes('ชื่อ'))) {
+          headerIdx = i;
+          break;
+        }
+      }
+      const headerRow = rows[headerIdx] || [];
+      let workSumColIdx = headerRow.findIndex(h => String(h).includes('รวมมาทำงาน'));
+      if (workSumColIdx === -1) workSumColIdx = 33;
+      const lastDayColIdx = workSumColIdx - 1;
+
+      for (let r = headerIdx + 1; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.length < 2) continue;
         const nameVal = String(row[1] || '').trim();
-        if (nameVal.length < 3 || nameVal === 'ชื่อ-สกุล') continue;
+        if (nameVal.length < 3 || nameVal.includes('ชื่อ') || nameVal.startsWith('รวม') || nameVal.startsWith('ลงชื่อ') || nameVal.startsWith('(') || nameVal.startsWith('📌')) continue;
         
         let workDays = 0;
         let dayColumnFilled = false;
-        for (let c = 2; c <= 32; c++) {
+        for (let c = 2; c <= lastDayColIdx; c++) {
           const val = String(row[c] || '').trim();
           if (val) {
             dayColumnFilled = true;
@@ -3378,8 +3669,8 @@ function processUploadedFile(file) {
           }
         }
         if (!dayColumnFilled || workDays === 0) {
-          const lastVal = parseInt(row[row.length - 1]);
-          workDays = (!isNaN(lastVal) && lastVal >= 0 && lastVal <= 31) ? lastVal : 26;
+          const sumCellVal = parseInt(row[workSumColIdx] !== undefined ? row[workSumColIdx] : row[row.length - 1]);
+          workDays = (!isNaN(sumCellVal) && sumCellVal >= 0 && sumCellVal <= 31) ? sumCellVal : 26;
         }
         let matchFound = false;
         let matchingEmployeeName = '';
