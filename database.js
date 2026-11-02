@@ -622,12 +622,97 @@ export function listenToGlobalSettings(callback) {
 }
 
 /**
+ * --- PERSISTENT TAX ID & ADDRESS VAULT HELPERS ---
+ * Ensures 13-digit Tax ID and Address never get lost across restarts, idle logouts, or re-imports.
+ */
+function normalizePersonNameKey(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function getLocalTaxAddressVault() {
+  try {
+    return JSON.parse(localStorage.getItem('tp_tax_address_vault')) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function updateLocalTaxAddressVault(personnelList = []) {
+  const vault = getLocalTaxAddressVault();
+  let changed = false;
+  (personnelList || []).forEach(person => {
+    const key = normalizePersonNameKey(person?.name);
+    if (!key) return;
+    const taxId = String(person.taxId || '').trim();
+    const address = String(person.address || '').trim();
+    const branch = String(person.branch || '').trim();
+    if (taxId || address || branch) {
+      const prev = vault[key] || {};
+      const mergedTaxId = taxId || prev.taxId || '';
+      const mergedAddress = address || prev.address || '';
+      const mergedBranch = branch || prev.branch || '';
+      if (prev.taxId !== mergedTaxId || prev.address !== mergedAddress || prev.branch !== mergedBranch) {
+        vault[key] = {
+          name: String(person.name || '').trim(),
+          taxId: mergedTaxId,
+          address: mergedAddress,
+          branch: mergedBranch,
+          updatedAt: Date.now()
+        };
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    localStorage.setItem('tp_tax_address_vault', JSON.stringify(vault));
+  }
+  return vault;
+}
+
+export function enrichPersonnelWithTaxVault(personnelList = []) {
+  const vault = getLocalTaxAddressVault();
+  let localPersonnel = [];
+  try {
+    localPersonnel = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  } catch (e) {
+    localPersonnel = [];
+  }
+
+  let rescuedAny = false;
+  const enriched = (personnelList || []).map(person => {
+    const key = normalizePersonNameKey(person?.name);
+    if (!key) return person;
+    const vaultEntry = vault[key] || {};
+    const localMatch = localPersonnel.find(lp => normalizePersonNameKey(lp?.name) === key) || {};
+    const resolvedTaxId = String(person.taxId || vaultEntry.taxId || localMatch.taxId || '').trim();
+    const resolvedAddress = String(person.address || vaultEntry.address || localMatch.address || '').trim();
+    const resolvedBranch = String(person.branch || vaultEntry.branch || localMatch.branch || '').trim();
+
+    if ((resolvedTaxId && !person.taxId) || (resolvedAddress && !person.address)) {
+      rescuedAny = true;
+    }
+
+    return {
+      ...person,
+      taxId: resolvedTaxId,
+      address: resolvedAddress,
+      ...(resolvedBranch ? { branch: resolvedBranch } : {})
+    };
+  });
+
+  updateLocalTaxAddressVault(enriched);
+  return { enriched, rescuedAny };
+}
+
+/**
  * --- PERSONNEL MANAGEMENT CRUD ---
  */
 
 export async function fetchPersonnelList() {
   if (!isCloudConnected()) {
-    return JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    const localList = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    const { enriched } = enrichPersonnelWithTaxVault(localList);
+    return enriched;
   }
   try {
     const querySnapshot = await getDocs(collection(db, "personnel"));
@@ -635,11 +720,16 @@ export async function fetchPersonnelList() {
     querySnapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
-    localStorage.setItem('tp_personnel', JSON.stringify(list));
-    return list;
+    const { enriched, rescuedAny } = enrichPersonnelWithTaxVault(list);
+    localStorage.setItem('tp_personnel', JSON.stringify(enriched));
+    if (rescuedAny && enriched.length > 0) {
+      savePersonnelList(enriched).catch(() => {});
+    }
+    return enriched;
   } catch (error) {
     console.error("❌ Firestore fetchPersonnelList failed. Falling back to local storage.", error);
-    return JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    const fallback = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+    return enrichPersonnelWithTaxVault(fallback).enriched;
   }
 }
 
@@ -647,8 +737,11 @@ export async function savePersonnelList(personnelList) {
   const now = Date.now();
   personnelList.forEach((person, i) => {
     if (!person.id) person.id = `person_${now}_${i}`;
+    person.taxId = String(person.taxId || '').trim();
+    person.address = String(person.address || '').trim();
   });
 
+  const vault = updateLocalTaxAddressVault(personnelList);
   localStorage.setItem('tp_personnel', JSON.stringify(personnelList));
 
   if (!isCloudConnected()) return false;
@@ -668,6 +761,10 @@ export async function savePersonnelList(personnelList) {
       batch.set(docRef, person);
     });
 
+    // Also mirror taxAddressVault inside configs/global_variables for cross-restart & cross-device redundancy
+    const configRef = doc(db, "configs", "global_variables");
+    batch.set(configRef, { taxAddressVault: vault }, { merge: true });
+
     await batch.commit();
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'synced' } }));
     console.log("✅ Personnel list successfully synced to Cloud Firestore.");
@@ -685,8 +782,12 @@ export function listenToPersonnel(callback) {
     snapshot.forEach((doc) => {
       list.push({ ...doc.data(), id: doc.id });
     });
-    localStorage.setItem('tp_personnel', JSON.stringify(list));
-    callback(list);
+    const { enriched, rescuedAny } = enrichPersonnelWithTaxVault(list);
+    localStorage.setItem('tp_personnel', JSON.stringify(enriched));
+    if (rescuedAny && enriched.length > 0) {
+      savePersonnelList(enriched).catch(() => {});
+    }
+    callback(enriched);
   }, (error) => {
     console.error("Firestore listenToPersonnel failed:", error);
   });
@@ -1061,32 +1162,75 @@ export async function fetchGlobalConfigs() {
       { minSalary: 96667, maxSalary: 9999999, rate: 0.25 }
     ]
   };
+  let localConfigs = {};
+  try {
+    localConfigs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
+  } catch (e) {
+    localConfigs = {};
+  }
+
   if (!isCloudConnected()) {
-    try {
-      return JSON.parse(localStorage.getItem('tp_global_configs')) || defaultConfigs;
-    } catch (e) {
-      return defaultConfigs;
-    }
+    return Object.keys(localConfigs).length > 0 ? localConfigs : defaultConfigs;
   }
   try {
     const docRef = doc(db, "configs", "global_variables");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const data = docSnap.data();
+      let needsCloudRescue = false;
+
+      // Rescue local Post Office 50-Tawi defaults if previously saved only to localStorage
+      if (!data.postOfficeTaxId && localConfigs.postOfficeTaxId) {
+        data.postOfficeTaxId = localConfigs.postOfficeTaxId;
+        needsCloudRescue = true;
+      }
+      if (!data.postOfficeBranch && localConfigs.postOfficeBranch) {
+        data.postOfficeBranch = localConfigs.postOfficeBranch;
+        needsCloudRescue = true;
+      }
+      if (!data.postOfficeAddress && localConfigs.postOfficeAddress) {
+        data.postOfficeAddress = localConfigs.postOfficeAddress;
+        needsCloudRescue = true;
+      }
+
+      // Merge cloud taxAddressVault with local vault
+      const localVault = getLocalTaxAddressVault();
+      const cloudVault = data.taxAddressVault || {};
+      const mergedVault = { ...cloudVault };
+      Object.keys(localVault).forEach(k => {
+        const lv = localVault[k];
+        const cv = mergedVault[k] || {};
+        mergedVault[k] = {
+          name: lv.name || cv.name || '',
+          taxId: lv.taxId || cv.taxId || '',
+          address: lv.address || cv.address || '',
+          branch: lv.branch || cv.branch || '',
+          updatedAt: Math.max(lv.updatedAt || 0, cv.updatedAt || 0)
+        };
+        if ((lv.taxId && !cv.taxId) || (lv.address && !cv.address)) {
+          needsCloudRescue = true;
+        }
+      });
+      if (Object.keys(mergedVault).length > 0) {
+        localStorage.setItem('tp_tax_address_vault', JSON.stringify(mergedVault));
+        data.taxAddressVault = mergedVault;
+      }
+
+      if (needsCloudRescue) {
+        setDoc(docRef, data, { merge: true }).catch(() => {});
+      }
+
       localStorage.setItem('tp_global_configs', JSON.stringify(data));
       return data;
     } else {
-      await setDoc(docRef, defaultConfigs);
-      localStorage.setItem('tp_global_configs', JSON.stringify(defaultConfigs));
-      return defaultConfigs;
+      const initialConfigs = { ...defaultConfigs, ...localConfigs };
+      await setDoc(docRef, initialConfigs);
+      localStorage.setItem('tp_global_configs', JSON.stringify(initialConfigs));
+      return initialConfigs;
     }
   } catch (error) {
     console.error("❌ Firestore fetchGlobalConfigs failed. Falling back to local storage.", error);
-    try {
-      return JSON.parse(localStorage.getItem('tp_global_configs')) || defaultConfigs;
-    } catch (e) {
-      return defaultConfigs;
-    }
+    return Object.keys(localConfigs).length > 0 ? localConfigs : defaultConfigs;
   }
 }
 

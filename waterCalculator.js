@@ -11,6 +11,24 @@ function setWaterEmployees(val) {
   window.waterEmployees = val;
 }
 
+function resolveEmployeeTaxInfo(empName, empItem = {}, registry = null) {
+  const normKey = String(empName || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const regList = registry || (window.personnel && window.personnel.length > 0 ? window.personnel : (JSON.parse(localStorage.getItem('tp_personnel')) || []));
+  const person = regList.find(p => String(p?.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === normKey);
+  let vaultEntry = {};
+  try {
+    const vault = JSON.parse(localStorage.getItem('tp_tax_address_vault')) || {};
+    vaultEntry = vault[normKey] || {};
+  } catch (e) {
+    vaultEntry = {};
+  }
+  return {
+    taxId: String(person?.taxId || vaultEntry.taxId || empItem?.taxId || '').trim(),
+    branch: String(person?.branch || vaultEntry.branch || empItem?.branch || '00000').trim() || '00000',
+    address: String(person?.address || vaultEntry.address || empItem?.address || '').trim()
+  };
+}
+
 export function calculateWaterTax(salary, totalAllowance) {
   const brackets = window.waterTaxBrackets || [
     { minSalary: 0, maxSalary: 25833, rate: 0.00 },
@@ -761,9 +779,9 @@ export async function exportWaterCsv() {
   } else {
     taxedItems.forEach((item, idx) => {
       const { allowance, tax, net } = computeRowMetrics(item);
-      const regPerson = personnelRegistry.find(p => p.name === item.name);
-      const taxId = regPerson?.taxId || '-';
-      const address = regPerson?.address || '-';
+      const resolvedTax = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+      const taxId = resolvedTax.taxId || '-';
+      const address = resolvedTax.address || '-';
       const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
       const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
       const redBold = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'DC2626' } };
@@ -1439,10 +1457,10 @@ export function print50Tawi(originalIdx) {
   const poAddress = configs.postOfficeAddress || "";
 
   const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
-  const person = registry.find(p => p.name.trim().replace(/\s+/g, ' ') === employee.name.trim().replace(/\s+/g, ' '));
-  const empTaxId = person ? (person.taxId || "") : "";
-  const empBranch = person ? (person.branch || "00000") : "00000";
-  const empAddress = person ? (person.address || "") : "";
+  const resolvedEmpTax = resolveEmployeeTaxInfo(employee.name, employee, registry);
+  const empTaxId = resolvedEmpTax.taxId;
+  const empBranch = resolvedEmpTax.branch;
+  const empAddress = resolvedEmpTax.address;
 
   const allowance = employee.workDays * (window.waterAllowancePerDay || 30);
   const tax = calculateWaterTax(employee.salary, allowance);
@@ -1703,24 +1721,37 @@ export function print50Tawi(originalIdx) {
       </style>
     </head>
     <body>
-      <div class="no-print-header no-print" style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; flex-grow: 1;">
-          <h2 style="margin: 0; font-size: 11pt;">📄 พิมพ์ใบ 50 ทวิ</h2>
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <label for="poTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: white;">เลขผู้เสียภาษี ปณ.:</label>
-            <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 130px; text-align: center; color: black; font-family: monospace;" />
+      <div class="no-print-header no-print" style="display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; flex-grow: 1;">
+          <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <h2 style="margin: 0; font-size: 10.5pt;">🏢 ข้อมูล ปณ.:</h2>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <label for="poTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: white;">เลขผู้เสียภาษี ปณ.:</label>
+              <input type="text" id="poTaxIdInput" value="${poTaxId}" maxlength="13" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 125px; text-align: center; color: black; font-family: monospace;" />
+            </div>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <label for="poBranchInput" style="font-size: 8.5pt; font-weight: bold; color: white;">สาขาที่:</label>
+              <input type="text" id="poBranchInput" value="${poBranch}" maxlength="5" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 65px; text-align: center; color: black; font-family: monospace;" />
+            </div>
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-grow: 1; max-width: 340px;">
+              <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
+              <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
+            </div>
           </div>
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <label for="poBranchInput" style="font-size: 8.5pt; font-weight: bold; color: white;">สาขาที่:</label>
-            <input type="text" id="poBranchInput" value="${poBranch}" maxlength="5" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 70px; text-align: center; color: black; font-family: monospace;" />
+          <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.15);">
+            <h2 style="margin: 0; font-size: 10.5pt; color: #fde047;">👤 ผู้ถูกหัก (${employee.name}):</h2>
+            <div style="display: flex; gap: 0.35rem; align-items: center;">
+              <label for="empTaxIdInput" style="font-size: 8.5pt; font-weight: bold; color: #fde047;">เลขบัตร 13 หลัก:</label>
+              <input type="text" id="empTaxIdInput" value="${empTaxId}" maxlength="13" placeholder="กรอกเลข 13 หลัก" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #fde047; width: 135px; text-align: center; color: black; font-family: monospace; background: #fefce8;" />
+            </div>
+            <div style="display: flex; gap: 0.35rem; align-items: center; flex-grow: 1; max-width: 380px;">
+              <label for="empAddressInput" style="font-size: 8.5pt; font-weight: bold; color: #fde047;">ที่อยู่ผู้รับเงิน:</label>
+              <input type="text" id="empAddressInput" value="${empAddress}" placeholder="บ้านเลขที่ หมู่ ตำบล อำเภอ จังหวัด..." style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #fde047; width: 100%; color: black; background: #fefce8;" />
+            </div>
+            <button id="savePoConfigBtn" style="background: #10b981; color: white; border: none; padding: 6px 14px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกข้อมูลถาวร (Cloud)</button>
           </div>
-          <div style="display: flex; gap: 0.4rem; align-items: center; flex-grow: 1; max-width: 400px;">
-            <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
-            <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
-          </div>
-          <button id="savePoConfigBtn" style="background: var(--post-emerald); color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกค่าเริ่มต้น</button>
         </div>
-        <button onclick="window.print()" style="background: var(--post-orange); color: white; border: none; padding: 6px 16px; font-weight: bold; border-radius: 4px; cursor: pointer;">🖨️ สั่งพิมพ์ใบ 50 ทวิ</button>
+        <button onclick="window.print()" style="background: var(--post-orange, #f97316); color: white; border: none; padding: 8px 18px; font-weight: bold; border-radius: 4px; cursor: pointer;">🖨️ สั่งพิมพ์ใบ 50 ทวิ</button>
       </div>
 
       <div class="page-container">
@@ -1772,8 +1803,8 @@ export function print50Tawi(originalIdx) {
               </div>
             </div>
             <div class="party-detail">
-              <div>ชื่อ-นามสกุล: <span class="editable-field" contenteditable="true">${employee.name}</span></div>
-              <div>ที่อยู่: <span class="editable-field" contenteditable="true">${empAddress || '.........................................................................................................'}</span></div>
+              <div>ชื่อ-นามสกุล: <span id="empNameSpan" class="editable-field" contenteditable="true">${employee.name}</span></div>
+              <div>ที่อยู่: <span id="empAddressSpan" class="editable-field" contenteditable="true">${empAddress || '.........................................................................................................'}</span></div>
             </div>
           </div>
 
@@ -1878,17 +1909,22 @@ export function print50Tawi(originalIdx) {
         const poTaxIdInput = document.getElementById('poTaxIdInput');
         const poBranchInput = document.getElementById('poBranchInput');
         const poAddressInput = document.getElementById('poAddressInput');
+        const empTaxIdInput = document.getElementById('empTaxIdInput');
+        const empAddressInput = document.getElementById('empAddressInput');
+        const empAddressSpan = document.getElementById('empAddressSpan');
+        const poAddressSpan = document.getElementById('poAddressSpan');
         const savePoConfigBtn = document.getElementById('savePoConfigBtn');
+        const targetEmpName = ${JSON.stringify(employee.name)};
 
-        function updateTaxIdBoxes(taxId) {
-          const clean = (taxId || '').replace(/\D/g, '').padEnd(13, ' ');
+        function updateTaxIdBoxes(taxId, containerId = 'poTaxIdContainer') {
+          const clean = (taxId || '').replace(/\\D/g, '').padEnd(13, ' ');
           const boxes = clean.split('').map(char => '<span class="tax-box">' + (char === ' ' ? '&nbsp;' : char) + '</span>').join('');
-          const container = document.getElementById('poTaxIdContainer');
+          const container = document.getElementById(containerId);
           if (container) container.innerHTML = boxes;
         }
 
         function updateBranchBoxes(branch) {
-          const clean = (branch || '').replace(/\D/g, '').padEnd(5, '0');
+          const clean = (branch || '').replace(/\\D/g, '').padEnd(5, '0');
           const boxes = clean.split('').map(char => '<span class="tax-box">' + char + '</span>').join('');
           const container = document.getElementById('poBranchContainer');
           if (container) container.innerHTML = boxes;
@@ -1896,7 +1932,7 @@ export function print50Tawi(originalIdx) {
 
         if (poTaxIdInput) {
           poTaxIdInput.addEventListener('input', (e) => {
-            updateTaxIdBoxes(e.target.value);
+            updateTaxIdBoxes(e.target.value, 'poTaxIdContainer');
           });
         }
 
@@ -1908,31 +1944,123 @@ export function print50Tawi(originalIdx) {
 
         if (poAddressInput) {
           poAddressInput.addEventListener('input', (e) => {
-            const addressSpan = document.getElementById('poAddressSpan');
-            if (addressSpan) addressSpan.textContent = e.target.value || '.........................................................................................................';
+            if (poAddressSpan) poAddressSpan.textContent = e.target.value || '.........................................................................................................';
+          });
+        }
+        if (poAddressSpan) {
+          poAddressSpan.addEventListener('input', () => {
+            const raw = poAddressSpan.textContent.replace(/\\.{3,}/g, '').trim();
+            if (poAddressInput) poAddressInput.value = raw;
+          });
+        }
+
+        if (empTaxIdInput) {
+          empTaxIdInput.addEventListener('input', (e) => {
+            updateTaxIdBoxes(e.target.value, 'empTaxIdContainer');
+          });
+        }
+
+        if (empAddressInput) {
+          empAddressInput.addEventListener('input', (e) => {
+            if (empAddressSpan) empAddressSpan.textContent = e.target.value || '.........................................................................................................';
+          });
+        }
+        if (empAddressSpan) {
+          empAddressSpan.addEventListener('input', () => {
+            const raw = empAddressSpan.textContent.replace(/\\.{3,}/g, '').trim();
+            if (empAddressInput) empAddressInput.value = raw;
           });
         }
 
         if (savePoConfigBtn) {
-          savePoConfigBtn.addEventListener('click', () => {
-            const newTaxId = poTaxIdInput.value.trim();
-            const newBranch = poBranchInput.value.trim();
-            const newAddress = poAddressInput.value.trim();
+          savePoConfigBtn.addEventListener('click', async () => {
+            const newTaxId = poTaxIdInput ? poTaxIdInput.value.trim() : '';
+            const newBranch = poBranchInput ? poBranchInput.value.trim() : '00000';
+            const newAddress = poAddressInput ? poAddressInput.value.trim() : '';
+            const newEmpTaxId = empTaxIdInput ? empTaxIdInput.value.replace(/\\D/g, '').trim() : '';
+            const rawSpanAddr = empAddressSpan ? empAddressSpan.textContent.replace(/\\.{3,}/g, '').trim() : '';
+            const newEmpAddress = (empAddressInput && empAddressInput.value.trim()) ? empAddressInput.value.trim() : rawSpanAddr;
+
             try {
-              const parentConfigs = JSON.parse(window.opener.localStorage.getItem('tp_global_configs')) || {};
+              const openerWin = window.opener;
+              if (!openerWin) throw new Error('No opener window');
+
+              const normName = String(targetEmpName || '').trim().replace(/\\s+/g, ' ').toLowerCase();
+
+              // 1. Update local & cloud taxAddressVault
+              const vault = JSON.parse(openerWin.localStorage.getItem('tp_tax_address_vault')) || {};
+              if (normName && (newEmpTaxId || newEmpAddress)) {
+                vault[normName] = {
+                  name: targetEmpName,
+                  taxId: newEmpTaxId || (vault[normName]?.taxId || ''),
+                  address: newEmpAddress || (vault[normName]?.address || ''),
+                  branch: '00000',
+                  updatedAt: Date.now()
+                };
+                openerWin.localStorage.setItem('tp_tax_address_vault', JSON.stringify(vault));
+              }
+
+              // 2. Save Post Office configs + taxAddressVault to localStorage AND Cloud Firestore
+              const parentConfigs = JSON.parse(openerWin.localStorage.getItem('tp_global_configs')) || {};
               parentConfigs.postOfficeTaxId = newTaxId;
               parentConfigs.postOfficeBranch = newBranch;
               parentConfigs.postOfficeAddress = newAddress;
-              window.opener.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
-              if (window.opener.appConfigs) {
-                window.opener.appConfigs.postOfficeTaxId = newTaxId;
-                window.opener.appConfigs.postOfficeBranch = newBranch;
-                window.opener.appConfigs.postOfficeAddress = newAddress;
+              parentConfigs.taxAddressVault = vault;
+              openerWin.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
+              if (openerWin.appConfigs) {
+                openerWin.appConfigs.postOfficeTaxId = newTaxId;
+                openerWin.appConfigs.postOfficeBranch = newBranch;
+                openerWin.appConfigs.postOfficeAddress = newAddress;
               }
-              alert('บันทึกข้อมูลผู้มีหน้าที่หักภาษีเป็นค่าเริ่มต้นสำเร็จเรียบร้อยแล้ว!');
+              if (typeof openerWin.saveGlobalConfigs === 'function') {
+                await openerWin.saveGlobalConfigs(parentConfigs);
+              }
+
+              // 3. Save Employee Tax ID & Address to Personnel Registry + Cloud Firestore
+              if (normName && (newEmpTaxId || newEmpAddress)) {
+                const regList = openerWin.personnel && openerWin.personnel.length > 0
+                  ? openerWin.personnel
+                  : (JSON.parse(openerWin.localStorage.getItem('tp_personnel')) || []);
+                const pIdx = regList.findIndex(p => String(p?.name || '').trim().replace(/\\s+/g, ' ').toLowerCase() === normName);
+                if (pIdx !== -1) {
+                  if (newEmpTaxId) regList[pIdx].taxId = newEmpTaxId;
+                  if (newEmpAddress) regList[pIdx].address = newEmpAddress;
+                } else {
+                  regList.push({
+                    name: targetEmpName,
+                    position: ${JSON.stringify(employee.position || 'พนักงาน')},
+                    duty: ${JSON.stringify(employee.duty || 'นำจ่าย')},
+                    salary: ${Number(employee.salary || 0)},
+                    taxId: newEmpTaxId,
+                    address: newEmpAddress
+                  });
+                }
+                openerWin.personnel = regList;
+                openerWin.localStorage.setItem('tp_personnel', JSON.stringify(regList));
+                if (typeof openerWin.savePersonnelList === 'function') {
+                  await openerWin.savePersonnelList(regList);
+                }
+
+                // 4. Also persist on waterEmployees item as fallback
+                if (Array.isArray(openerWin.waterEmployees)) {
+                  let wUpdated = false;
+                  openerWin.waterEmployees.forEach(w => {
+                    if (String(w?.name || '').trim().replace(/\\s+/g, ' ').toLowerCase() === normName) {
+                      if (newEmpTaxId) w.taxId = newEmpTaxId;
+                      if (newEmpAddress) w.address = newEmpAddress;
+                      wUpdated = true;
+                    }
+                  });
+                  if (wUpdated && typeof openerWin.saveWaterEmployees === 'function') {
+                    await openerWin.saveWaterEmployees(openerWin.waterEmployees);
+                  }
+                }
+              }
+
+              alert('✅ บันทึกข้อมูลเลขผู้เสียภาษีและที่อยู่ (ทั้ง ปณ. และผู้รับเงิน) ลงฐานข้อมูล Cloud ถาวรเรียบร้อยแล้ว!');
             } catch (err) {
               console.error(err);
-              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าตั้งค่าแอดมิน');
+              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าหลักของโปรแกรม');
             }
           });
         }
@@ -1990,16 +2118,16 @@ export function printAll50Tawi() {
   
   const pagesHtml = taxEmployees.map((employee, taxIdx) => {
     const sequenceNo = taxIdx + 1;
-    const person = registry.find(p => p.name.trim().replace(/\s+/g, ' ') === employee.name.trim().replace(/\s+/g, ' '));
-    const empTaxId = person ? (person.taxId || "") : "";
-    const empBranch = person ? (person.branch || "00000") : "00000";
-    const empAddress = person ? (person.address || "") : "";
+    const resolvedEmpTax = resolveEmployeeTaxInfo(employee.name, employee, registry);
+    const empTaxId = resolvedEmpTax.taxId;
+    const empBranch = resolvedEmpTax.branch;
+    const empAddress = resolvedEmpTax.address;
 
     const allowance = employee.workDays * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(employee.salary, allowance);
 
     return `
-      <div class="page-container">
+      <div class="page-container" data-emp-name="${(employee.name || '').replace(/"/g, '&quot;')}">
         <div class="main-border-box">
           
           <div class="header-section">
@@ -2041,7 +2169,8 @@ export function printAll50Tawi() {
               <span>ผู้ถูกหักภาษี ณ ที่จ่าย :</span>
               <div class="tax-id-line">
                 <span>เลขประจำตัวผู้เสียภาษีอากร (13 หลัก)* :</span>
-                <span style="display: inline-flex;">${formatTaxIdBoxes(empTaxId)}</span>
+                <input type="text" class="empTaxIdInlineInput no-print" value="${empTaxId}" maxlength="13" placeholder="เลข 13 หลัก" style="width: 115px; padding: 1px 5px; font-size: 8pt; font-family: monospace; text-align: center; border: 1px dashed #b45309; background: rgba(254, 243, 199, 0.5); border-radius: 3px; margin-right: 4px;" title="พิมพ์เลข 13 หลักที่นี่แล้วกดปุ่มบันทึกข้อมูลถาวรด้านบนเพื่อบันทึกถาวร" />
+                <span class="empTaxIdBoxesSpan" style="display: inline-flex;">${formatTaxIdBoxes(empTaxId)}</span>
                 &nbsp;&nbsp;&nbsp;&nbsp;
                 <span>สาขาที่ :</span>
                 <span style="display: inline-flex;">${formatBranchBoxes(empBranch)}</span>
@@ -2049,7 +2178,7 @@ export function printAll50Tawi() {
             </div>
             <div class="party-detail">
               <div>ชื่อ-นามสกุล: <span class="editable-field" contenteditable="true">${employee.name}</span></div>
-              <div>ที่อยู่: <span class="editable-field" contenteditable="true">${empAddress || '.........................................................................................................'}</span></div>
+              <div>ที่อยู่: <span class="empAddressSpanClass editable-field" contenteditable="true">${empAddress || '.........................................................................................................'}</span></div>
             </div>
           </div>
 
@@ -2401,7 +2530,7 @@ export function printAll50Tawi() {
             <label for="poAddressInput" style="font-size: 8.5pt; font-weight: bold; color: white;">ที่อยู่ ปณ.:</label>
             <input type="text" id="poAddressInput" value="${poAddress}" style="padding: 4px 8px; font-size: 9pt; border-radius: 4px; border: 1px solid #ccc; width: 100%; color: black;" />
           </div>
-          <button id="savePoConfigBtn" style="background: var(--post-emerald); color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกค่าเริ่มต้น</button>
+          <button id="savePoConfigBtn" style="background: #10b981; color: white; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">💾 บันทึกข้อมูลถาวร (Cloud)</button>
         </div>
         <button onclick="window.print()" style="background: var(--post-orange); color: white; border: none; padding: 6px 16px; font-weight: bold; border-radius: 4px; cursor: pointer;">🖨️ สั่งพิมพ์ทั้งหมด</button>
       </div>
@@ -2432,6 +2561,17 @@ export function printAll50Tawi() {
           });
         }
 
+        document.querySelectorAll('.page-container').forEach(page => {
+          const empInput = page.querySelector('.empTaxIdInlineInput');
+          const empBoxes = page.querySelector('.empTaxIdBoxesSpan');
+          if (empInput && empBoxes) {
+            empInput.addEventListener('input', (e) => {
+              const clean = (e.target.value || '').replace(/\\D/g, '').padEnd(13, ' ');
+              empBoxes.innerHTML = clean.split('').map(char => '<span class="tax-box">' + (char === ' ' ? '&nbsp;' : char) + '</span>').join('');
+            });
+          }
+        });
+
         if (poTaxIdInput) {
           poTaxIdInput.addEventListener('input', (e) => {
             updateTaxIdBoxes(e.target.value);
@@ -2454,25 +2594,85 @@ export function printAll50Tawi() {
         }
 
         if (savePoConfigBtn) {
-          savePoConfigBtn.addEventListener('click', () => {
+          savePoConfigBtn.addEventListener('click', async () => {
             const newTaxId = poTaxIdInput.value.trim();
             const newBranch = poBranchInput.value.trim();
             const newAddress = poAddressInput.value.trim();
             try {
-              const parentConfigs = JSON.parse(window.opener.localStorage.getItem('tp_global_configs')) || {};
+              const openerWin = window.opener;
+              if (!openerWin) throw new Error('No opener window');
+
+              const vault = JSON.parse(openerWin.localStorage.getItem('tp_tax_address_vault')) || {};
+              const regList = openerWin.personnel && openerWin.personnel.length > 0
+                ? openerWin.personnel
+                : (JSON.parse(openerWin.localStorage.getItem('tp_personnel')) || []);
+              let regUpdated = false;
+
+              document.querySelectorAll('.page-container').forEach(page => {
+                const empName = (page.getAttribute('data-emp-name') || '').trim();
+                if (!empName) return;
+                const normName = empName.replace(/\\s+/g, ' ').toLowerCase();
+                const empTaxInput = page.querySelector('.empTaxIdInlineInput');
+                const empAddrSpan = page.querySelector('.empAddressSpanClass');
+                const empTaxVal = empTaxInput ? empTaxInput.value.replace(/\\D/g, '').trim() : '';
+                const empAddrVal = empAddrSpan ? empAddrSpan.textContent.replace(/\\.{3,}/g, '').trim() : '';
+
+                if (empTaxVal || empAddrVal) {
+                  vault[normName] = {
+                    name: empName,
+                    taxId: empTaxVal || (vault[normName]?.taxId || ''),
+                    address: empAddrVal || (vault[normName]?.address || ''),
+                    branch: '00000',
+                    updatedAt: Date.now()
+                  };
+                  const pIdx = regList.findIndex(p => String(p?.name || '').trim().replace(/\\s+/g, ' ').toLowerCase() === normName);
+                  if (pIdx !== -1) {
+                    if (empTaxVal) regList[pIdx].taxId = empTaxVal;
+                    if (empAddrVal) regList[pIdx].address = empAddrVal;
+                    regUpdated = true;
+                  }
+                  if (Array.isArray(openerWin.waterEmployees)) {
+                    openerWin.waterEmployees.forEach(w => {
+                      if (String(w?.name || '').trim().replace(/\\s+/g, ' ').toLowerCase() === normName) {
+                        if (empTaxVal) w.taxId = empTaxVal;
+                        if (empAddrVal) w.address = empAddrVal;
+                      }
+                    });
+                  }
+                }
+              });
+
+              openerWin.localStorage.setItem('tp_tax_address_vault', JSON.stringify(vault));
+
+              const parentConfigs = JSON.parse(openerWin.localStorage.getItem('tp_global_configs')) || {};
               parentConfigs.postOfficeTaxId = newTaxId;
               parentConfigs.postOfficeBranch = newBranch;
               parentConfigs.postOfficeAddress = newAddress;
-              window.opener.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
-              if (window.opener.appConfigs) {
-                window.opener.appConfigs.postOfficeTaxId = newTaxId;
-                window.opener.appConfigs.postOfficeBranch = newBranch;
-                window.opener.appConfigs.postOfficeAddress = newAddress;
+              parentConfigs.taxAddressVault = vault;
+              openerWin.localStorage.setItem('tp_global_configs', JSON.stringify(parentConfigs));
+              if (openerWin.appConfigs) {
+                openerWin.appConfigs.postOfficeTaxId = newTaxId;
+                openerWin.appConfigs.postOfficeBranch = newBranch;
+                openerWin.appConfigs.postOfficeAddress = newAddress;
               }
-              alert('บันทึกข้อมูลผู้มีหน้าที่หักภาษีเป็นค่าเริ่มต้นสำเร็จเรียบร้อยแล้ว!');
+              if (typeof openerWin.saveGlobalConfigs === 'function') {
+                await openerWin.saveGlobalConfigs(parentConfigs);
+              }
+              if (regUpdated) {
+                openerWin.personnel = regList;
+                openerWin.localStorage.setItem('tp_personnel', JSON.stringify(regList));
+                if (typeof openerWin.savePersonnelList === 'function') {
+                  await openerWin.savePersonnelList(regList);
+                }
+                if (typeof openerWin.saveWaterEmployees === 'function') {
+                  await openerWin.saveWaterEmployees(openerWin.waterEmployees);
+                }
+              }
+
+              alert('✅ บันทึกข้อมูลเลขผู้เสียภาษีและที่อยู่ทั้งหมดลงฐานข้อมูล Cloud ถาวรเรียบร้อยแล้ว!');
             } catch (err) {
               console.error(err);
-              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าตั้งค่าแอดมิน');
+              alert('ไม่สามารถบันทึกข้อมูลย้อนกลับได้ กรุณาบันทึกผ่านทางหน้าหลักของโปรแกรม');
             }
           });
         }

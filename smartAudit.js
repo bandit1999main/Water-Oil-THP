@@ -189,14 +189,25 @@ export async function runMonthlyAudit() {
   // ─────────────────────────────────────────────────────────────────────────
   // 3. เช็คข้อมูล "ใบหักภาษี 50 ทวิ" (เลขประจำตัวผู้เสียภาษี 13 หลัก & ที่อยู่)
   // ─────────────────────────────────────────────────────────────────────────
+  let taxVault = {};
+  try {
+    taxVault = JSON.parse(localStorage.getItem('tp_tax_address_vault')) || {};
+  } catch (e) {
+    taxVault = {};
+  }
+
   waterList.forEach((wItem, wIdx) => {
     const allowance = Number(wItem.workDays || 0) * (window.waterAllowancePerDay || 30);
     const tax = calculateWaterTax(Number(wItem.salary || 0), allowance);
     if (tax > 0) {
-      const regIdx = registry.findIndex(p => (p.name || '').trim() === (wItem.name || '').trim());
+      const normName = String(wItem.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const regIdx = registry.findIndex(p => String(p?.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === normName);
       const regPerson = regIdx !== -1 ? registry[regIdx] : null;
-      const cleanTaxId = (regPerson?.taxId || '').replace(/\D/g, '');
-      const address = (regPerson?.address || '').trim();
+      const vaultEntry = taxVault[normName] || {};
+      const resolvedTaxId = String(regPerson?.taxId || vaultEntry.taxId || wItem?.taxId || '').trim();
+      const resolvedAddress = String(regPerson?.address || vaultEntry.address || wItem?.address || '').trim();
+      const cleanTaxId = resolvedTaxId.replace(/\D/g, '');
+      const address = resolvedAddress;
 
       const hasValidTaxId = cleanTaxId.length === 13;
       const hasValidAddress = address.length >= 5 && address !== '-';
@@ -216,8 +227,8 @@ export async function runMonthlyAudit() {
             name: wItem.name,
             waterIdx: wIdx,
             regIdx,
-            currentTaxId: regPerson?.taxId || '',
-            currentAddress: regPerson?.address || ''
+            currentTaxId: resolvedTaxId,
+            currentAddress: resolvedAddress
           }
         });
       }
@@ -627,8 +638,11 @@ export async function openSmartAuditModal(options = {}) {
           okText: 'บันทึกข้อมูล',
           okClass: 'btn-primary',
           onConfirm: async () => {
-            let regList = JSON.parse(localStorage.getItem('tp_personnel')) || [];
-            const pIdx = regList.findIndex(p => (p.name || '').trim() === m.name.trim());
+            const normName = String(m.name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+            let regList = (window.personnel && window.personnel.length > 0)
+              ? window.personnel
+              : (JSON.parse(localStorage.getItem('tp_personnel')) || []);
+            const pIdx = regList.findIndex(p => String(p?.name || '').trim().replace(/\s+/g, ' ').toLowerCase() === normName);
             if (pIdx !== -1) {
               regList[pIdx].taxId = taxIdVal;
               regList[pIdx].address = addrVal;
@@ -645,6 +659,13 @@ export async function openSmartAuditModal(options = {}) {
             localStorage.setItem('tp_personnel', JSON.stringify(regList));
             window.personnel = regList;
             await savePersonnelList(regList);
+
+            if (window.waterEmployees && window.waterEmployees[m.waterIdx]) {
+              window.waterEmployees[m.waterIdx].taxId = taxIdVal;
+              window.waterEmployees[m.waterIdx].address = addrVal;
+              await saveWaterEmployees(window.waterEmployees);
+            }
+
             window.showToast(`บันทึกข้อมูล 50 ทวิ ของ ${m.name} สำเร็จ!`, 'success');
             await refreshView();
           }

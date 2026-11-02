@@ -355,10 +355,12 @@ function clearSensitiveLocalCache() {
   try {
     // Do not wipe localStorage if offline, to prevent losing unsynced offline work
     if (!navigator.onLine || !isCloudConnected()) return;
+    // Preserve theme, global configs (PO Tax ID/Address), and tax/address backup vault across idle logouts/restarts
+    const preservedKeys = new Set(['tp_theme', 'tp_global_configs', 'tp_tax_address_vault']);
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('tp_') && k !== 'tp_theme') {
+      if (k && k.startsWith('tp_') && !preservedKeys.has(k)) {
         keysToRemove.push(k);
       }
     }
@@ -981,6 +983,9 @@ function setupCalculatorDOMReferencesAndEvents() {
 }
 document.addEventListener('DOMContentLoaded', async () => {
   window.saveGlobalSetting = saveGlobalSetting;
+  window.saveGlobalConfigs = saveGlobalConfigs;
+  window.savePersonnelList = savePersonnelList;
+  window.saveWaterEmployees = saveWaterEmployees;
   window.openEditModal = openEditModal;
   
   // Set default activeMonth and activeYear globally
@@ -1628,6 +1633,10 @@ async function initCloudSync() {
       applyGlobalSettingsToDOM();
 
       await fetchSavedTemplates();
+      const cloudPersonnel = await fetchPersonnelList();
+      if (cloudPersonnel && cloudPersonnel.length > 0) {
+        personnel = cloudPersonnel;
+      }
       const cloudRoutes = await fetchRouteData();
       if (cloudRoutes && Object.keys(cloudRoutes).length > 0) {
         ROUTE_DATA = cloudRoutes;
