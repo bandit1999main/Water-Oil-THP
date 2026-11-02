@@ -839,257 +839,498 @@ export function printWaterReport() {
   }
 
   waterEmployees.sort((a, b) => a.name.localeCompare(b.name, 'th'));
-  
+
   const globalMonthSelect = document.getElementById('globalMonth');
   const globalYearSelect = document.getElementById('globalYear');
   const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
   const yearText = globalYearSelect.value;
   const month = parseInt(globalMonthSelect.value);
   const year = parseInt(globalYearSelect.value);
-  
-  let totalAllowanceVal = 0;
-  let totalTaxVal = 0;
-  let totalNetVal = 0;
-  let tableRowsHtml = '';
-  
-  waterEmployees.forEach((item, index) => {
-    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
-    const tax = calculateWaterTax(item.salary, allowance);
-    const net = Math.round((allowance - tax) * 100) / 100;
-    
-    totalAllowanceVal += allowance;
-    totalTaxVal += tax;
-    totalNetVal += net;
-    
-    tableRowsHtml += `
-      <tr>
-        <td>${index + 1}</td>
-        <td><strong>${item.name}</strong></td>
-        <td>${item.position} / ${item.duty || '-'}</td>
-        <td>${item.workDays} วัน</td>
-        <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
-        <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #f7f4f4; font-weight: 300;">${item.signature}</span></td>
-        <td><span style="font-size: 8pt; color: #444;">${getResignRemarkForEmployee(item.name, year, month, item.remarks)}</span></td>
-      </tr>
-    `;
-  });
-  
+  const postOffice = document.getElementById('globalPostOfficeName')?.value.trim() || 'ไปรษณีย์ไทย';
+
   const sigMakerTitleVal = document.getElementById('sigMakerTitle').value.trim() || 'ผู้จัดทำ';
   const sigMakerNameVal = document.getElementById('sigMakerName').value.trim() || '..........................................................';
   const sigMakerPosVal = document.getElementById('sigMakerPos').value.trim() || '..........................................................';
-  
+
   const sigCheckerTitleVal = document.getElementById('sigCheckerTitle').value.trim() || 'ผู้ตรวจสอบ';
   const sigCheckerNameVal = document.getElementById('sigCheckerName').value.trim() || '..........................................................';
   const sigCheckerPosVal = document.getElementById('sigCheckerPos').value.trim() || '..........................................................';
-  
+
   const sigApproverTitleVal = document.getElementById('sigApproverTitle').value.trim() || 'ผู้อนุมัติ';
   const sigApproverNameVal = document.getElementById('sigApproverName').value.trim() || '..........................................................';
   const sigApproverPosVal = document.getElementById('sigApproverPos').value.trim() || '..........................................................';
-  
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>พิมพ์รายงานค่าน้ำดื่ม_${monthText}_${yearText}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-      <style>
-        body {
-          background: white !important;
-          color: black !important;
-          font-family: 'Sarabun', sans-serif !important;
-          margin: 0 !important;
-          padding: 0.5cm !important;
-        }
-        @page {
-          size: A4 portrait;
-          margin: 0.3cm;
-        }
-        .print-header {
-          text-align: center;
-          margin-bottom: 0.2rem !important;
-          padding-bottom: 0.15rem !important;
-          border-bottom: 2px double #000 !important;
-        }
-        .print-title-container h2 {
-          font-size: 10.5pt !important;
-          font-weight: bold;
-          margin: 0 0 0.15rem 0;
-        }
-        .print-title-container h3 {
-          font-size: 9pt !important;
-          font-weight: bold;
-          margin: 0 0 0.15rem 0;
-        }
-        .print-title-container p {
-          font-size: 8pt;
-          margin: 0 0 0.25rem 0;
-        }
-        .print-meta-info {
-          text-align: right;
-          font-size: 6.8pt !important;
-          color: #444;
-        }
-        .print-meta-info p {
-          margin: 0 0 0.05rem 0;
-        }
-        .print-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 1rem;
-        }
-        .print-table th, 
-        .print-table td {
-          border: 1px solid #000 !important;
-          padding: 4px 3px !important;
-          font-size: 8pt !important;
-          line-height: 1.25 !important;
-          color: black !important;
-        }
-        .print-table th {
-          font-weight: bold !important;
-          text-align: center !important;
-          background-color: #f8f8f8 !important;
-        }
-        .print-table td {
-          text-align: left;
-          height: 14px !important;
-          vertical-align: middle !important;
-        }
-        .print-table td:nth-child(2) {
-          font-size: 8.5pt !important;
-          font-weight: bold !important;
-        }
-        .print-table td:nth-child(8) {
-          white-space: nowrap !important;
-          font-size: 7.8pt !important;
-        }
-        .print-table td:nth-child(1),
-        .print-table td:nth-child(4),
-        .print-table td:nth-child(5),
-        .print-table td:nth-child(6),
-        .print-table td:nth-child(7),
-        .print-table td:nth-child(8) {
-          text-align: center !important;
-        }
-        .print-summary-section {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: 0.2rem !important;
-          margin-bottom: 0.2rem !important;
-        }
-        .summary-block {
-          width: 280px;
-          font-size: 7.5pt !important;
-        }
-        .summary-block p {
-          display: flex;
-          justify-content: space-between;
-          margin: 0 0 0.05rem 0;
-        }
-        .final-sum {
-          font-weight: bold;
-          border-top: 1px solid black;
-          border-bottom: 4px double #000;
-          padding: 2px 0;
-          margin-top: 2px;
-          font-size: 8pt !important;
-        }
-        .print-signatures {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 1.5cm !important;
-          page-break-inside: avoid;
-        }
-        .sig-box {
-          text-align: center;
-          width: 32%;
-          font-size: 7.2pt !important;
-          line-height: 1.3 !important;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.15rem !important; margin-bottom: 0.25rem !important;">
-        <div style="width: 80px;"></div>
-        <div class="print-title-container" style="flex-grow: 1; text-align: center;">
-          <h2 style="font-size: 10.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ</h2>
-          <h3 style="font-size: 9pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">บริษัท ไปรษณีย์ไทย จำกัด</h3>
-          <p style="font-size: 8pt; margin: 0 0 0.25rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+
+  const personnelRegistry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+
+  const classifyWaterItem = (item) => {
+    const pos = (item.position || '').trim();
+    const duty = (item.duty || '').trim();
+    const regPerson = personnelRegistry.find(p => p.name === item.name);
+    const regDuty = (regPerson?.duty || '').trim();
+
+    if (
+      duty.includes('หัวหน้าโซน') ||
+      duty.includes('ชนจ') ||
+      pos.includes('ชนจ') ||
+      regDuty.includes('หัวหน้าโซน') ||
+      regDuty.includes('ชนจ')
+    ) {
+      return 'supervisor';
+    }
+    if (pos.includes('เหมา')) {
+      return 'contractor';
+    }
+    if (pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ' || pos === 'หน.ปณ.') {
+      return 'staff';
+    }
+    return 'worker';
+  };
+
+  const grouped = { staff: [], worker: [], contractor: [], supervisor: [] };
+  waterEmployees.forEach(item => {
+    grouped[classifyWaterItem(item)].push(item);
+  });
+
+  const calcGroupStats = (list) => {
+    let days = 0;
+    let allowance = 0;
+    let tax = 0;
+    let net = 0;
+    list.forEach(item => {
+      const a = item.workDays * (window.waterAllowancePerDay || 30);
+      const t = calculateWaterTax(item.salary, a);
+      const n = Math.round((a - t) * 100) / 100;
+      days += Number(item.workDays || 0);
+      allowance += a;
+      tax += t;
+      net += n;
+    });
+    return { count: list.length, days, allowance, tax, net };
+  };
+
+  const groupSummaryList = [
+    { key: 'staff', title: '1. พนักงาน และ ลูกจ้างประจำ', list: grouped.staff, stats: calcGroupStats(grouped.staff) },
+    { key: 'worker', title: '2. ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว', list: grouped.worker, stats: calcGroupStats(grouped.worker) },
+    { key: 'contractor', title: '3. ลูกจ้างเหมาบริการนำจ่าย', list: grouped.contractor, stats: calcGroupStats(grouped.contractor) },
+    { key: 'supervisor', title: '4. หัวหน้าโซนนำจ่าย (ชนจ.)', list: grouped.supervisor, stats: calcGroupStats(grouped.supervisor) }
+  ];
+
+  const buildWaterPageHtml = (groupTitle, items) => {
+    if (!items || items.length === 0) return '';
+    let subAllowance = 0;
+    let subTax = 0;
+    let subNet = 0;
+
+    const rowsHtml = items.map((item, index) => {
+      const allowance = item.workDays * (window.waterAllowancePerDay || 30);
+      const tax = calculateWaterTax(item.salary, allowance);
+      const net = Math.round((allowance - tax) * 100) / 100;
+      subAllowance += allowance;
+      subTax += tax;
+      subNet += net;
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td><strong>${item.name}</strong></td>
+          <td>${item.position} / ${item.duty || '-'}</td>
+          <td>${item.workDays} วัน</td>
+          <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td><strong>${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+          <td><span style="font-family: 'Sarabun', sans-serif; font-style: italic; font-size: 9pt; color: #f7f4f4; font-weight: 300;">${item.signature}</span></td>
+          <td><span style="font-size: 8pt; color: #444;">${getResignRemarkForEmployee(item.name, year, month, item.remarks)}</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="print-page">
+        <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.15rem !important; margin-bottom: 0.25rem !important;">
+          <div style="width: 80px;"></div>
+          <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+            <h2 style="font-size: 10.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">แบบฟอร์มการเบิกค่าน้ำดื่ม สำหรับผู้ปฏิบัติงานภายนอกที่ทำการ (${postOffice})</h2>
+            <h3 style="font-size: 9pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">กลุ่มงาน: ${groupTitle}</h3>
+            <p style="font-size: 8pt; margin: 0 0 0.25rem 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText}</p>
+          </div>
+          <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
+            ตราประทับ<br>ปณ.
+          </div>
         </div>
-        <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
-          ตราประทับ<br>ปณ.
+        <div class="print-meta-info" style="text-align: right; font-size: 6.8pt !important; color: #444; margin-bottom: 0.4rem;">
+          <p style="margin: 0 0 0.05rem 0;">เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
+          <p style="margin: 0 0 0.05rem 0;">เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
+          <p style="margin: 0 0 0.05rem 0;">หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
+        </div>
+
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th style="width: 4%">ลำดับ</th>
+              <th style="width: 19%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 18%">ปฏิบัติหน้าที่</th>
+              <th style="width: 7%">วันปฏิบัติงาน</th>
+              <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
+              <th style="width: 7%">ภาษี (ถ้ามี)</th>
+              <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
+              <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 10%">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="print-summary-section">
+          <div class="summary-block">
+            <p>จำนวนรายชื่อผู้เบิก (${groupTitle}): <strong>${items.length}</strong> ราย</p>
+            <p>ค่าน้ำดื่มรวม: <strong>${subAllowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p>ภาษีหัก ณ ที่จ่ายรวม: <strong>${subTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+            <p class="final-sum">ยอดเงินจ่ายสุทธิรวม: <strong>${subNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+          </div>
+        </div>
+
+        <div class="print-signatures">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
         </div>
       </div>
-      <div class="print-meta-info" style="text-align: right; font-size: 6.8pt !important; color: #444; margin-bottom: 0.4rem;">
-        <p style="margin: 0 0 0.05rem 0;">เดบิต: <strong>ค่าอาหารและเครื่องดื่ม CA POS 51-9925-01</strong></p>
-        <p style="margin: 0 0 0.05rem 0;">เครดิต: <strong>เจ้าหนี้พนักงาน CA POS 21-9999-08</strong></p>
-        <p style="margin: 0 0 0.05rem 0;">หักภาษี ณ ที่จ่าย: <strong>21-99-15-01</strong> (เงินเดือนเกิน 25,833 บ.)</p>
-      </div>
+    `;
+  };
 
-      <table class="print-table">
-        <thead>
-          <tr>
-            <th style="width: 4%">ลำดับ</th>
-            <th style="width: 19%">ชื่อ - นามสกุลผู้รับเงิน</th>
-            <th style="width: 18%">ปฏิบัติหน้าที่</th>
-            <th style="width: 7%">วันปฏิบัติงาน</th>
-            <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
-            <th style="width: 7%">ภาษี (ถ้ามี)</th>
-            <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
-            <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
-            <th style="width: 10%">หมายเหตุ</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tableRowsHtml}
-        </tbody>
-      </table>
+  const buildWaterCoverSheetHtml = () => {
+    let grandCount = 0;
+    let grandDays = 0;
+    let grandAllowance = 0;
+    let grandTax = 0;
+    let grandNet = 0;
 
-      <div class="print-summary-section">
-        <div class="summary-block">
-          <p>จำนวนรายชื่อผู้เบิกทั้งสิ้น: <strong>${waterEmployees.length}</strong> ราย</p>
-          <p>ค่าน้ำดื่มรวมทั้งสิ้น: <strong>${totalAllowanceVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p>ภาษีหัก ณ ที่จ่ายรวมทั้งสิ้น: <strong>${totalTaxVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
-          <p class="final-sum">ยอดเงินจ่ายสุทธิรวมทั้งสิ้น: <strong>${totalNetVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> บาท</p>
+    const rowsHtml = groupSummaryList.map((g, idx) => {
+      grandCount += g.stats.count;
+      grandDays += g.stats.days;
+      grandAllowance += g.stats.allowance;
+      grandTax += g.stats.tax;
+      grandNet += g.stats.net;
+
+      return `
+        <tr>
+          <td style="text-align: center !important;">${idx + 1}</td>
+          <td style="text-align: left !important; padding-left: 8px !important; font-weight: bold;">${g.title.replace(/^\d+\.\s*/, '')}</td>
+          <td style="text-align: center !important;">${g.stats.count} ราย</td>
+          <td style="text-align: center !important;">${g.stats.days} วัน</td>
+          <td style="text-align: right !important; padding-right: 6px !important;">${g.stats.allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right !important; padding-right: 6px !important;">${g.stats.tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right !important; padding-right: 6px !important; font-weight: bold;">${g.stats.net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="print-page">
+        <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.25rem !important; margin-bottom: 0.5rem !important;">
+          <div style="width: 80px;"></div>
+          <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+            <h2 style="font-size: 11.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">ใบปะหน้าสรุปยอดการเบิกจ่ายค่าน้ำดื่ม (แยกตามหมวดหมู่ปฏิบัติงาน)</h2>
+            <h3 style="font-size: 9.5pt !important; font-weight: bold; margin: 0 0 0.15rem 0;">ประจำที่ทำการไปรษณีย์ ${postOffice}</h3>
+            <p style="font-size: 8.5pt; margin: 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText} | อัตราค่าน้ำดื่มวันละ ${(window.waterAllowancePerDay || 30).toFixed(2)} บาท</p>
+          </div>
+          <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
+            ตราประทับ<br>ปณ.
+          </div>
+        </div>
+
+        <table class="print-table" style="margin-top: 0.5rem; margin-bottom: 1.2rem;">
+          <thead>
+            <tr>
+              <th style="width: 6%; padding: 6px !important;">ลำดับ</th>
+              <th style="width: 30%; padding: 6px !important;">หมวดหมู่ / กลุ่มปฏิบัติงาน</th>
+              <th style="width: 12%; padding: 6px !important;">จำนวนคน</th>
+              <th style="width: 12%; padding: 6px !important;">รวมวันทำงาน</th>
+              <th style="width: 14%; padding: 6px !important;">ค่าน้ำดื่มรวม (บาท)</th>
+              <th style="width: 12%; padding: 6px !important;">ภาษีหัก ณ ที่จ่าย</th>
+              <th style="width: 14%; padding: 6px !important;">จ่ายสุทธิ (บาท)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr style="background-color: #f1f5f9 !important; font-weight: bold;">
+              <td colspan="2" style="text-align: center !important; padding: 6px !important;">รวมเบิกจ่ายทั้งสิ้นทุกหมวดหมู่</td>
+              <td style="text-align: center !important; padding: 6px !important;">${grandCount} ราย</td>
+              <td style="text-align: center !important; padding: 6px !important;">${grandDays} วัน</td>
+              <td style="text-align: right !important; padding: 6px !important;">${grandAllowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right !important; padding: 6px !important;">${grandTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right !important; padding: 6px !important; border-bottom: 3px double #000 !important;">${grandNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="print-signatures" style="margin-top: 2cm !important;">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
         </div>
       </div>
+    `;
+  };
 
-      <div class="print-signatures">
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigMakerNameVal})</p>
-          <p>ตำแหน่ง ${sigMakerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigCheckerNameVal})</p>
-          <p>ตำแหน่ง ${sigCheckerPosVal}</p>
-        </div>
-        <div class="sig-box">
-          <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
-          <p style="margin-top: 0.5rem;">(${sigApproverNameVal})</p>
-          <p>ตำแหน่ง ${sigApproverPosVal}</p>
+  let modal = document.getElementById('waterPrintSelectorModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'waterPrintSelectorModal';
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '4700';
+    document.body.appendChild(modal);
+  }
+
+  const fmtBaht = (n) => n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  modal.innerHTML = `
+    <div class="modal-content glass-modal animate-slide-in" style="max-width: 560px; width: 95%;">
+      <div class="modal-header">
+        <h3>🖨️ เลือกหมวดหมู่ที่ต้องการพิมพ์ (ค่าน้ำดื่ม)</h3>
+        <button type="button" id="closeWaterPrintSelectorBtn" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--text-secondary);">
+          เลือกรายการเอกสารค่าน้ำดื่มที่ต้องการสั่งพิมพ์สำหรับเดือน <strong>${monthText} พ.ศ. ${yearText}</strong>:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1.5px solid #0284c7; background: rgba(2, 132, 199, 0.06); cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">
+              <input type="checkbox" class="water-print-opt" value="cover" checked style="width: 18px; height: 18px; cursor: pointer;" />
+              📄 ใบปะหน้าสรุปยอดรวมทุกหมวดหมู่ (เสนอเซ็นอนุมัติ)
+            </span>
+            <span style="font-size: 0.78rem; font-weight: 700; color: #0284c7;">แนะนำ</span>
+          </label>
+          ${groupSummaryList.map(g => `
+            <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; border-radius: 10px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.02); cursor: ${g.stats.count > 0 ? 'pointer' : 'not-allowed'}; opacity: ${g.stats.count > 0 ? '1' : '0.5'};">
+              <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">
+                <input type="checkbox" class="water-print-opt" value="${g.key}" ${g.stats.count > 0 ? 'checked' : 'disabled'} style="width: 17px; height: 17px; cursor: pointer;" />
+                ${g.title} (${g.stats.count} ราย)
+              </span>
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);">${fmtBaht(g.stats.net)} ฿</span>
+            </label>
+          `).join('')}
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; border-radius: 10px; border: 1px dashed var(--border-glass); background: rgba(0,0,0,0.01); cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
+              <input type="checkbox" class="water-print-opt" value="combined_all" style="width: 17px; height: 17px; cursor: pointer;" />
+              📋 พิมพ์แบบรวมทุกคนในตารางเดียว (${waterEmployees.length} ราย)
+            </span>
+          </label>
         </div>
       </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 0.5rem;">
+        <button type="button" id="cancelWaterPrintSelectorBtn" class="btn btn-secondary btn-small">ยกเลิก</button>
+        <button type="button" id="confirmWaterPrintSelectorBtn" class="btn btn-primary btn-small" style="font-weight: 700; padding: 0.5rem 1.25rem;">
+          🖨️ เปิดหน้าต่างพิมพ์รายงานที่เลือก
+        </button>
+      </div>
+    </div>
+  `;
 
-      <script>
-        window.onload = function() {
-          window.print();
-          window.onafterprint = function() {
-            window.close();
+  modal.classList.add('active');
+  modal.querySelector('#closeWaterPrintSelectorBtn').onclick = () => modal.classList.remove('active');
+  modal.querySelector('#cancelWaterPrintSelectorBtn').onclick = () => modal.classList.remove('active');
+  modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+
+  modal.querySelector('#confirmWaterPrintSelectorBtn').onclick = () => {
+    const selectedKeys = new Set(
+      Array.from(modal.querySelectorAll('.water-print-opt:checked')).map(cb => cb.value)
+    );
+    if (selectedKeys.size === 0) {
+      window.showToast('กรุณาเลือกอย่างน้อย 1 รายการเพื่อพิมพ์!', 'warning');
+      return;
+    }
+    modal.classList.remove('active');
+
+    const pagesHtml = [];
+    if (selectedKeys.has('cover')) {
+      pagesHtml.push(buildWaterCoverSheetHtml());
+    }
+    groupSummaryList.forEach(g => {
+      if (selectedKeys.has(g.key) && g.list.length > 0) {
+        pagesHtml.push(buildWaterPageHtml(g.title.replace(/^\d+\.\s*/, ''), g.list));
+      }
+    });
+    if (selectedKeys.has('combined_all')) {
+      pagesHtml.push(buildWaterPageHtml('รวมเจ้าหน้าที่ปฏิบัติงานทั้งหมด', waterEmployees));
+    }
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>พิมพ์รายงานค่าน้ำดื่ม_${monthText}_${yearText}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <style>
+          body {
+            background: white !important;
+            color: black !important;
+            font-family: 'Sarabun', sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-page {
+            padding: 0.5cm !important;
+            page-break-after: always;
+            box-sizing: border-box;
+          }
+          .print-page:last-child {
+            page-break-after: avoid;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 0.3cm;
+          }
+          .print-header {
+            text-align: center;
+            margin-bottom: 0.2rem !important;
+            padding-bottom: 0.15rem !important;
+            border-bottom: 2px double #000 !important;
+          }
+          .print-title-container h2 {
+            font-size: 10.5pt !important;
+            font-weight: bold;
+            margin: 0 0 0.15rem 0;
+          }
+          .print-title-container h3 {
+            font-size: 9pt !important;
+            font-weight: bold;
+            margin: 0 0 0.15rem 0;
+          }
+          .print-title-container p {
+            font-size: 8pt;
+            margin: 0 0 0.25rem 0;
+          }
+          .print-meta-info {
+            text-align: right;
+            font-size: 6.8pt !important;
+            color: #444;
+          }
+          .print-meta-info p {
+            margin: 0 0 0.05rem 0;
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+          }
+          .print-table th,
+          .print-table td {
+            border: 1px solid #000 !important;
+            padding: 4px 3px !important;
+            font-size: 8pt !important;
+            line-height: 1.25 !important;
+            color: black !important;
+          }
+          .print-table th {
+            font-weight: bold !important;
+            text-align: center !important;
+            background-color: #f8f8f8 !important;
+          }
+          .print-table td {
+            text-align: left;
+            height: 14px !important;
+            vertical-align: middle !important;
+          }
+          .print-table td:nth-child(2) {
+            font-size: 8.5pt !important;
+            font-weight: bold !important;
+          }
+          .print-table td:nth-child(8) {
+            white-space: nowrap !important;
+            font-size: 7.8pt !important;
+          }
+          .print-table td:nth-child(1),
+          .print-table td:nth-child(4),
+          .print-table td:nth-child(5),
+          .print-table td:nth-child(6),
+          .print-table td:nth-child(7),
+          .print-table td:nth-child(8) {
+            text-align: center !important;
+          }
+          .print-summary-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.2rem !important;
+            margin-bottom: 0.2rem !important;
+          }
+          .summary-block {
+            width: 280px;
+            font-size: 7.5pt !important;
+          }
+          .summary-block p {
+            display: flex;
+            justify-content: space-between;
+            margin: 0 0 0.05rem 0;
+          }
+          .final-sum {
+            font-weight: bold;
+            border-top: 1px solid black;
+            border-bottom: 4px double #000;
+            padding: 2px 0;
+            margin-top: 2px;
+            font-size: 8pt !important;
+          }
+          .print-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5cm !important;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            text-align: center;
+            width: 32%;
+            font-size: 7.2pt !important;
+            line-height: 1.3 !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml.join('')}
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+            setTimeout(function() { window.close(); }, 500);
           };
-          setTimeout(function() { window.close(); }, 500);
-        };
-      </script>
-    </body>
-    </html>
-  `);
-  printWindow.document.close();
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 }
 
 export async function clearWaterData() {

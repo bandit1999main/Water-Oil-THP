@@ -822,23 +822,42 @@ function setupCalculatorDOMReferencesAndEvents() {
     import('./fuelCalculator.js').then(m => m.addSupervisorMission());
   });
 
+  const openSmartAuditBtn = document.getElementById('openSmartAuditBtn');
+  if (openSmartAuditBtn) {
+    openSmartAuditBtn.addEventListener('click', () => {
+      import('./smartAudit.js').then(m => m.openSmartAuditModal());
+    });
+  }
+
   exportCsvBtn.addEventListener('click', () => {
-    if (activeMode === 'fuel') {
-      import('./fuelCalculator.js').then(m => m.exportFuelCsv());
-    } else if (activeMode === 'water') {
-      import('./waterCalculator.js').then(m => m.exportWaterCsv());
-    }
+    import('./smartAudit.js').then(({ runSmartAuditBeforeAction }) => {
+      runSmartAuditBeforeAction('ส่งออกไฟล์ Excel', () => {
+        if (activeMode === 'fuel') {
+          import('./fuelCalculator.js').then(m => m.exportFuelCsv());
+        } else if (activeMode === 'water') {
+          import('./waterCalculator.js').then(m => m.exportWaterCsv());
+        }
+      });
+    });
   });
   printReportBtn.addEventListener('click', () => {
-    if (activeMode === 'fuel') {
-      import('./fuelCalculator.js').then(m => m.printFuelReport());
-    } else if (activeMode === 'water') {
-      import('./waterCalculator.js').then(m => m.printWaterReport());
-    }
+    import('./smartAudit.js').then(({ runSmartAuditBeforeAction }) => {
+      runSmartAuditBeforeAction('พิมพ์รายงาน', () => {
+        if (activeMode === 'fuel') {
+          import('./fuelCalculator.js').then(m => m.printFuelReport());
+        } else if (activeMode === 'water') {
+          import('./waterCalculator.js').then(m => m.printWaterReport());
+        }
+      });
+    });
   });
   if (printAll50TawiBtn) {
     printAll50TawiBtn.addEventListener('click', () => {
-      import('./waterCalculator.js').then(m => m.printAll50Tawi());
+      import('./smartAudit.js').then(({ runSmartAuditBeforeAction }) => {
+        runSmartAuditBeforeAction('พิมพ์ใบ 50 ทวิ ทั้งหมด', () => {
+          import('./waterCalculator.js').then(m => m.printAll50Tawi());
+        });
+      });
     });
   }
   clearAllBtn.addEventListener('click', () => {

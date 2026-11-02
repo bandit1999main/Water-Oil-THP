@@ -1992,23 +1992,216 @@ export function printFuelReport() {
     `;
   };
 
-  const page1 = buildStandardPageHtml('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular);
-  if (page1) pagesHtml.push(page1);
+  const postOffice = document.getElementById('globalPostOfficeName')?.value.trim() || '.............................................';
 
-  const page2 = buildStandardPageHtml('ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว', listDailyAndTemp);
-  if (page2) pagesHtml.push(page2);
+  const calcGroupStats = (list) => {
+    let liters = 0;
+    let fuel = 0;
+    let maint = 0;
+    let total = 0;
+    list.forEach(r => {
+      liters += Number(r.liters || 0);
+      fuel += Number(r.fuelCost || 0);
+      maint += Number(r.maintCost || 0);
+      total += Number(r.sumTotal || 0);
+    });
+    return { count: list.length, liters, fuel, maint, total };
+  };
 
-  const page3 = buildStandardPageHtml('ลูกจ้างเหมาบริการนำจ่าย', listContractors);
-  if (page3) pagesHtml.push(page3);
+  const groupSummaryList = [
+    { key: 'staff', title: '1. พนักงาน และ ลูกจ้างประจำ', list: listStaffAndRegular, stats: calcGroupStats(listStaffAndRegular) },
+    { key: 'worker', title: '2. ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว', list: listDailyAndTemp, stats: calcGroupStats(listDailyAndTemp) },
+    { key: 'contractor', title: '3. ลูกจ้างเหมาบริการนำจ่าย', list: listContractors, stats: calcGroupStats(listContractors) },
+    { key: 'substitute', title: '4. เจ้าหน้าที่จ้างวิ่งแทนด้านจ่าย', list: listSubstitutes, stats: calcGroupStats(listSubstitutes) },
+    { key: 'supervisor', title: '5. หัวหน้าโซนนำจ่าย (ชนจ.)', list: listSupervisors, stats: calcGroupStats(listSupervisors) }
+  ];
 
-  const page4 = buildStandardPageHtml('เจ้าหน้าที่จ้างวิ่งแทนด้านจ่าย', listSubstitutes);
-  if (page4) pagesHtml.push(page4);
+  const buildCoverSheetHtml = () => {
+    let grandCount = 0;
+    let grandLiters = 0;
+    let grandFuel = 0;
+    let grandMaint = 0;
+    let grandTotal = 0;
 
-  const page5 = buildStandardPageHtml('หัวหน้าโซนนำจ่าย (ชนจ.)', listSupervisors);
-  if (page5) pagesHtml.push(page5);
+    const rowsHtml = groupSummaryList.map((g, idx) => {
+      grandCount += g.stats.count;
+      grandLiters += g.stats.liters;
+      grandFuel += g.stats.fuel;
+      grandMaint += g.stats.maint;
+      grandTotal += g.stats.total;
+
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td style="text-align: left !important; padding-left: 10px !important; font-weight: bold;">${g.title.replace(/^\d+\.\s*/, '')}</td>
+          <td style="text-align: center;">${g.stats.count} รายการ</td>
+          <td style="text-align: right; padding-right: 8px !important;">${g.stats.liters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right; padding-right: 8px !important;">${g.stats.fuel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right; padding-right: 8px !important;">${g.stats.maint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="text-align: right; padding-right: 8px !important; font-weight: bold;">${g.stats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="print-page">
+        <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.3rem !important; margin-bottom: 0.6rem !important;">
+          <div style="width: 80px;"></div>
+          <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+            <h2 style="font-size: 12pt !important; font-weight: bold; margin: 0 0 0.2rem 0;">ใบปะหน้าสรุปยอดการเบิกจ่ายค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ</h2>
+            <h3 style="font-size: 10pt !important; font-weight: bold; margin: 0 0 0.2rem 0;">ประจำที่ทำการไปรษณีย์ ${postOffice} (แยกตามหมวดหมู่ปฏิบัติงาน)</h3>
+            <p style="font-size: 9pt; margin: 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText} | ราคาน้ำมันอ้างอิงเฉลี่ย: ${currentFuelPrice.toFixed(2)} บาท/ลิตร</p>
+          </div>
+          <div style="border: 1px dashed #888; width: 80px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 7.5pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa; font-weight: normal;">
+            ตราประทับ<br>ปณ.
+          </div>
+        </div>
+
+        <table class="print-table" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+          <thead>
+            <tr>
+              <th style="width: 6%; padding: 7px !important; font-size: 9pt !important;">ลำดับ</th>
+              <th style="width: 30%; padding: 7px !important; font-size: 9pt !important;">หมวดหมู่ / กลุ่มปฏิบัติงาน</th>
+              <th style="width: 12%; padding: 7px !important; font-size: 9pt !important;">จำนวนรายการ</th>
+              <th style="width: 13%; padding: 7px !important; font-size: 9pt !important;">ปริมาณน้ำมัน (ลิตร)</th>
+              <th style="width: 13%; padding: 7px !important; font-size: 9pt !important;">ค่าน้ำมัน (บาท)</th>
+              <th style="width: 13%; padding: 7px !important; font-size: 9pt !important;">ค่าบำรุงรักษา (บาท)</th>
+              <th style="width: 13%; padding: 7px !important; font-size: 9pt !important;">รวมเบิกจ่ายสุทธิ (บาท)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr style="background-color: #f1f5f9 !important; font-weight: bold;">
+              <td colspan="2" style="text-align: center; padding: 7px !important; font-size: 9.5pt !important;">รวมเบิกจ่ายทั้งสิ้นทุกหมวดหมู่</td>
+              <td style="text-align: center; padding: 7px !important; font-size: 9.5pt !important;">${grandCount} รายการ</td>
+              <td style="text-align: right; padding: 7px 8px !important; font-size: 9.5pt !important;">${grandLiters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right; padding: 7px 8px !important; font-size: 9.5pt !important;">${grandFuel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right; padding: 7px 8px !important; font-size: 9.5pt !important;">${grandMaint.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right; padding: 7px 8px !important; font-size: 10pt !important; border-bottom: 3px double #000 !important;">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="print-signatures" style="margin-top: 2cm !important;">
+          <div class="sig-box" style="font-size: 8.5pt !important;">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.6rem; font-weight: bold;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box" style="font-size: 8.5pt !important;">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.6rem; font-weight: bold;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box" style="font-size: 8.5pt !important;">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.6rem; font-weight: bold;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  let modal = document.getElementById('fuelPrintSelectorModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'fuelPrintSelectorModal';
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '4700';
+    document.body.appendChild(modal);
+  }
+
+  const fmtBaht = (n) => n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  modal.innerHTML = `
+    <div class="modal-content glass-modal animate-slide-in" style="max-width: 560px; width: 95%;">
+      <div class="modal-header">
+        <h3>🖨️ เลือกหมวดหมู่ที่ต้องการพิมพ์ (ค่าน้ำมัน)</h3>
+        <button type="button" id="closeFuelPrintSelectorBtn" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="margin: 0 0 1rem 0; font-size: 0.85rem; color: var(--text-secondary);">
+          เลือกรายการเอกสารที่ต้องการสั่งพิมพ์สำหรับเดือน <strong>${monthText} พ.ศ. ${yearText}</strong>:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1.5px solid var(--post-orange); background: rgba(251, 80, 18, 0.06); cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">
+              <input type="checkbox" class="fuel-print-opt" value="cover" checked style="width: 18px; height: 18px; cursor: pointer;" />
+              📄 ใบปะหน้าสรุปยอดรวมทุกหมวดหมู่ (เสนอเซ็นอนุมัติ)
+            </span>
+            <span style="font-size: 0.78rem; font-weight: 700; color: var(--post-orange);">แนะนำ</span>
+          </label>
+          ${groupSummaryList.map(g => `
+            <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; border-radius: 10px; border: 1px solid var(--border-glass); background: rgba(255,255,255,0.02); cursor: ${g.stats.count > 0 ? 'pointer' : 'not-allowed'}; opacity: ${g.stats.count > 0 ? '1' : '0.5'};">
+              <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">
+                <input type="checkbox" class="fuel-print-opt" value="${g.key}" ${g.stats.count > 0 ? 'checked' : 'disabled'} style="width: 17px; height: 17px; cursor: pointer;" />
+                ${g.title} (${g.stats.count} ราย)
+              </span>
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);">${fmtBaht(g.stats.total)} ฿</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 0.5rem;">
+        <button type="button" id="cancelFuelPrintSelectorBtn" class="btn btn-secondary btn-small">ยกเลิก</button>
+        <button type="button" id="confirmFuelPrintSelectorBtn" class="btn btn-primary btn-small" style="font-weight: 700; padding: 0.5rem 1.25rem;">
+          🖨️ เปิดหน้าต่างพิมพ์รายงานที่เลือก
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.add('active');
+  modal.querySelector('#closeFuelPrintSelectorBtn').onclick = () => modal.classList.remove('active');
+  modal.querySelector('#cancelFuelPrintSelectorBtn').onclick = () => modal.classList.remove('active');
+  modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+
+  modal.querySelector('#confirmFuelPrintSelectorBtn').onclick = () => {
+    const selectedKeys = new Set(
+      Array.from(modal.querySelectorAll('.fuel-print-opt:checked')).map(cb => cb.value)
+    );
+    if (selectedKeys.size === 0) {
+      window.showToast('กรุณาเลือกอย่างน้อย 1 หมวดหมู่เพื่อพิมพ์!', 'warning');
+      return;
+    }
+    modal.classList.remove('active');
+    executeFuelPrintWithSelection(selectedKeys);
+  };
+
+  function executeFuelPrintWithSelection(selectedKeys) {
+    pagesHtml = [];
+
+    if (selectedKeys.has('cover')) {
+      pagesHtml.push(buildCoverSheetHtml());
+    }
+
+    if (selectedKeys.has('staff')) {
+      const page1 = buildStandardPageHtml('พนักงาน และ ลูกจ้างประจำ', listStaffAndRegular);
+      if (page1) pagesHtml.push(page1);
+    }
+
+    if (selectedKeys.has('worker')) {
+      const page2 = buildStandardPageHtml('ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว', listDailyAndTemp);
+      if (page2) pagesHtml.push(page2);
+    }
+
+    if (selectedKeys.has('contractor')) {
+      const page3 = buildStandardPageHtml('ลูกจ้างเหมาบริการนำจ่าย', listContractors);
+      if (page3) pagesHtml.push(page3);
+    }
+
+    if (selectedKeys.has('substitute')) {
+      const page4 = buildStandardPageHtml('เจ้าหน้าที่จ้างวิ่งแทนด้านจ่าย', listSubstitutes);
+      if (page4) pagesHtml.push(page4);
+    }
+
+    if (selectedKeys.has('supervisor')) {
+      const page5 = buildStandardPageHtml('หัวหน้าโซนนำจ่าย (ชนจ.)', listSupervisors);
+      if (page5) pagesHtml.push(page5);
+    }
 
   // Supervisors (ชนจ.) Pages
-  const postOffice = document.getElementById('globalPostOfficeName').value.trim() || '.............................................';
   const splitBahtSatang = (value) => {
     const rounded = Math.round(value * 100) / 100;
     const parts = rounded.toFixed(2).split('.');
@@ -2018,6 +2211,7 @@ export function printFuelReport() {
     };
   };
 
+  if (selectedKeys.has('supervisor')) {
   supervisors.forEach((sup) => {
     if (!sup.missions || sup.missions.length === 0) return;
 
@@ -2240,6 +2434,7 @@ export function printFuelReport() {
     `;
     pagesHtml.push(pagePlan);
   });
+  }
 
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
@@ -2400,6 +2595,7 @@ export function printFuelReport() {
     </html>
   `);
   printWindow.document.close();
+  }
 }
 
 export async function clearFuelData() {
@@ -2778,6 +2974,9 @@ export function getCalculatorsTemplate() {
                 </button>
                 <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);" title="นำเข้าวันทำงานจากไฟล์ Excel">
                   📥 นำเข้า Excel
+                </button>
+                <button type="button" id="openSmartAuditBtn" class="btn btn-secondary btn-small" style="border: 1px solid #0284c7; color: #0284c7; background: rgba(2, 132, 199, 0.08); font-weight: bold;" title="ตรวจทานความถูกต้องของวันทำงาน คนวิ่งแทน และข้อมูลภาษี 50 ทวิ">
+                  🔍 ตรวจทานข้อมูล
                 </button>
                 <span style="height: 22px; width: 1px; background: var(--border-glass); margin: 0 0.15rem;"></span>
                 <button type="button" id="exportCsvBtn" class="btn btn-secondary btn-small" title="ดาวน์โหลดตารางเป็นไฟล์ Excel">
