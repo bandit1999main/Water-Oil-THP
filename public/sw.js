@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thp-fuel-v2';
+const CACHE_NAME = 'thp-fuel-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -61,13 +61,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For HTML pages: Network-first (always get latest app)
-  if (event.request.headers.get('accept')?.includes('text/html')) {
+  // For HTML, JS, and CSS files: Network-first (always get latest app code when online, fall back to cache when offline)
+  const isCodeOrHtml =
+    event.request.headers.get('accept')?.includes('text/html') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css');
+
+  if (isCodeOrHtml) {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
           return res;
         })
         .catch(() => caches.match(event.request))
