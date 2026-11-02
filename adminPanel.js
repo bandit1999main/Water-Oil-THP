@@ -7,7 +7,9 @@ import {
   fetchGlobalConfigs,
   saveGlobalConfigs,
   logActivity,
-  fetchActivityLogs
+  fetchActivityLogs,
+  exportFullCloudBackup,
+  restoreFullCloudBackup
 } from './database.js';
 
 let appUsersList = [];
@@ -601,35 +603,27 @@ export async function initAdminPanel() {
   const backupFileSelector = document.getElementById('backupFileSelector');
 
   if (exportBackupBtn) {
-    exportBackupBtn.addEventListener('click', () => {
-      window.showToast('กำลังเตรียมไฟล์สำรองข้อมูล...', 'info');
+    exportBackupBtn.addEventListener('click', async () => {
+      window.showToast('กำลังดึงข้อมูลทุกเดือนจาก Cloud Firestore เพื่อสำรองข้อมูล...', 'info');
+      exportBackupBtn.disabled = true;
       try {
-        const backupData = {};
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key.startsWith('tp_')) {
-            try {
-              backupData[key] = JSON.parse(localStorage.getItem(key));
-            } catch (e) {
-              backupData[key] = localStorage.getItem(key);
-            }
-          }
-        }
-        
+        const backupData = await exportFullCloudBackup();
         const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `thp_system_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `thp_full_cloud_backup_${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        logActivity('backup_export', 'ส่งออกไฟล์สำรองข้อมูลของระบบ');
-        window.showToast('📤 ส่งออกสำรองข้อมูลสำเร็จ!', 'success');
+        logActivity('backup_export', 'ส่งออกไฟล์สำรองข้อมูล Cloud Firestore ทั้งระบบครบทุกเดือน');
+        window.showToast('📤 ส่งออกสำรองข้อมูลทั้งระบบจาก Cloud สำเร็จ!', 'success');
       } catch (err) {
         console.error("Backup export failed:", err);
         window.showToast('ส่งออกสำรองข้อมูลล้มเหลว', 'error');
+      } finally {
+        exportBackupBtn.disabled = false;
       }
     });
   }
@@ -647,21 +641,20 @@ export async function initAdminPanel() {
           const backupData = JSON.parse(event.target.result);
           
           // Basic validation checking if keys are system configs
-          const keys = Object.keys(backupData);
-          const hasSystemKeys = keys.some(k => k.startsWith('tp_'));
-          if (!hasSystemKeys) {
+          const keys = Object.keys(backupData).filter(k => k.startsWith('tp_'));
+          if (keys.length === 0) {
             window.showToast('❌ รูปแบบไฟล์สำรองข้อมูลไม่ถูกต้อง!', 'error');
             return;
           }
 
           window.showConfirm({
-            title: '📥 ยืนยันการกู้คืนข้อมูลสำรอง',
-            message: `ระบบตรวจพบข้อมูลสำรองจำนวน ${keys.length} ตาราง/การตั้งค่า คุณต้องการกู้คืนข้อมูลทั้งหมดใช่หรือไม่? (ข้อมูลปัจจุบันจะถูกเขียนทับ)`,
+            title: '📥 ยืนยันการกู้คืนข้อมูลสำรองขึ้น Cloud',
+            message: `ระบบตรวจพบข้อมูลสำรองจำนวน ${keys.length} ตาราง/ชุดข้อมูล คุณต้องการกู้คืนข้อมูลทั้งหมดกลับเข้าเครื่องและซิงค์ขึ้น Cloud Firestore ครบทุกเดือนใช่หรือไม่?`,
             icon: '⚠️',
-            okText: 'กู้คืนข้อมูล',
+            okText: 'กู้คืนข้อมูลทั้งระบบ',
             okClass: 'btn-danger',
             onConfirm: async () => {
-              window.showToast('กำลังกู้คืนข้อมูล...', 'info');
+              window.showToast('กำลังกู้คืนข้อมูลทุกเดือนขึ้น Cloud Firestore...', 'info');
               
               // Restore to localStorage
               keys.forEach(key => {
@@ -673,40 +666,17 @@ export async function initAdminPanel() {
                 }
               });
 
-              // Write back collections to Firestore in background if online
+              // Write all collections and monthly partitions back to Firestore
               if (isCloudConnected()) {
                 try {
-                  const dbMod = await import('./database.js');
-                  
-                  // Restore personnel
-                  if (backupData['tp_personnel']) {
-                    await dbMod.savePersonnelList(backupData['tp_personnel']);
-                  }
-                  // Restore global configs
-                  if (backupData['tp_global_configs']) {
-                    await dbMod.saveGlobalConfigs(backupData['tp_global_configs']);
-                  }
-                  // Restore route data
-                  if (backupData['tp_route_data']) {
-                    await dbMod.saveRouteData(backupData['tp_route_data']);
-                  }
-                  
-                  // Sync current lists back to Firestore
-                  const activeFuelKey = dbMod.getActiveEmployeesCollectionName();
-                  if (backupData[`tp_${activeFuelKey}`]) {
-                    await dbMod.saveEmployees(backupData[`tp_${activeFuelKey}`]);
-                  }
-                  const activeWaterKey = dbMod.getActiveWaterEmployeesCollectionName();
-                  if (backupData[`tp_${activeWaterKey}`]) {
-                    await dbMod.saveWaterEmployees(backupData[`tp_${activeWaterKey}`]);
-                  }
+                  await restoreFullCloudBackup(backupData);
                 } catch (dbErr) {
                   console.error("Firestore batch restore failed:", dbErr);
                 }
               }
 
-              await logActivity('backup_import', 'กู้คืนฐานข้อมูลและตั้งค่าของระบบสำเร็จผ่านไฟล์สำรองข้อมูล');
-              window.showToast('📥 กู้คืนข้อมูลสำรองสำเร็จ! ระบบจะทำการรีโหลดการตั้งค่าใหม่', 'success');
+              await logActivity('backup_import', 'กู้คืนฐานข้อมูลทุกเดือนและตั้งค่าของระบบขึ้น Cloud Firestore สำเร็จผ่านไฟล์สำรองข้อมูล');
+              window.showToast('📥 กู้คืนข้อมูลสำรองครบทุกเดือนสำเร็จ! ระบบจะทำการรีโหลดใหม่', 'success');
               await window.loadAppConfigs();
               backupFileSelector.value = '';
               setTimeout(() => window.location.reload(), 1500);

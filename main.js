@@ -353,6 +353,8 @@ window.escapeHtml = escapeHtml;
 
 function clearSensitiveLocalCache() {
   try {
+    // Do not wipe localStorage if offline, to prevent losing unsynced offline work
+    if (!navigator.onLine || !isCloudConnected()) return;
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -1655,19 +1657,23 @@ async function initCloudSync() {
           }
           if (updatedSettings.fuelMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.fuelMonth.value)) {
             globalMonthSelect.value = updatedSettings.fuelMonth.value;
+            window.activeMonth = String(updatedSettings.fuelMonth.value);
             monthChanged = true;
           }
           if (updatedSettings.fuelYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.fuelYear.value)) {
             globalYearSelect.value = updatedSettings.fuelYear.value;
+            window.activeYear = String(updatedSettings.fuelYear.value);
             yearChanged = true;
           }
         } else if (activeMode === 'water') {
           if (updatedSettings.waterMonth && globalMonthSelect && globalMonthSelect.value !== String(updatedSettings.waterMonth.value)) {
             globalMonthSelect.value = updatedSettings.waterMonth.value;
+            window.activeMonth = String(updatedSettings.waterMonth.value);
             monthChanged = true;
           }
           if (updatedSettings.waterYear && globalYearSelect && globalYearSelect.value !== String(updatedSettings.waterYear.value)) {
             globalYearSelect.value = updatedSettings.waterYear.value;
+            window.activeYear = String(updatedSettings.waterYear.value);
             yearChanged = true;
           }
         }
@@ -3524,7 +3530,7 @@ async function processCopy(prevList, isOverwrite) {
   if (currMoSelect && currYrInput) {
     const month = parseInt(currMoSelect.value);
     const year = parseInt(currYrInput.value);
-    resultList = filterAndEnrichResignedEmployees(resultList, year, month);
+    resultList = filterAndEnrichResignedEmployees(resultList, year, month, true);
   }
 
   if (activeMode === 'fuel') {
@@ -3696,14 +3702,14 @@ async function processLoadRegistry(mappedList, isOverwrite) {
   showToast(`โหลดทะเบียนบุคลากรสำเร็จ! จัดเก็บทั้งหมด ${resultList.length} รายชื่อ`, 'success');
 }
 
-function filterAndEnrichResignedEmployees(list, year, month) {
+function filterAndEnrichResignedEmployees(list, year, month, isNewCopy = false) {
   if (!Array.isArray(list) || !year || !month) return list;
   const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
   
   return list.filter(emp => {
     const person = registry.find(p => p.name === emp.name);
     if (person) {
-      if (person.vehicle === 'ไม่ได้ใช้งาน') {
+      if (isNewCopy && person.vehicle === 'ไม่ได้ใช้งาน') {
         return false;
       }
       if (person.status === 'resigned') {
@@ -3711,7 +3717,7 @@ function filterAndEnrichResignedEmployees(list, year, month) {
           if (year > person.resignYear || (year === person.resignYear && month > person.resignMonth)) {
             return false;
           }
-        } else {
+        } else if (isNewCopy) {
           return false;
         }
       }

@@ -125,16 +125,20 @@ export function checkIsAdmin(user) {
 export function getActiveEmployeesCollectionName() {
   const yrEl = document.getElementById('globalYear');
   const moEl = document.getElementById('globalMonth');
-  const yr = window.activeYear || (yrEl ? yrEl.value : '2569');
-  const mo = String(window.activeMonth || (moEl ? moEl.value : '05')).padStart(2, '0');
+  const yr = (yrEl && yrEl.value) ? yrEl.value : (window.activeYear || '2569');
+  const mo = String((moEl && moEl.value) ? moEl.value : (window.activeMonth || '05')).padStart(2, '0');
+  window.activeYear = String(yr);
+  window.activeMonth = String(parseInt(mo, 10) || mo);
   return `employees_${yr}_${mo}`;
 }
 
 export function getActiveWaterEmployeesCollectionName() {
   const yrEl = document.getElementById('globalYear');
   const moEl = document.getElementById('globalMonth');
-  const yr = window.activeYear || (yrEl ? yrEl.value : '2569');
-  const mo = String(window.activeMonth || (moEl ? moEl.value : '05')).padStart(2, '0');
+  const yr = (yrEl && yrEl.value) ? yrEl.value : (window.activeYear || '2569');
+  const mo = String((moEl && moEl.value) ? moEl.value : (window.activeMonth || '05')).padStart(2, '0');
+  window.activeYear = String(yr);
+  window.activeMonth = String(parseInt(mo, 10) || mo);
   return `water_employees_${yr}_${mo}`;
 }
 
@@ -1267,6 +1271,195 @@ export async function deleteLeaveRequest(requestId) {
     console.error("❌ Failed to deleteLeaveRequest:", error);
     return false;
   }
+}
+
+/**
+ * --- FULL CLOUD BACKUP & RESTORE (ADMIN DATA PROTECTION) ---
+ */
+export async function exportFullCloudBackup() {
+  const backupData = {};
+
+  // 1. Include all local tp_* keys first as base
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('tp_')) {
+      try {
+        backupData[key] = JSON.parse(localStorage.getItem(key));
+      } catch (e) {
+        backupData[key] = localStorage.getItem(key);
+      }
+    }
+  }
+
+  if (!isCloudConnected()) {
+    return backupData;
+  }
+
+  // 2. Pull static collections directly from Cloud Firestore
+  const [
+    personnelList,
+    routeData,
+    globalSettings,
+    globalConfigs,
+    savedTemplates,
+    sigProfiles,
+    monthlySummaries,
+    leaveRequests
+  ] = await Promise.all([
+    fetchPersonnelList(),
+    fetchRouteData(),
+    fetchGlobalSettings(),
+    fetchGlobalConfigs(),
+    fetchSavedTemplates(),
+    fetchSignatoryProfiles(),
+    fetchMonthlySummaries(),
+    fetchLeaveRequests()
+  ]);
+
+  if (personnelList) backupData['tp_personnel'] = personnelList;
+  if (routeData) backupData['tp_route_data'] = routeData;
+  if (globalSettings) backupData['tp_global_settings'] = globalSettings;
+  if (globalConfigs) backupData['tp_global_configs'] = globalConfigs;
+  if (savedTemplates) backupData['tp_saved_templates'] = savedTemplates;
+  if (sigProfiles) backupData['tp_sig_profiles'] = sigProfiles;
+  if (monthlySummaries) backupData['tp_monthly_summaries'] = monthlySummaries;
+  if (leaveRequests) backupData['tp_leave_requests'] = leaveRequests;
+
+  // 3. Discover all year_month partitions from monthly_summaries, customCycles, and active year
+  const partitions = new Set();
+  const currentYearBE = new Date().getFullYear() + 543;
+  [currentYearBE - 1, currentYearBE, currentYearBE + 1].forEach(yr => {
+    for (let m = 1; m <= 12; m++) {
+      partitions.add(`${yr}_${String(m).padStart(2, '0')}`);
+    }
+  });
+  if (Array.isArray(monthlySummaries)) {
+    monthlySummaries.forEach(s => {
+      if (s && s.id) partitions.add(s.id);
+    });
+  }
+  if (globalConfigs && Array.isArray(globalConfigs.customCycles)) {
+    globalConfigs.customCycles.forEach(c => {
+      if (c && c.year && c.value) {
+        partitions.add(`${c.year}_${String(c.value).padStart(2, '0')}`);
+      }
+    });
+  }
+
+  // Fetch all non-empty monthly partitions in parallel batches
+  const partitionList = Array.from(partitions);
+  await Promise.all(partitionList.map(async (ym) => {
+    try {
+      const [fuelDocs, waterDocs, attDocs] = await Promise.all([
+        getDocs(collection(db, `employees_${ym}`)),
+        getDocs(collection(db, `water_employees_${ym}`)),
+        getDocs(collection(db, `attendance_${ym}`))
+      ]);
+      if (!fuelDocs.empty) {
+        const list = [];
+        fuelDocs.forEach(d => list.push({ ...d.data(), id: d.id }));
+        backupData[`tp_employees_${ym}`] = list;
+      }
+      if (!waterDocs.empty) {
+        const list = [];
+        waterDocs.forEach(d => list.push({ ...d.data(), id: d.id }));
+        backupData[`tp_water_employees_${ym}`] = list;
+      }
+      if (!attDocs.empty) {
+        const list = [];
+        attDocs.forEach(d => list.push({ ...d.data(), id: d.id }));
+        backupData[`tp_attendance_${ym}`] = list;
+      }
+    } catch (e) {
+      console.warn(`Skipped backup partition ${ym}:`, e);
+    }
+  }));
+
+  backupData['_backupMeta'] = {
+    projectId: firebaseConfig.projectId,
+    exportedAt: new Date().toISOString(),
+    version: '2.5'
+  };
+
+  return backupData;
+}
+
+export async function restoreFullCloudBackup(backupData) {
+  if (!isCloudConnected() || !backupData) return false;
+
+  if (backupData['tp_personnel'] && Array.isArray(backupData['tp_personnel'])) {
+    await savePersonnelList(backupData['tp_personnel']);
+  }
+  if (backupData['tp_global_configs'] && typeof backupData['tp_global_configs'] === 'object') {
+    await saveGlobalConfigs(backupData['tp_global_configs']);
+  }
+  if (backupData['tp_route_data'] && typeof backupData['tp_route_data'] === 'object') {
+    await saveRouteData(backupData['tp_route_data']);
+  }
+  if (backupData['tp_global_settings'] && typeof backupData['tp_global_settings'] === 'object') {
+    for (const [k, v] of Object.entries(backupData['tp_global_settings'])) {
+      await saveGlobalSetting(k, v);
+    }
+  }
+  if (backupData['tp_saved_templates'] && typeof backupData['tp_saved_templates'] === 'object') {
+    for (const [tName, tData] of Object.entries(backupData['tp_saved_templates'])) {
+      const list = Array.isArray(tData) ? tData : (tData.employees || []);
+      const mode = tData.mode || 'fuel';
+      await saveTemplate(tName, list, mode);
+    }
+  }
+  if (backupData['tp_sig_profiles'] && typeof backupData['tp_sig_profiles'] === 'object') {
+    for (const [pName, pData] of Object.entries(backupData['tp_sig_profiles'])) {
+      await saveSignatoryProfile(pName, pData);
+    }
+  }
+  if (backupData['tp_leave_requests'] && Array.isArray(backupData['tp_leave_requests'])) {
+    for (const req of backupData['tp_leave_requests']) {
+      await saveLeaveRequest(req);
+    }
+  }
+
+  // Restore all monthly partitions (tp_employees_YYYY_MM, tp_water_employees_YYYY_MM, tp_attendance_YYYY_MM)
+  const keys = Object.keys(backupData);
+  for (const key of keys) {
+    const empMatch = key.match(/^tp_(employees_\d{4}_\d{2,})$/);
+    const waterMatch = key.match(/^tp_(water_employees_\d{4}_\d{2,})$/);
+    const attMatch = key.match(/^tp_attendance_(\d{4})_(\d{2,})$/);
+
+    if (empMatch && Array.isArray(backupData[key])) {
+      const collName = empMatch[1];
+      const list = backupData[key];
+      const batch = writeBatch(db);
+      const now = Date.now();
+      list.forEach((emp, i) => {
+        const id = emp.id ? String(emp.id) : `emp_${now}_${i}`;
+        batch.set(doc(db, collName, id), { ...emp, id });
+      });
+      await batch.commit();
+    } else if (waterMatch && Array.isArray(backupData[key])) {
+      const collName = waterMatch[1];
+      const list = backupData[key];
+      const batch = writeBatch(db);
+      const now = Date.now();
+      list.forEach((emp, i) => {
+        const id = emp.id ? String(emp.id) : `water_${now}_${i}`;
+        batch.set(doc(db, collName, id), { ...emp, id });
+      });
+      await batch.commit();
+    } else if (attMatch && Array.isArray(backupData[key])) {
+      await saveAttendanceList(parseInt(attMatch[1], 10), parseInt(attMatch[2], 10), backupData[key]);
+    }
+  }
+
+  if (backupData['tp_monthly_summaries'] && Array.isArray(backupData['tp_monthly_summaries'])) {
+    for (const s of backupData['tp_monthly_summaries']) {
+      if (s && s.year && s.month) {
+        await saveMonthlySummary(s.year, s.month, s);
+      }
+    }
+  }
+
+  return true;
 }
 
 
