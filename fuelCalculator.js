@@ -1112,41 +1112,48 @@ export function applyAvgPriceToGlobal() {
   window.showToast('บันทึกและเปิดใช้งานราคาน้ำมันเฉลี่ยเรียบร้อยแล้ว!', 'success');
 }
 
-export function exportFuelCsv() {
-  const employees = getEmployees();
+export async function exportFuelCsv() {
+  const employees = [...getEmployees()];
   if (employees.length === 0) {
     window.showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
     return;
   }
 
+  employees.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+
   const globalFuelPriceInput = document.getElementById('globalFuelPrice');
   const currentFuelPrice = parseFloat(globalFuelPriceInput ? globalFuelPriceInput.value : (window.defaultFuelPrice || 35.00)) || (window.defaultFuelPrice || 35.00);
-  let csvContent = "\uFEFF";
-  
-  csvContent += "ลำดับ,ชื่อ-นามสกุล,ตำแหน่ง/บทบาท,รายละเอียดด้านจ่าย/ภารกิจ,วันทำงาน,ปริมาณน้ำมัน (ลิตร),ค่าน้ำมัน (บาท),ค่าบำรุงรักษา (บาท),รวมเบิกจ่าย (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
-  
-  let flatRows = [];
-  const ROUTE_DATA = getRouteData();
-  employees.forEach((item, parentIndex) => {
-    if (item.formMode !== 'supervisor') {
-      const liters = calculateClaimLiters(item);
-      const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
-      const maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
-      const sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
+  const globalMonthSelect = document.getElementById('globalMonth');
+  const globalYearSelect = document.getElementById('globalYear');
+  const monthText = globalMonthSelect ? globalMonthSelect.options[globalMonthSelect.selectedIndex].text : '';
+  const yearText = globalYearSelect ? globalYearSelect.value : '';
+  const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 5;
+  const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+  const postOffice = (document.getElementById('globalPostOfficeName')?.value || window.postOfficeName || 'ไปรษณีย์ไทย').trim();
 
-      flatRows.push({
-        name: item.name,
-        position: item.isSubstitute ? `${item.position} / ${item.duty || '-'} (วิ่งแทน)` : `${item.position} / ${item.duty || '-'}`,
-        routeDesc: `ด้านจ่ายที่ ${item.route}` + (item.isSubstitute ? ' (วิ่งแทน)' : ''),
-        workDays: item.workDays,
-        liters: liters,
-        fuelCost: fuelCost,
-        maintCost: maintCost,
-        sumTotal: sumTotal,
-        signature: item.signature,
-        remarks: item.remarks
-      });
-    } else {
+  const sigMakerTitleVal = document.getElementById('sigMakerTitle')?.value.trim() || 'ผู้จัดทำ';
+  const sigMakerNameVal = document.getElementById('sigMakerName')?.value.trim() || '..........................................................';
+  const sigMakerPosVal = document.getElementById('sigMakerPos')?.value.trim() || '..........................................................';
+  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle')?.value.trim() || 'ผู้ตรวจสอบ';
+  const sigCheckerNameVal = document.getElementById('sigCheckerName')?.value.trim() || '..........................................................';
+  const sigCheckerPosVal = document.getElementById('sigCheckerPos')?.value.trim() || '..........................................................';
+  const sigApproverTitleVal = document.getElementById('sigApproverTitle')?.value.trim() || 'ผู้อนุมัติ';
+  const sigApproverNameVal = document.getElementById('sigApproverName')?.value.trim() || '..........................................................';
+  const sigApproverPosVal = document.getElementById('sigApproverPos')?.value.trim() || '..........................................................';
+
+  let listStaffAndRegular = [];
+  let listDailyAndTemp = [];
+  let listContractors = [];
+  let listSubstitutes = [];
+  let listSupervisors = [];
+  let supervisorsRaw = [];
+
+  const ROUTE_DATA = getRouteData();
+
+  employees.forEach((item) => {
+    if (item.formMode === 'supervisor') {
+      supervisorsRaw.push(item);
+
       const inspectMissions = (item.missions || []).filter(m => m.type === 'ตรวจสอบการนำจ่าย');
       if (inspectMissions.length > 0) {
         let rawInspectionLiters = 0;
@@ -1165,18 +1172,19 @@ export function exportFuelCsv() {
         const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
         const roundedInspectMaint = Math.round(inspectMaint * 100) / 100;
         const sumTotal = Math.round((fuelCost + roundedInspectMaint) * 100) / 100;
+        const routesList = inspectMissions.map(m => m.route).filter((v, i, a) => a.indexOf(v) === i).join(',');
 
-        flatRows.push({
+        listSupervisors.push({
           name: item.name,
           position: `${item.position} / ${item.duty || '-'}`,
-          routeDesc: `ตรวจสอบการนำจ่าย`,
-          workDays: inspectDays,
-          liters: liters,
-          fuelCost: fuelCost,
+          routeDesc: `ตรวจสอบการนำจ่าย ด้าน ${routesList}`,
+          dayCount: inspectDays,
+          liters,
+          fuelCost,
           maintCost: roundedInspectMaint,
-          sumTotal: sumTotal,
-          signature: item.signature,
-          remarks: item.remarks
+          sumTotal,
+          signature: item.signature || '',
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         });
       }
 
@@ -1190,40 +1198,559 @@ export function exportFuelCsv() {
         const roundedMaint = Math.round(maint * 100) / 100;
         const sumTotal = Math.round((fuelCost + roundedMaint) * 100) / 100;
 
-        flatRows.push({
+        listSupervisors.push({
           name: item.name,
           position: `${item.position} / ${item.duty || '-'}`,
           routeDesc: `${m.type} (ด้าน ${m.route})`,
-          workDays: m.days,
-          liters: liters,
-          fuelCost: fuelCost,
+          dayCount: m.days,
+          liters,
+          fuelCost,
           maintCost: roundedMaint,
-          sumTotal: sumTotal,
-          signature: item.signature,
-          remarks: item.remarks
+          sumTotal,
+          signature: item.signature || '',
+          remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
         });
       });
+    } else {
+      const liters = calculateClaimLiters(item);
+      const fuelCost = Math.round(liters * currentFuelPrice * 100) / 100;
+      const maintCost = Math.round(calculateMaintenanceCost(item) * 100) / 100;
+      const sumTotal = Math.round((fuelCost + maintCost) * 100) / 100;
+      const posLower = (item.position || '').toLowerCase();
+      const isStaff = !item.isSubstitute && (posLower.includes('พนักงาน') || posLower.includes('ลูกจ้างประจำ'));
+
+      const rowObj = {
+        name: item.name,
+        position: `${item.position} / ${item.duty || '-'}`,
+        routeDesc: `ด้านจ่ายที่ ${item.route}` + (item.isSubstitute ? ' (วิ่งแทน)' : ''),
+        dayCount: isStaff ? (item.daysNotWorked || 0) : (item.workDays || 0),
+        liters,
+        fuelCost,
+        maintCost,
+        sumTotal,
+        signature: item.signature || '',
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
+      };
+
+      if (item.isSubstitute) {
+        listSubstitutes.push(rowObj);
+      } else if (isStaff) {
+        listStaffAndRegular.push(rowObj);
+      } else if (posLower.includes('เหมา')) {
+        listContractors.push(rowObj);
+      } else {
+        listDailyAndTemp.push(rowObj);
+      }
     }
   });
 
-  flatRows.forEach((row, index) => {
-    csvContent += `${index + 1},"${row.name}","${row.position}","${row.routeDesc}",${row.workDays},${row.liters.toFixed(2)},${row.fuelCost.toFixed(2)},${row.maintCost.toFixed(2)},${row.sumTotal.toFixed(2)},"${row.signature}","${row.remarks}"\n`;
-  });
+  const categories = [
+    {
+      tabName: '1.พนง-ลูกจ้างประจำ',
+      title: 'พนักงาน และ ลูกจ้างประจำ',
+      dayColHeader: 'วันไม่ได้นำรถมาใช้ (วัน)',
+      headerColor: 'D9381E',
+      list: listStaffAndRegular
+    },
+    {
+      tabName: '2.ลูกจ้าง',
+      title: 'ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว',
+      dayColHeader: 'วันทำงาน (วัน)',
+      headerColor: '0284C7',
+      list: listDailyAndTemp
+    },
+    {
+      tabName: '3.ลูกจ้างเหมา',
+      title: 'ลูกจ้างเหมาบริการนำจ่าย',
+      dayColHeader: 'วันทำงาน (วัน)',
+      headerColor: '7C3AED',
+      list: listContractors
+    },
+    {
+      tabName: '4.วิ่งแทน',
+      title: 'เจ้าหน้าที่จ้างวิ่งแทนด้านจ่าย',
+      dayColHeader: 'วันทำงาน (วัน)',
+      headerColor: 'D97706',
+      list: listSubstitutes
+    },
+    {
+      tabName: '5.ชนจ.',
+      title: 'หัวหน้าโซนนำจ่าย (ชนจ.)',
+      dayColHeader: 'วันทำงาน (วัน)',
+      headerColor: '059669',
+      list: listSupervisors
+    }
+  ];
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
+  try {
+    window.showToast('กำลังสร้างไฟล์ Excel แยกหมวดหมู่...', 'info');
+    const XLSX = await window.getXLSX();
+    const wb = XLSX.utils.book_new();
 
-  const globalMonthSelect = document.getElementById('globalMonth');
-  const globalYearSelect = document.getElementById('globalYear');
-  const m = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
-  const y = globalYearSelect.value;
-  link.setAttribute("download", `เบิกค่าน้ำมัน_${m}_${y}.csv`);
+    const borderThin = {
+      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+    };
+    const borderTotal = {
+      top: { style: 'thin', color: { rgb: '1E293B' } },
+      bottom: { style: 'double', color: { rgb: '1E293B' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+    };
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const styleDocTitle = {
+      font: { name: 'Sarabun', sz: 13, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E293B' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    const styleSubTitle = {
+      font: { name: 'Sarabun', sz: 10, bold: true, color: { rgb: '334155' } },
+      fill: { fgColor: { rgb: 'F1F5F9' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    const styleTableHeader = {
+      font: { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '334155' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: borderThin
+    };
+    const styleCellCenter = {
+      font: { name: 'Sarabun', sz: 10 },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: borderThin
+    };
+    const styleCellLeft = {
+      font: { name: 'Sarabun', sz: 10 },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: borderThin
+    };
+    const styleCellNumber = {
+      font: { name: 'Sarabun', sz: 10 },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      numFmt: '#,##0.00',
+      border: borderThin
+    };
+    const styleCellTotalLabel = {
+      font: { name: 'Sarabun', sz: 10, bold: true, color: { rgb: '0F172A' } },
+      fill: { fgColor: { rgb: 'FEF3C7' } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: borderTotal
+    };
+    const styleCellTotalNum = {
+      font: { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'B45309' } },
+      fill: { fgColor: { rgb: 'FEF3C7' } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      numFmt: '#,##0.00',
+      border: borderTotal
+    };
+    const styleGrandTotalLabel = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '059669' } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: borderTotal
+    };
+    const styleGrandTotalNum = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '059669' } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      numFmt: '#,##0.00',
+      border: borderTotal
+    };
+
+    const colWidths = [
+      { wch: 7 },  // ลำดับ
+      { wch: 26 }, // ชื่อ - นามสกุล
+      { wch: 30 }, // ตำแหน่ง / บทบาท
+      { wch: 26 }, // รายละเอียดด้านจ่าย/ภารกิจ
+      { wch: 16 }, // วันทำงาน / วันไม่ได้นำรถมาใช้
+      { wch: 15 }, // ปริมาณน้ำมัน (ลิตร)
+      { wch: 15 }, // ค่าน้ำมัน (บาท)
+      { wch: 15 }, // ค่าบำรุงรักษา (บาท)
+      { wch: 16 }, // รวมเบิกจ่าย (บาท)
+      { wch: 20 }, // ลายมือชื่อผู้รับเงิน
+      { wch: 22 }  // หมายเหตุ
+    ];
+
+    // =========================================================================
+    // SHEET 1: รวมทั้งหมด (แยกกลุ่ม)
+    // =========================================================================
+    const combinedData = [];
+    const combinedMerges = [];
+    const combinedRowStyles = []; // Array of { rowIdx, type, color }
+
+    // Title rows
+    combinedData.push([`บัญชีสรุปการเบิกจ่ายค่าน้ำมันเชื้อเพลิงและค่าบำรุงรักษายานพาหนะ (${postOffice})`, '', '', '', '', '', '', '', '', '', '']);
+    combinedMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+    combinedRowStyles.push({ r: 0, type: 'docTitle' });
+
+    combinedData.push([`ประจำเดือน ${monthText} พ.ศ. ${yearText} | ราคาน้ำมันอ้างอิง: ${currentFuelPrice.toFixed(2)} บาท/ลิตร (แยกตามหมวดหมู่พนักงาน)`, '', '', '', '', '', '', '', '', '', '']);
+    combinedMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+    combinedRowStyles.push({ r: 1, type: 'subTitle' });
+
+    combinedData.push(['', '', '', '', '', '', '', '', '', '', '']);
+
+    let grandLiters = 0;
+    let grandFuelCost = 0;
+    let grandMaintCost = 0;
+    let grandNetTotal = 0;
+    let grandPeopleCount = 0;
+
+    categories.forEach((cat, catIdx) => {
+      // Category Banner Row
+      const bannerRowIdx = combinedData.length;
+      combinedData.push([`กลุ่มที่ ${catIdx + 1}: ${cat.title} (จำนวน ${cat.list.length} รายการ)`, '', '', '', '', '', '', '', '', '', '']);
+      combinedMerges.push({ s: { r: bannerRowIdx, c: 0 }, e: { r: bannerRowIdx, c: 10 } });
+      combinedRowStyles.push({ r: bannerRowIdx, type: 'catBanner', color: cat.headerColor });
+
+      // Table Header Row
+      const headerRowIdx = combinedData.length;
+      combinedData.push([
+        'ลำดับ',
+        'ชื่อ - นามสกุล',
+        'ตำแหน่ง / บทบาท',
+        'รายละเอียด/ด้านจ่าย',
+        cat.dayColHeader,
+        'ปริมาณน้ำมัน (ลิตร)',
+        'ค่าน้ำมัน (บาท)',
+        'ค่าบำรุงรักษา (บาท)',
+        'รวมเบิกจ่าย (บาท)',
+        'ลายมือชื่อผู้รับเงิน',
+        'หมายเหตุ'
+      ]);
+      combinedRowStyles.push({ r: headerRowIdx, type: 'tableHeader' });
+
+      if (cat.list.length === 0) {
+        const emptyRowIdx = combinedData.length;
+        combinedData.push(['-', 'ไม่มีรายการเบิกจ่ายในหมวดหมู่นี้', '-', '-', 0, 0, 0, 0, 0, '-', '-']);
+        combinedRowStyles.push({ r: emptyRowIdx, type: 'dataRow' });
+      } else {
+        let subLiters = 0;
+        let subFuel = 0;
+        let subMaint = 0;
+        let subTotal = 0;
+
+        cat.list.forEach((row, idx) => {
+          subLiters += row.liters;
+          subFuel += row.fuelCost;
+          subMaint += row.maintCost;
+          subTotal += row.sumTotal;
+          grandPeopleCount++;
+
+          const dataRowIdx = combinedData.length;
+          combinedData.push([
+            idx + 1,
+            row.name,
+            row.position,
+            row.routeDesc,
+            row.dayCount,
+            Number(row.liters.toFixed(2)),
+            Number(row.fuelCost.toFixed(2)),
+            Number(row.maintCost.toFixed(2)),
+            Number(row.sumTotal.toFixed(2)),
+            row.signature,
+            row.remarks
+          ]);
+          combinedRowStyles.push({ r: dataRowIdx, type: 'dataRow' });
+        });
+
+        grandLiters += subLiters;
+        grandFuelCost += subFuel;
+        grandMaintCost += subMaint;
+        grandNetTotal += subTotal;
+
+        const subRowIdx = combinedData.length;
+        combinedData.push([
+          '',
+          '',
+          '',
+          `รวมเฉพาะกลุ่ม: ${cat.title} (${cat.list.length} รายการ)`,
+          '',
+          Number(subLiters.toFixed(2)),
+          Number(subFuel.toFixed(2)),
+          Number(subMaint.toFixed(2)),
+          Number(subTotal.toFixed(2)),
+          '',
+          ''
+        ]);
+        combinedMerges.push({ s: { r: subRowIdx, c: 0 }, e: { r: subRowIdx, c: 4 } });
+        combinedRowStyles.push({ r: subRowIdx, type: 'subTotal' });
+      }
+
+      // Blank separator row
+      combinedData.push(['', '', '', '', '', '', '', '', '', '', '']);
+    });
+
+    // Grand total row at the bottom of Combined Sheet
+    const grandRowIdx = combinedData.length;
+    combinedData.push([
+      '',
+      '',
+      '',
+      `รวมเบิกจ่ายทั้งสิ้นทุกกลุ่ม (รวม ${grandPeopleCount} รายการ)`,
+      '',
+      Number(grandLiters.toFixed(2)),
+      Number(grandFuelCost.toFixed(2)),
+      Number(grandMaintCost.toFixed(2)),
+      Number(grandNetTotal.toFixed(2)),
+      '',
+      ''
+    ]);
+    combinedMerges.push({ s: { r: grandRowIdx, c: 0 }, e: { r: grandRowIdx, c: 4 } });
+    combinedRowStyles.push({ r: grandRowIdx, type: 'grandTotal' });
+
+    const wsCombined = XLSX.utils.aoa_to_sheet(combinedData);
+    wsCombined['!merges'] = combinedMerges;
+    wsCombined['!cols'] = colWidths;
+
+    combinedRowStyles.forEach(meta => {
+      for (let c = 0; c <= 10; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r: meta.r, c });
+        if (!wsCombined[cellRef]) wsCombined[cellRef] = { t: 's', v: '' };
+        if (meta.type === 'docTitle') {
+          wsCombined[cellRef].s = styleDocTitle;
+        } else if (meta.type === 'subTitle') {
+          wsCombined[cellRef].s = styleSubTitle;
+        } else if (meta.type === 'catBanner') {
+          wsCombined[cellRef].s = {
+            font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: meta.color } },
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        } else if (meta.type === 'tableHeader') {
+          wsCombined[cellRef].s = styleTableHeader;
+        } else if (meta.type === 'dataRow') {
+          if (c === 0 || c === 4 || c === 9) wsCombined[cellRef].s = styleCellCenter;
+          else if (c >= 5 && c <= 8) wsCombined[cellRef].s = styleCellNumber;
+          else wsCombined[cellRef].s = styleCellLeft;
+        } else if (meta.type === 'subTotal') {
+          if (c >= 5 && c <= 8) wsCombined[cellRef].s = styleCellTotalNum;
+          else wsCombined[cellRef].s = styleCellTotalLabel;
+        } else if (meta.type === 'grandTotal') {
+          if (c >= 5 && c <= 8) wsCombined[cellRef].s = styleGrandTotalNum;
+          else wsCombined[cellRef].s = styleGrandTotalLabel;
+        }
+      }
+    });
+
+    XLSX.utils.book_append_sheet(wb, wsCombined, 'รวมทั้งหมด (แยกกลุ่ม)');
+
+    // =========================================================================
+    // SHEETS 2..6: แยกชีตตามหมวดหมู่ (1.พนง-ลูกจ้างประจำ, 2.ลูกจ้าง, 3.ลูกจ้างเหมา, 4.วิ่งแทน, 5.ชนจ.)
+    // =========================================================================
+    categories.forEach((cat) => {
+      const sheetData = [];
+      const sheetMerges = [];
+      const sheetStyles = [];
+
+      sheetData.push([`รายละเอียดบัญชีรายชื่อพนักงานใช้รถจักรยานยนต์ส่วนตัวปฏิบัติหน้าที่นำจ่ายไปรษณีย์ภัณฑ์ค้างจ่าย (${postOffice})`, '', '', '', '', '', '', '', '', '', '']);
+      sheetMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+      sheetStyles.push({ r: 0, type: 'catBanner', color: cat.headerColor });
+
+      sheetData.push([`กลุ่มงาน: ${cat.title} | ประจำเดือน ${monthText} พ.ศ. ${yearText} (ราคาน้ำมันอ้างอิง: ${currentFuelPrice.toFixed(2)} บาท/ลิตร)`, '', '', '', '', '', '', '', '', '', '']);
+      sheetMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+      sheetStyles.push({ r: 1, type: 'subTitle' });
+
+      sheetData.push([
+        'ลำดับ',
+        'ชื่อ - นามสกุล',
+        'ตำแหน่ง / บทบาท',
+        'รายละเอียด/ด้านจ่าย',
+        cat.dayColHeader,
+        'ปริมาณน้ำมัน (ลิตร)',
+        'ค่าน้ำมัน (บาท)',
+        'ค่าบำรุงรักษา (บาท)',
+        'รวมเบิกจ่าย (บาท)',
+        'ลายมือชื่อผู้รับเงิน',
+        'หมายเหตุ'
+      ]);
+      sheetStyles.push({ r: 2, type: 'tableHeader' });
+
+      let subLiters = 0;
+      let subFuel = 0;
+      let subMaint = 0;
+      let subTotal = 0;
+
+      if (cat.list.length === 0) {
+        const rIdx = sheetData.length;
+        sheetData.push(['-', 'ไม่มีรายการเบิกจ่ายในหมวดหมู่นี้', '-', '-', 0, 0, 0, 0, 0, '-', '-']);
+        sheetStyles.push({ r: rIdx, type: 'dataRow' });
+      } else {
+        cat.list.forEach((row, idx) => {
+          subLiters += row.liters;
+          subFuel += row.fuelCost;
+          subMaint += row.maintCost;
+          subTotal += row.sumTotal;
+
+          const rIdx = sheetData.length;
+          sheetData.push([
+            idx + 1,
+            row.name,
+            row.position,
+            row.routeDesc,
+            row.dayCount,
+            Number(row.liters.toFixed(2)),
+            Number(row.fuelCost.toFixed(2)),
+            Number(row.maintCost.toFixed(2)),
+            Number(row.sumTotal.toFixed(2)),
+            row.signature,
+            row.remarks
+          ]);
+          sheetStyles.push({ r: rIdx, type: 'dataRow' });
+        });
+      }
+
+      const totalRowIdx = sheetData.length;
+      sheetData.push([
+        '',
+        '',
+        '',
+        `รวมทั้งสิ้น (${cat.title})`,
+        '',
+        Number(subLiters.toFixed(2)),
+        Number(subFuel.toFixed(2)),
+        Number(subMaint.toFixed(2)),
+        Number(subTotal.toFixed(2)),
+        '',
+        ''
+      ]);
+      sheetMerges.push({ s: { r: totalRowIdx, c: 0 }, e: { r: totalRowIdx, c: 4 } });
+      sheetStyles.push({ r: totalRowIdx, type: 'subTotal' });
+
+      // If this is the ชนจ. sheet and we have supervisor mission details, append the detailed mission breakdown!
+      if (cat.tabName === '5.ชนจ.' && supervisorsRaw.length > 0) {
+        sheetData.push(['', '', '', '', '', '', '', '', '', '', '']);
+        const planBannerIdx = sheetData.length;
+        sheetData.push(['ตารางรายละเอียดภารกิจและแผนการออกตรวจสอบการนำจ่ายของหัวหน้าโซนนำจ่าย (ชนจ.)', '', '', '', '', '', '', '', '', '', '']);
+        sheetMerges.push({ s: { r: planBannerIdx, c: 0 }, e: { r: planBannerIdx, c: 10 } });
+        sheetStyles.push({ r: planBannerIdx, type: 'catBanner', color: '0F766E' });
+
+        const planHeaderIdx = sheetData.length;
+        sheetData.push([
+          'ลำดับ',
+          'ชื่อ - นามสกุล (ชนจ.)',
+          'ประเภทภารกิจ',
+          'ด้านจ่ายที่ปฏิบัติ',
+          'วันที่ปฏิบัติงาน',
+          'จำนวนวัน',
+          'ระยะทางด้านจ่าย (กม./วัน)',
+          'ระยะทางที่ใช้จริง (กม.)',
+          'น้ำมันที่ใช้ (ลิตร)',
+          'พาหนะ',
+          'หมายเหตุ'
+        ]);
+        sheetStyles.push({ r: planHeaderIdx, type: 'tableHeader' });
+
+        let mSeq = 1;
+        supervisorsRaw.forEach((sup) => {
+          (sup.missions || []).forEach((m) => {
+            const routeInfo = ROUTE_DATA[m.route];
+            const workerDist = routeInfo ? parseFloat(routeInfo.workerDist) || 0 : 0;
+            const workerLiters = routeInfo ? parseFloat(routeInfo.workerLiters) || 0 : 0;
+            const isInspection = m.type === 'ตรวจสอบการนำจ่าย';
+            const actualDist = isInspection ? (workerDist / 2) * (m.days || 1) : workerDist * (m.days || 1);
+            const actualLiters = isInspection ? (workerLiters / 2) * (m.days || 1) : workerLiters * (m.days || 1);
+
+            const mRowIdx = sheetData.length;
+            sheetData.push([
+              mSeq++,
+              sup.name,
+              m.type,
+              `ด้านจ่ายที่ ${m.route}`,
+              m.dates || '-',
+              m.days || 1,
+              Number(workerDist.toFixed(2)),
+              Number(actualDist.toFixed(2)),
+              Number(actualLiters.toFixed(2)),
+              sup.vehicle || 'รถจักรยานยนต์',
+              sup.remarks || ''
+            ]);
+            sheetStyles.push({ r: mRowIdx, type: 'dataRow' });
+          });
+        });
+      }
+
+      // Signatory block at bottom of sheet
+      sheetData.push(['', '', '', '', '', '', '', '', '', '', '']);
+      sheetData.push([
+        '',
+        `ลงชื่อ..................................................${sigMakerTitleVal}`,
+        '',
+        '',
+        `ลงชื่อ..................................................${sigCheckerTitleVal}`,
+        '',
+        '',
+        `ลงชื่อ..................................................${sigApproverTitleVal}`,
+        '',
+        '',
+        ''
+      ]);
+      sheetData.push([
+        '',
+        `(${sigMakerNameVal})`,
+        '',
+        '',
+        `(${sigCheckerNameVal})`,
+        '',
+        '',
+        `(${sigApproverNameVal})`,
+        '',
+        '',
+        ''
+      ]);
+      sheetData.push([
+        '',
+        `ตำแหน่ง ${sigMakerPosVal}`,
+        '',
+        '',
+        `ตำแหน่ง ${sigCheckerPosVal}`,
+        '',
+        '',
+        `ตำแหน่ง ${sigApproverPosVal}`,
+        '',
+        '',
+        ''
+      ]);
+
+      const wsCat = XLSX.utils.aoa_to_sheet(sheetData);
+      wsCat['!merges'] = sheetMerges;
+      wsCat['!cols'] = colWidths;
+
+      sheetStyles.forEach(meta => {
+        for (let c = 0; c <= 10; c++) {
+          const cellRef = XLSX.utils.encode_cell({ r: meta.r, c });
+          if (!wsCat[cellRef]) wsCat[cellRef] = { t: 's', v: '' };
+          if (meta.type === 'catBanner') {
+            wsCat[cellRef].s = {
+              font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+              fill: { fgColor: { rgb: meta.color } },
+              alignment: { horizontal: 'center', vertical: 'center' }
+            };
+          } else if (meta.type === 'subTitle') {
+            wsCat[cellRef].s = styleSubTitle;
+          } else if (meta.type === 'tableHeader') {
+            wsCat[cellRef].s = styleTableHeader;
+          } else if (meta.type === 'dataRow') {
+            if (c === 0 || c === 4 || c === 9) wsCat[cellRef].s = styleCellCenter;
+            else if (c >= 5 && c <= 8) wsCat[cellRef].s = styleCellNumber;
+            else wsCat[cellRef].s = styleCellLeft;
+          } else if (meta.type === 'subTotal') {
+            if (c >= 5 && c <= 8) wsCat[cellRef].s = styleCellTotalNum;
+            else wsCat[cellRef].s = styleCellTotalLabel;
+          }
+        }
+      });
+
+      XLSX.utils.book_append_sheet(wb, wsCat, cat.tabName);
+    });
+
+    XLSX.writeFile(wb, `เบิกค่าน้ำมัน_${monthText}_${yearText}.xlsx`);
+    window.showToast('📊 ส่งออกไฟล์ Excel (.xlsx) แยกหมวดหมู่ครบทั้ง 5 กลุ่มเรียบร้อย!', 'success');
+  } catch (err) {
+    console.error('Excel export failed:', err);
+    window.showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์ Excel', 'error');
+  }
 }
 
 export function printFuelReport() {
