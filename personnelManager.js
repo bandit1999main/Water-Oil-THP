@@ -385,22 +385,23 @@ export function renderPersonnelTable() {
       activeCount++;
       displayNo = activeCount;
     }
+    const esc = window.escapeHtml || ((s) => s);
     const tr = document.createElement('tr');
     tr.style.opacity = isResigned ? '0.6' : '1';
     tr.innerHTML = `
       <td>${displayNo}</td>
       <td style="font-weight: 700;">
-        ${person.name}
+        ${esc(person.name)}
         ${isResigned ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.4rem; font-weight: bold;">ลาออก</span>` : ''}
         ${person.restDays && person.restDays.length > 0 ? `<div class="fuel-only-field" style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
       </td>
-      <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.position}</span></td>
-      <td><span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #e11d48; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.department || 'ทั่วไป'}</span></td>
-      <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: var(--post-emerald); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${person.duty || '-'}</span></td>
+      <td><span class="badge" style="background: rgba(139, 92, 246, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${esc(person.position)}</span></td>
+      <td><span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #e11d48; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${esc(person.department || 'ทั่วไป')}</span></td>
+      <td><span class="badge" style="background: rgba(14, 165, 233, 0.1); color: var(--post-emerald); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;">${esc(person.duty || '-')}</span></td>
       <td class="water-only-col">${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
-      <td class="fuel-only-col">${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
-      <td class="fuel-only-col">${person.vehicle || '-'}</td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${person.signature || person.name}</span></td>
+      <td class="fuel-only-col">${person.route ? 'ด้านจ่ายที่ ' + esc(person.route) : '-'}</td>
+      <td class="fuel-only-col">${esc(person.vehicle || '-')}</td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${esc(person.signature || person.name)}</span></td>
       <td class="actions-col">
         <button class="row-action-btn edit-person-btn" data-index="${originalIdx}" title="แก้ไข">✏️</button>
         ${isResigned ?

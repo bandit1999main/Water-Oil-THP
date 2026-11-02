@@ -395,16 +395,17 @@ export function renderFuelTable() {
       planBtnHtml = `<button class="btn btn-primary btn-small print-plan-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.2rem; background: var(--post-orange); border-color: var(--post-orange);">🖨️ แผนตรวจ</button>`;
     }
 
+    const esc = window.escapeHtml || ((s) => s);
     tr.innerHTML = `
       <td>${displayNo}</td>
-      <td><strong>${row.name}</strong></td>
-      <td><span class="badge position-${row.position.replace(/[\s\(\)\.]/g, '')}">${row.position} / ${row.item.duty || '-'}</span></td>
-      <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${row.routeDescPlain}">${row.routeDescHtml}</td>
+      <td><strong>${esc(row.name)}</strong></td>
+      <td><span class="badge position-${esc(row.position.replace(/[\s\(\)\.]/g, ''))}">${esc(row.position)} / ${esc(row.item.duty || '-')}</span></td>
+      <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${esc(row.routeDescPlain)}">${row.routeDescHtml}</td>
       <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ลิตร</td>
       <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
       <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
       <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</strong></td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${row.signature}</span></td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${esc(row.signature)}</span></td>
       <td class="actions-col" style="width: 280px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
         ${planBtnHtml}
@@ -2290,8 +2291,8 @@ export function getCalculatorsTemplate() {
             </div>
 
             <!-- Search Bar for Claims -->
-            <div class="search-bar-container" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; max-width: 400px; padding: 0 0.5rem;">
-              <input type="text" id="employeeSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา..." style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem;" />
+            <div class="search-bar-container" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; max-width: 440px; padding: 0 0.5rem;">
+              <input type="text" id="employeeSearchInput" class="form-input" placeholder="🔍 พิมพ์ชื่อ, ตำแหน่ง หรือหน้าที่ เพื่อค้นหา... (กด / ค้นหาด่วน)" style="margin: 0; padding: 0.5rem 0.75rem; font-size: 0.9rem;" />
             </div>
 
             <!-- Scrollable Table Container -->

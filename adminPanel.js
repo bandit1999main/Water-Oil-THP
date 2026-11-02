@@ -786,15 +786,16 @@ export async function renderActivityLogs() {
       typeBadge = `<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">⚙️ อื่นๆ</span>`;
     }
 
+    const esc = window.escapeHtml || ((s) => s);
     html += `
       <tr>
         <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; color: var(--text-secondary);">${timeText}</td>
         <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; font-weight: 600;">
-          ${log.actorName}<br/>
-          <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">${log.actorEmail}</span>
+          ${esc(log.actorName)}<br/>
+          <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">${esc(log.actorEmail)}</span>
         </td>
         <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); text-align: center; vertical-align: middle;">${typeBadge}</td>
-        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; font-weight: 500;">${log.description}</td>
+        <td style="padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; font-weight: 500;">${esc(log.description)}</td>
       </tr>
     `;
   });

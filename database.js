@@ -189,6 +189,7 @@ export async function saveEmployees(employeesList) {
   if (!isCloudConnected()) return false;
 
   try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'syncing' } }));
     const batch = writeBatch(db);
     
     // First, get all existing docs to clean up deleted ones
@@ -206,9 +207,11 @@ export async function saveEmployees(employeesList) {
     });
 
     await batch.commit();
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'synced' } }));
     console.log(`✅ Employees successfully synced to Cloud Firestore (${collName}).`);
     return true;
   } catch (error) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'error' } }));
     console.error(`❌ Firestore saveEmployees failed for ${collName}.`, error);
     return false;
   }
@@ -260,6 +263,7 @@ export async function saveWaterEmployees(employeesList) {
   if (!isCloudConnected()) return false;
 
   try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'syncing' } }));
     const batch = writeBatch(db);
     
     const querySnapshot = await getDocs(collection(db, collName));
@@ -275,9 +279,11 @@ export async function saveWaterEmployees(employeesList) {
     });
 
     await batch.commit();
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'synced' } }));
     console.log(`✅ Water employees successfully synced to Cloud Firestore (${collName}).`);
     return true;
   } catch (error) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'error' } }));
     console.error(`❌ Firestore saveWaterEmployees failed for ${collName}.`, error);
     return false;
   }
@@ -347,6 +353,7 @@ export async function saveRouteData(routeData) {
   if (!isCloudConnected()) return false;
 
   try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'syncing' } }));
     const existingSnap = await getDocs(collection(db, "route_data"));
     const batch = writeBatch(db);
     const currentKeys = new Set(Object.keys(routeData).map(String));
@@ -362,9 +369,11 @@ export async function saveRouteData(routeData) {
       batch.set(docRef, routeData[routeKey]);
     });
     await batch.commit();
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'synced' } }));
     console.log("✅ Route data successfully synced to Cloud Firestore.");
     return true;
   } catch (error) {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'error' } }));
     console.error("❌ Firestore saveRouteData failed.", error);
     return false;
   }
@@ -641,6 +650,7 @@ export async function savePersonnelList(personnelList) {
   if (!isCloudConnected()) return false;
 
   try {
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'syncing' } }));
     const batch = writeBatch(db);
     const querySnapshot = await getDocs(collection(db, "personnel"));
     querySnapshot.forEach((d) => {
@@ -655,6 +665,7 @@ export async function savePersonnelList(personnelList) {
     });
 
     await batch.commit();
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('thp-cloud-sync', { detail: { status: 'synced' } }));
     console.log("✅ Personnel list successfully synced to Cloud Firestore.");
     return true;
   } catch (error) {

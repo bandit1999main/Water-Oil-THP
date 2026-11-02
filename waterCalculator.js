@@ -115,18 +115,19 @@ export function renderWaterTable() {
       displayNo = activeCount;
     }
 
+    const esc = window.escapeHtml || ((s) => s);
     const tr = document.createElement('tr');
     if (isResigned) tr.style.opacity = '0.7';
     tr.innerHTML = `
       <td>${displayNo}</td>
-      <td style="font-weight: 700; color: var(--text-primary);">${item.name}</td>
-      <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${item.position} / ${item.duty || '-'}</span></td>
+      <td style="font-weight: 700; color: var(--text-primary);">${esc(item.name)}</td>
+      <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${esc(item.position)} / ${esc(item.duty || '-')}</span></td>
       <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
       <td style="text-align: center;">${item.workDays} วัน</td>
       <td style="font-weight: 700;">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
       <td style="color: ${tax > 0 ? 'var(--post-red)' : 'var(--text-secondary)'}; font-weight: ${tax > 0 ? '700' : '400'};">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
       <td style="font-weight: 800; color: var(--post-emerald);">${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
-      <td style="font-family: var(--font-title); font-style: italic; color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">${item.signature}</td>
+      <td style="font-family: var(--font-title); font-style: italic; color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">${esc(item.signature)}</td>
       <td class="actions-col">
         <button class="row-action-btn edit-btn" title="แก้ไข">✏️</button>
         <button class="row-action-btn delete-btn" title="ลบ">🗑️</button>

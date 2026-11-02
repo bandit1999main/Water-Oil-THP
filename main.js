@@ -340,6 +340,32 @@ function showConfirm({ title = 'ยืนยัน', message = '', icon = '⚠�
 window.showToast = showToast;
 window.showConfirm = showConfirm;
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
+function clearSensitiveLocalCache() {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('tp_') && k !== 'tp_theme') {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch (e) {
+    console.warn('Failed to clear sensitive local cache:', e);
+  }
+}
+
 function showPrompt({
   title = 'กรอกข้อมูล',
   message = '',
@@ -1231,6 +1257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoutBtn.addEventListener('click', async () => {
       showLoadingState();
       try {
+        clearSensitiveLocalCache();
         await logoutUser();
         window.location.reload();
       } catch (err) {
@@ -1245,6 +1272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     pendingLogoutBtn.addEventListener('click', async () => {
       showLoadingState();
       try {
+        clearSensitiveLocalCache();
         await logoutUser();
         window.location.reload();
       } catch (err) {
@@ -1312,6 +1340,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateConnectivityStatus();
     showToast('📴 ออฟไลน์ - ระบบจะสลับไปบันทึกข้อมูลในเครื่องโดยอัตโนมัติ', 'warning');
   });
+
+  // Listen to live cloud sync events
+  window.addEventListener('thp-cloud-sync', (e) => {
+    const status = e.detail?.status;
+    const badgeEl = document.getElementById('dbStatusBadge');
+    if (!badgeEl || !navigator.onLine) return;
+    if (status === 'syncing') {
+      badgeEl.innerHTML = `<span style="color: #f59e0b; font-weight: bold;">🔄 กำลังซิงค์ข้อมูล...</span>`;
+      badgeEl.style.background = 'rgba(245, 158, 11, 0.1)';
+      badgeEl.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+    } else if (status === 'synced') {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+      badgeEl.innerHTML = `<span style="color: #10b981; font-weight: bold;">🟢 ซิงค์ล่าสุด ${timeStr} น.</span>`;
+      badgeEl.style.background = 'rgba(16, 185, 129, 0.1)';
+      badgeEl.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+    }
+  });
+
+  // Global keyboard shortcuts (/ to search, Alt+1..6 to switch modes)
+  document.addEventListener('keydown', (e) => {
+    const activeTag = document.activeElement?.tagName;
+    const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
+    const hasOpenModal = !!document.querySelector('.modal-overlay.active');
+
+    if (e.key === '/' && !isTyping && !hasOpenModal && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const searchInput = document.getElementById('employeeSearchInput') || document.getElementById('personnelSearchInput');
+      if (searchInput && searchInput.offsetParent !== null) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      }
+      return;
+    }
+
+    if (e.altKey && !e.ctrlKey && !e.metaKey && !hasOpenModal) {
+      const modeMap = {
+        '1': { mode: 'fuel', btnId: 'modeFuelBtn' },
+        '2': { mode: 'water', btnId: 'modeWaterBtn' },
+        '3': { mode: 'personnel', btnId: 'modePersonnelBtn' },
+        '4': { mode: 'leave', btnId: 'modeLeaveBtn' },
+        '5': { mode: 'history', btnId: 'modeHistoryBtn' },
+        '6': { mode: 'admin', btnId: 'modeAdminBtn' }
+      };
+      const target = modeMap[e.key];
+      if (target) {
+        const btn = document.getElementById(target.btnId);
+        if (btn && !btn.classList.contains('hidden') && btn.offsetParent !== null) {
+          e.preventDefault();
+          switchAppMode(target.mode);
+        }
+      }
+    }
+  });
+
+  // Idle session auto-logout (30 minutes of inactivity on shared PCs)
+  const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+  let idleTimer = null;
+  const resetIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(async () => {
+      const mainApp = document.getElementById('mainAppContainer');
+      if (mainApp && !mainApp.classList.contains('hidden')) {
+        clearSensitiveLocalCache();
+        try {
+          await logoutUser();
+        } catch (err) {
+          console.warn('Idle logout error:', err);
+        }
+        window.location.reload();
+      }
+    }, IDLE_TIMEOUT_MS);
+  };
+  ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, resetIdleTimer, { passive: true });
+  });
+  resetIdleTimer();
 
   // Pre-fetch dynamic modules in the background after 3 seconds
   setTimeout(() => {
@@ -1632,6 +1737,22 @@ function renderDashboardView(html) {
 
 /* --- APP MODE SWITCHER (FUEL vs WATER vs PERSONNEL vs ADMIN) --- */
 async function switchAppMode(mode) {
+  const container = document.getElementById('activeDashboardView');
+  if (!document.startViewTransition) {
+    await switchAppModeCore(mode);
+    if (container) container.focus({ preventScroll: true });
+    return;
+  }
+
+  const transition = document.startViewTransition(async () => {
+    await switchAppModeCore(mode);
+  });
+  transition.finished.finally(() => {
+    if (container) container.focus({ preventScroll: true });
+  });
+}
+
+async function switchAppModeCore(mode) {
   activeMode = mode;
   document.documentElement.setAttribute('data-mode', mode);
 

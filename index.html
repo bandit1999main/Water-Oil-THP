@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="description" content="ระบบคำนวณค่าน้ำมันและค่าบำรุงรักษาไปรษณีย์ไทย คำนวณราคาน้ำมันถัวเฉลี่ยถ่วงน้ำหนักตามระเบียบใหม่ล่าสุด" />
     <title>ระบบคำนวณค่าน้ำมัน &amp; ค่าบำรุงรักษา | ไปรษณีย์ไทย</title>
 
@@ -224,7 +226,7 @@
         <img id="welcomeHeroBanner" src="./fuel_banner.png" alt="Dashboard Banner" style="width: 240px; height: 110px; object-fit: cover; border-radius: var(--radius-small); border: 1.5px solid var(--border-glass); box-shadow: 0 8px 24px rgba(0,0,0,0.15); transition: transform 0.3s ease;" class="welcome-hero-banner" />
       </div>
 
-      <div id="activeDashboardView"></div>
+      <div id="activeDashboardView" tabindex="-1" style="outline: none;"></div>
     </main>
 
     <!-- Toast Notification Container -->
