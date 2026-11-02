@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thp-fuel-v1';
+const CACHE_NAME = 'thp-fuel-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,6 +11,9 @@ const ASSETS_TO_CACHE = [
   './logistics_banner.png',
   './personnel_banner.png',
   './water_banner.png',
+  './leave_banner.png',
+  './admin_banner.png',
+  './avatar_placeholder.png',
 ];
 
 // Install: cache core assets

@@ -1,45 +1,39 @@
-# 🌌 Premium Interactive 2.5D Developer Portfolio & Admin Dashboard
+# 📮 ระบบคำนวณค่าน้ำมัน & ค่าน้ำดื่ม ไปรษณีย์ไทย (Water-Oil-THP)
 
-Welcome to my next-generation developer portfolio! This project showcases a beautiful, responsive dark-mode portfolio built with **Vite (Vanilla JS)**, maximum-performance modular styles, an interactive **2.5D isometric game engine**, and a secure **cloud-synchronized Administrative Panel**.
+ระบบบริหารจัดการและคำนวณเบิกจ่ายค่าน้ำมันเชื้อเพลิง ค่าบำรุงรักษายานพาหนะ ค่าน้ำดื่ม ทะเบียนบุคลากร ตารางลงเวลาปฏิบัติงาน และระบบการลาออนไลน์ สำหรับที่ทำการไปรษณีย์ไทย (พัฒนาด้วย Vite + Vanilla JavaScript + Firebase Cloud Firestore & Authentication)
 
----
+## ✨ ฟีเจอร์หลัก (Key Features)
 
-## ✨ Features
+1. **⛽ ระบบคำนวณค่าน้ำมันและค่าบำรุงรักษา (Fuel & Maintenance Calculator)**
+   - รองรับการเบิกจ่ายแบบรายเดือน (พนักงาน/ลูกจ้างประจำ) และรายวันตามวันทำงานจริง (ลูกจ้าง/วิ่งแทน)
+   - รองรับการคำนวณภารกิจตรวจสอบการนำจ่ายของหัวหน้าโซนนำจ่าย (ชนจ.)
+   - **จัดการด้านจ่ายอ้างอิง (Route Management)**: สามารถ **เพิ่มด้านจ่ายใหม่**, **แก้ไข**, หรือ **ลบด้านจ่าย** พร้อมระบบคำนวณระยะทาง/ปริมาณน้ำมันต่อเดือนอัตโนมัติ (x26 วัน | รถจักรยานยนต์ 25 กม./ลิตร, รถยนต์ 10 กม./ลิตร) และซิงค์ข้อมูลแบบเรียลไทม์ผ่าน Cloud Firestore
+   - คำนวณราคาน้ำมันถัวเฉลี่ยรายงวด และออกรายงานจัดพิมพ์ / ส่งออกไฟล์ Excel (.xlsx)
 
-### 🕹️ 2.5D Isometric Interactive World
-* **Procedural Character Sprite**: Pulsing glowing energy node that drifts through an isometric mesh space.
-* **Responsive Control Mappings**: Fully responsive seek-on-tap mechanics for phones and tablets, plus standard keyboard WASD/Arrow keys.
-* **Neon Gravity Portals**: Orbiting portal nodes that gravitationally attract, compress, and warp visitors to navigate smoothly into `#about`, `#projects`, or `#contact` pages.
+2. **🥤 ระบบคำนวณค่าน้ำดื่มและภาษีหัก ณ ที่จ่าย (Water Allowance & Tax Calculator)**
+   - คำนวณเงินช่วยเหลือค่าน้ำดื่มตามจำนวนวันปฏิบัติงานจริง
+   - คำนวณภาษีหัก ณ ที่จ่ายตามขั้นเงินเดือนอัตโนมัติ พร้อมพิมพ์หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)
 
-### 🛡️ Secure Admin Control Center
-* **Authorized Gate**: A hidden glassmorphic console route `/#admin` where the developer can log in.
-* **Dynamic Content Manager**: Full create, read, update, and delete (CRUD) forms to manage portfolio project cards in real-time.
-* **Dual-Layer Database Sync**: Uses Firebase Firestore and Authentication when environment keys exist, and automatically falls back to a highly-resilient, offline-ready `localStorage` database if offline or credentials are missing.
+3. **👥 ระบบทะเบียนบุคลากรและตารางลงเวลา (Personnel & Attendance Manager)**
+   - จัดการข้อมูลพนักงาน แผนก หน้าที่ ด้านจ่ายประจำ วันหยุดประจำสัปดาห์ และสถานะการลาออก
+   - ตารางลงเวลาทำงานรายเดือน ซิงค์วันทำงานเข้าสู่ระบบคำนวณค่าน้ำมันและค่าน้ำดื่มได้ทันที
+   - ระบบตรวจสอบรายชื่อซ้ำและนำเข้าข้อมูลจากไฟล์ Excel (.xlsx)
 
----
+4. **🏖️ ระบบบันทึกและอนุมัติการลา (Leave Manager)**
+   - บันทึกการลาป่วย ลากิจ ลาพักผ่อน และซิงค์วันลาเข้าตารางเวลาทำงานอัตโนมัติ
 
-## 🛠️ Technology Stack
-* **Bundler & Server**: Vite, esbuild (ES2022 Compilation)
-* **Frontend**: HTML5, Vanilla JavaScript (ES6+ Dynamic Modules)
-* **Styling**: Vanilla CSS3 (Glassmorphism & HSL Color Gradients)
-* **Database & Auth**: Cloud Firebase Firestore, Firebase Auth SDK
-* **Automation**: GitHub Actions Continuous Deployment
+5. **📊 ประวัติและสรุปยอดเบิกจ่ายรายปี (Financial Archive) & 🛡️ แผงควบคุมผู้ดูแลระบบ (Admin Panel)**
+   - สรุปยอดเบิกจ่ายรายเดือน/รายปี ปิดยอดประจำเดือน (Lock Month) จัดการสิทธิ์ผู้ใช้งาน สำรอง/กู้คืนฐานข้อมูล (Backup & Restore) และบันทึกประวัติกิจกรรม (Activity Logs)
 
----
+## 🚀 การพัฒนาและติดตั้ง (Development & Build)
 
-## 🚀 Getting Started
+```bash
+# ติดตั้งแพ็กเกจ
+npm install
 
-### Local Development
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   ```
-2. Run the local development server:
-   ```bash
-   npm run dev
-   ```
-3. Open `http://localhost:5173/` in your browser.
+# รันเซิร์ฟเวอร์สำหรับพัฒนา
+npm run dev
 
-### Admin Credentials
-* **Default Email**: `bandit1999main@gmail.com`
-* **Default Password**: `admin`
+# สร้างไฟล์สำหรับใช้งานจริง (Production Build)
+npm run build
+```

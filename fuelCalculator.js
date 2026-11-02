@@ -772,7 +772,7 @@ export function editSupervisorInForm(parentIndex) {
 
   // Pre-fill position/duty for supervisor
   document.getElementById('empPosition').value = emp.position || 'หัวหน้าโซน';
-  document.getElementById('vehicleType').value = emp.vehicle || 'จักรยานยนต์';
+  document.getElementById('vehicleType').value = emp.vehicle || 'รถจักรยานยนต์';
 
   renderMissionsTable();
 
@@ -2419,45 +2419,60 @@ export function getCalculatorsTemplate() {
 
 
     <div id="routeEditorModal" class="modal-overlay">
-      <div class="modal-content glass-modal animate-slide-in" style="max-width: 800px;">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 820px;">
         <div class="modal-header">
-          <h3>⚙️ แก้ไขตารางสถิติด้านจ่ายอ้างอิง (ด้านที่ 1 - 40)</h3>
+          <h3>⚙️ จัดการตารางสถิติด้านจ่ายอ้างอิง</h3>
           <button type="button" id="closeRouteEditorModalBtn" class="btn-close">&times;</button>
         </div>
         <div class="modal-body">
           <p class="modal-instruction">
-            แก้ไขระยะทางและปริมาณน้ำมันอ้างอิงสำหรับพนักงาน (รายเดือน) และลูกจ้าง (รายวัน) ข้อมูลนี้จะถูกบันทึกเพื่อใช้เป็นฐานข้อมูลในการคำนวณเบิกจ่ายของทุกรายชื่อ
+            เพิ่ม แก้ไข หรือลบข้อมูลระยะทางและปริมาณน้ำมันอ้างอิงสำหรับพนักงาน (รายเดือน) และลูกจ้าง (รายวัน) ข้อมูลนี้จะถูกบันทึกเพื่อใช้เป็นฐานข้อมูลในการคำนวณเบิกจ่ายของทุกรายชื่อ
           </p>
 
-          <!-- Edit Form -->
-          <div style="background: rgba(0, 0, 0, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small); padding: 1.25rem; margin-bottom: 1.25rem;">
-            <div style="font-weight: 700; color: var(--text-highlight); margin-bottom: 0.75rem; font-size: 0.95rem;">✏️ ฟอร์มแก้ไขข้อมูลด้านจ่าย</div>
+          <!-- Edit / Add Form -->
+          <div id="routeEditorFormContainer" style="background: rgba(0, 0, 0, 0.03); border: 1px solid var(--border-glass); border-radius: var(--radius-small); padding: 1.25rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.85rem;">
+              <div id="routeFormModeTitle" style="font-weight: 700; color: var(--text-highlight); font-size: 0.95rem;">✏️ ฟอร์มแก้ไขข้อมูลด้านจ่าย</div>
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <label style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                  <input type="checkbox" id="routeAutoCalcToggle" checked style="width: 15px; height: 15px; cursor: pointer;" />
+                  ⚡ คำนวณอัตโนมัติ (x26 วัน)
+                </label>
+                <button type="button" id="toggleAddRouteModeBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.08); padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;">
+                  ➕ เพิ่มด้านจ่ายใหม่
+                </button>
+              </div>
+            </div>
             
             <div class="form-row-3" style="grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
-              <div class="form-group">
+              <div class="form-group" id="editRouteSelectGroup">
                 <label for="editRouteSelect">เลือกด้านจ่ายที่ต้องการแก้</label>
                 <select id="editRouteSelect" class="form-select">
                   <!-- Loaded via JS -->
                 </select>
               </div>
+              <div class="form-group hidden" id="newRouteIdGroup">
+                <label for="newRouteIdInput" style="color: var(--post-emerald); font-weight: 700;">หมายเลข/ชื่อด้านจ่ายใหม่</label>
+                <input type="text" id="newRouteIdInput" class="form-input" placeholder="เช่น 41 หรือ พิเศษ-1" style="border-color: var(--post-emerald);" />
+              </div>
               <div class="form-group">
                 <label for="routeDistDay">ระยะทางต่อวัน (กิโลเมตร)</label>
-                <input type="number" id="routeDistDay" class="form-input" step="0.01" value="0" />
+                <input type="number" id="routeDistDay" class="form-input" step="0.01" min="0" value="0" />
               </div>
               <div class="form-group">
                 <label for="routeFuelDay">น้ำมันต่อวัน (ลิตร)</label>
-                <input type="number" id="routeFuelDay" class="form-input" step="0.01" value="0" />
+                <input type="number" id="routeFuelDay" class="form-input" step="0.01" min="0" value="0" />
               </div>
             </div>
 
             <div class="form-row-3" style="grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
               <div class="form-group">
                 <label for="routeDistMonth">ระยะทางต่อเดือน (กิโลเมตร)</label>
-                <input type="number" id="routeDistMonth" class="form-input" step="0.01" value="0" />
+                <input type="number" id="routeDistMonth" class="form-input" step="0.01" min="0" value="0" />
               </div>
               <div class="form-group">
                 <label for="routeFuelMonth">น้ำมันต่อเดือน (ลิตร)</label>
-                <input type="number" id="routeFuelMonth" class="form-input" step="0.01" value="0" />
+                <input type="number" id="routeFuelMonth" class="form-input" step="0.01" min="0" value="0" />
               </div>
               <div class="form-group">
                 <label for="routeHasCar">ประเภทพาหนะหลัก</label>
@@ -2469,12 +2484,13 @@ export function getCalculatorsTemplate() {
             </div>
 
             <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+              <button type="button" id="cancelAddRouteModeBtn" class="btn btn-secondary btn-small hidden">ยกเลิก</button>
               <button type="button" id="saveSingleRouteBtn" class="btn btn-primary btn-small">✔️ อัปเดตด้านจ่ายนี้</button>
             </div>
           </div>
 
           <!-- All Routes Scrollable Table -->
-          <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.9rem;">📋 ตารางข้อมูลด้านจ่ายปัจจุบัน (1 - 40)</div>
+          <div style="font-weight: 700; margin-bottom: 0.5rem; font-size: 0.9rem;">📋 ตารางข้อมูลด้านจ่ายปัจจุบัน (ทั้งหมด <span id="routeTotalCountBadge">40</span> ด้าน)</div>
           <div class="modal-table-container" style="max-height: 250px;">
             <table class="modal-table">
               <thead>
@@ -2485,7 +2501,7 @@ export function getCalculatorsTemplate() {
                   <th>น้ำมัน/วัน</th>
                   <th>ระยะทาง/เดือน</th>
                   <th>น้ำมัน/เดือน</th>
-                  <th>เลือก</th>
+                  <th>จัดการ</th>
                 </tr>
               </thead>
               <tbody id="routeEditorTableBody">
@@ -2789,31 +2805,6 @@ export function getCalculatorsTemplate() {
           <button type="button" id="submitImportBtn" class="btn btn-primary" style="background: var(--post-emerald); border-color: var(--post-emerald);" disabled>
             ✔️ ยืนยันนำเข้าข้อมูล
           </button>
-        </div>
-      </div>
-    </div>
-    <!-- Modal: Resolve Duplicate Personnel Name -->
-    <div id="duplicateResolutionModal" class="modal-overlay">
-      <div class="modal-content glass-modal animate-slide-in" style="max-width: 650px; width: 95%;">
-        <div class="modal-header">
-          <h3>⚠️ ตรวจพบรายชื่อซ้ำในระบบ</h3>
-          <button type="button" id="closeDuplicateResolutionModalBtn" class="btn-close">&times;</button>
-        </div>
-        <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; max-height: 70vh;">
-          <p style="margin-bottom: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5;">
-            พบรายชื่อ <strong style="font-size: 1.05rem; color: var(--post-orange);"><span id="duplicateTargetName"></span></strong> มีข้อมูลอยู่ในระบบแล้ว กรุณาเลือกดำเนินการอย่างใดอย่างหนึ่งด้านล่าง:
-          </p>
-          
-          <div style="font-weight: 700; margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-primary);">📥 เลือกบันทึกทับข้อมูลรายการเดิม:</div>
-          <div id="duplicateRecordsList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; max-height: 250px; overflow-y: auto; padding-right: 0.25rem;">
-            <!-- Dynamic list of duplicates to overwrite -->
-          </div>
-        </div>
-        <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: space-between; flex-wrap: wrap;">
-          <button type="button" id="addNewPersonnelBtn" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: var(--post-emerald); color: var(--post-emerald); display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 1rem;">
-            ➕ ลงทะเบียนเป็นคนใหม่
-          </button>
-          <button type="button" id="cancelDuplicateResolutionBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem;">ยกเลิก</button>
         </div>
       </div>
     </div>

@@ -17,6 +17,8 @@ import {
   fetchEmployeesFromCollection,
   fetchAttendanceList,
   fetchRouteData,
+  listenToRouteData,
+  deleteRouteFromCloud,
   saveRouteData,
   resetCloudRouteData,
   fetchSavedTemplates,
@@ -118,6 +120,11 @@ function initRouteData() {
 }
 
 let ROUTE_DATA = JSON.parse(localStorage.getItem('tp_route_data')) || initRouteData();
+let isAddingNewRouteMode = false;
+
+function getSortedRouteKeys() {
+  return Object.keys(ROUTE_DATA).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+}
 let appUsersList = [];
 let cachedGlobalSettings = null;
 let tempParsedRecords = [];
@@ -477,28 +484,7 @@ function setupCalculatorDOMReferencesAndEvents() {
   globalPostOfficeName = document.getElementById('globalPostOfficeName');
 
   // Populate Dropdowns for Calculator
-  if (deliveryRouteSelect && missionRouteSelect) {
-    deliveryRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
-    missionRouteSelect.innerHTML = '';
-    editRouteSelect.innerHTML = '';
-    
-    Object.keys(ROUTE_DATA).forEach(route => {
-      const opt1 = document.createElement('option');
-      opt1.value = route;
-      opt1.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-      deliveryRouteSelect.appendChild(opt1);
-
-      const opt2 = document.createElement('option');
-      opt2.value = route;
-      opt2.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-      missionRouteSelect.appendChild(opt2);
-
-      const opt3 = document.createElement('option');
-      opt3.value = route;
-      opt3.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-      editRouteSelect.appendChild(opt3);
-    });
-  }
+  updateAllRouteDropdownTexts();
 
   // Bind Event Listeners
   if (globalMonthSelect) {
@@ -774,6 +760,31 @@ function setupCalculatorDOMReferencesAndEvents() {
   editRouteSelect.addEventListener('change', loadSelectedRouteToEditorForm);
   saveSingleRouteBtn.addEventListener('click', saveSingleRouteSettings);
   resetAllRoutesBtn.addEventListener('click', resetRouteDataDefaults);
+
+  const toggleAddRouteModeBtn = document.getElementById('toggleAddRouteModeBtn');
+  if (toggleAddRouteModeBtn) {
+    toggleAddRouteModeBtn.addEventListener('click', () => setRouteEditorMode(!isAddingNewRouteMode));
+  }
+  const cancelAddRouteModeBtn = document.getElementById('cancelAddRouteModeBtn');
+  if (cancelAddRouteModeBtn) {
+    cancelAddRouteModeBtn.addEventListener('click', () => setRouteEditorMode(false));
+  }
+  if (routeDistDayInput) {
+    routeDistDayInput.addEventListener('input', () => {
+      const autoToggle = document.getElementById('routeAutoCalcToggle');
+      if (autoToggle && autoToggle.checked) {
+        autoCalculateRouteFields();
+      }
+    });
+  }
+  if (routeHasCarSelect) {
+    routeHasCarSelect.addEventListener('change', () => {
+      const autoToggle = document.getElementById('routeAutoCalcToggle');
+      if (autoToggle && autoToggle.checked) {
+        autoCalculateRouteFields();
+      }
+    });
+  }
 
   toggleSigEditBtn.addEventListener('click', toggleSignatoryInputsLock);
   const manageSigProfilesBtn = document.getElementById('openSigProfilesBtn');
@@ -1408,11 +1419,26 @@ async function initCloudSync() {
       applyGlobalSettingsToDOM();
 
       await fetchSavedTemplates();
+      const cloudRoutes = await fetchRouteData();
+      if (cloudRoutes && Object.keys(cloudRoutes).length > 0) {
+        ROUTE_DATA = cloudRoutes;
+      }
       updateAllRouteDropdownTexts();
       bindMonthlyDataListeners();
       updateTemplateSelectDropdown();
 
       // ===== REAL-TIME LISTENERS (cross-device sync) =====
+      listenToRouteData((updatedRoutes) => {
+        if (updatedRoutes && Object.keys(updatedRoutes).length > 0) {
+          ROUTE_DATA = updatedRoutes;
+          updateAllRouteDropdownTexts();
+          if (routeEditorModal && routeEditorModal.classList.contains('active')) {
+            renderRouteEditorTable();
+            if (!isAddingNewRouteMode) loadSelectedRouteToEditorForm();
+          }
+          if (activeMode === 'fuel') renderEmployeeTable();
+        }
+      });
       listenToPersonnel((updatedList) => {
         personnel = updatedList;
         if (activeMode === 'personnel') {
@@ -2006,7 +2032,7 @@ function openEditModal(isWaterMode, idx) {
     modalWaterFields.classList.add('hidden');
 
     modalDeliveryRoute.innerHTML = '<option value="" disabled>-- เลือกด้านจ่าย --</option>';
-    Object.keys(ROUTE_DATA).forEach(route => {
+    getSortedRouteKeys().forEach(route => {
       const opt = document.createElement('option');
       opt.value = route;
       opt.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
@@ -2300,13 +2326,95 @@ async function deleteSelectedTemplate() {
 /* --- REFERENCE ROUTE DATA EDITOR MODAL FUNCTIONS --- */
 function openRouteEditor() {
   routeEditorModal.classList.add('active');
+  setRouteEditorMode(false);
   renderRouteEditorTable();
   loadSelectedRouteToEditorForm();
 }
 
+function getNextSuggestedRouteId() {
+  const numericIds = Object.keys(ROUTE_DATA)
+    .map(k => parseInt(k, 10))
+    .filter(n => !isNaN(n) && n > 0);
+  const maxNum = numericIds.length > 0 ? Math.max(...numericIds) : 40;
+  return String(maxNum + 1);
+}
+
+function autoCalculateRouteFields() {
+  if (!routeDistDayInput || !routeHasCarSelect) return;
+  const distDay = parseFloat(routeDistDayInput.value) || 0;
+  const hasCar = routeHasCarSelect.value === 'true';
+  const kmPerLiter = hasCar ? 10 : 25;
+  const distMonth = Number((distDay * 26).toFixed(2));
+  const fuelDay = Number((distDay / kmPerLiter).toFixed(2));
+  const fuelMonth = Math.ceil(distMonth / kmPerLiter);
+
+  if (routeDistMonthInput) routeDistMonthInput.value = distMonth;
+  if (routeFuelDayInput) routeFuelDayInput.value = fuelDay;
+  if (routeFuelMonthInput) routeFuelMonthInput.value = fuelMonth;
+}
+
+function setRouteEditorMode(addMode) {
+  isAddingNewRouteMode = Boolean(addMode);
+  const editGroup = document.getElementById('editRouteSelectGroup');
+  const newGroup = document.getElementById('newRouteIdGroup');
+  const newRouteInput = document.getElementById('newRouteIdInput');
+  const modeTitle = document.getElementById('routeFormModeTitle');
+  const toggleBtn = document.getElementById('toggleAddRouteModeBtn');
+  const cancelAddBtn = document.getElementById('cancelAddRouteModeBtn');
+
+  if (isAddingNewRouteMode) {
+    if (editGroup) editGroup.classList.add('hidden');
+    if (newGroup) newGroup.classList.remove('hidden');
+    if (modeTitle) {
+      modeTitle.textContent = '➕ ฟอร์มเพิ่มด้านจ่ายใหม่';
+      modeTitle.style.color = 'var(--post-emerald)';
+    }
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '✏️ สลับกลับโหมดแก้ไข';
+      toggleBtn.style.borderColor = 'var(--post-orange)';
+      toggleBtn.style.color = 'var(--post-orange)';
+      toggleBtn.style.background = 'rgba(245, 158, 11, 0.08)';
+    }
+    if (cancelAddBtn) cancelAddBtn.classList.remove('hidden');
+    if (saveSingleRouteBtn) {
+      saveSingleRouteBtn.innerHTML = '➕ บันทึกด้านจ่ายใหม่';
+      saveSingleRouteBtn.style.background = 'var(--post-emerald)';
+      saveSingleRouteBtn.style.borderColor = 'var(--post-emerald)';
+    }
+    if (newRouteInput) {
+      newRouteInput.value = getNextSuggestedRouteId();
+      setTimeout(() => newRouteInput.focus(), 50);
+    }
+    if (routeDistDayInput) routeDistDayInput.value = 50;
+    if (routeHasCarSelect) routeHasCarSelect.value = 'false';
+    autoCalculateRouteFields();
+  } else {
+    if (editGroup) editGroup.classList.remove('hidden');
+    if (newGroup) newGroup.classList.add('hidden');
+    if (modeTitle) {
+      modeTitle.textContent = '✏️ ฟอร์มแก้ไขข้อมูลด้านจ่าย';
+      modeTitle.style.color = 'var(--text-highlight)';
+    }
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '➕ เพิ่มด้านจ่ายใหม่';
+      toggleBtn.style.borderColor = 'var(--post-emerald)';
+      toggleBtn.style.color = 'var(--post-emerald)';
+      toggleBtn.style.background = 'rgba(16, 185, 129, 0.08)';
+    }
+    if (cancelAddBtn) cancelAddBtn.classList.add('hidden');
+    if (saveSingleRouteBtn) {
+      saveSingleRouteBtn.innerHTML = '✔️ อัปเดตด้านจ่ายนี้';
+      saveSingleRouteBtn.style.background = '';
+      saveSingleRouteBtn.style.borderColor = '';
+    }
+    loadSelectedRouteToEditorForm();
+  }
+}
+
 function loadSelectedRouteToEditorForm() {
+  if (!editRouteSelect) return;
   const route = editRouteSelect.value;
-  if (!route) return;
+  if (!route || !ROUTE_DATA[route]) return;
   const routeInfo = ROUTE_DATA[route];
   routeDistDayInput.value = routeInfo.workerDist;
   routeFuelDayInput.value = routeInfo.workerLiters;
@@ -2316,59 +2424,170 @@ function loadSelectedRouteToEditorForm() {
 }
 
 async function saveSingleRouteSettings() {
-  const route = editRouteSelect.value;
-  if (!route) return;
+  const newRouteInput = document.getElementById('newRouteIdInput');
+  const route = isAddingNewRouteMode
+    ? (newRouteInput ? newRouteInput.value.trim() : '')
+    : (editRouteSelect ? editRouteSelect.value : '');
+
+  if (!route) {
+    showToast('กรุณาระบุหมายเลขหรือชื่อด้านจ่าย!', 'warning');
+    if (isAddingNewRouteMode && newRouteInput) newRouteInput.focus();
+    return;
+  }
+
   const workerDist = parseFloat(routeDistDayInput.value) || 0;
   const workerLiters = parseFloat(routeFuelDayInput.value) || 0;
   const staffDist = parseFloat(routeDistMonthInput.value) || 0;
   const staffLiters = parseFloat(routeFuelMonthInput.value) || 0;
   const hasCar = routeHasCarSelect.value === 'true';
-  ROUTE_DATA[route] = { hasCar, workerDist, workerLiters, staffDist, staffLiters };
-  await saveRouteData(ROUTE_DATA);
-  updateAllRouteDropdownTexts();
-  renderRouteEditorTable();
-  renderEmployeeTable();
-  showToast(`อัปเดตข้อมูลด้านจ่ายที่ ${route} สำเร็จ!`, 'success');
+
+  const commitRouteSave = async (isNew) => {
+    ROUTE_DATA[route] = { hasCar, workerDist, workerLiters, staffDist, staffLiters };
+    await saveRouteData(ROUTE_DATA);
+    updateAllRouteDropdownTexts();
+    if (editRouteSelect) editRouteSelect.value = route;
+    setRouteEditorMode(false);
+    renderRouteEditorTable();
+    renderEmployeeTable();
+    logActivity(
+      isNew ? 'route_add' : 'route_edit',
+      `${isNew ? 'เพิ่มด้านจ่ายใหม่' : 'แก้ไขข้อมูลด้านจ่าย'} ด้านที่ ${route} (${hasCar ? 'รถยนต์' : 'จักรยานยนต์'}, ${workerDist} กม./วัน)`
+    );
+    showToast(isNew ? `เพิ่มด้านจ่ายที่ ${route} สำเร็จ!` : `อัปเดตข้อมูลด้านจ่ายที่ ${route} สำเร็จ!`, 'success');
+  };
+
+  if (isAddingNewRouteMode && ROUTE_DATA[route]) {
+    showConfirm({
+      title: 'ตรวจพบด้านจ่ายซ้ำ',
+      message: `ด้านจ่ายที่ "${route}" มีอยู่ในระบบแล้ว คุณต้องการเขียนทับข้อมูลของด้านจ่ายที่ ${route} ใช่หรือไม่?`,
+      icon: '⚠️',
+      okText: 'เขียนทับข้อมูล',
+      onConfirm: () => commitRouteSave(false)
+    });
+    return;
+  }
+
+  await commitRouteSave(isAddingNewRouteMode);
+}
+
+async function deleteRouteFromEditor(route) {
+  const sortedKeys = getSortedRouteKeys();
+  if (sortedKeys.length <= 1) {
+    showToast('ไม่สามารถลบด้านจ่ายสุดท้ายออกจากระบบได้', 'error');
+    return;
+  }
+
+  showConfirm({
+    title: '🗑️ ยืนยันการลบด้านจ่าย',
+    message: `คุณแน่ใจหรือไม่ว่าต้องการลบ "ด้านจ่ายที่ ${route}" ออกจากระบบอ้างอิง?`,
+    icon: '🗑️',
+    okText: 'ยืนยันลบด้านจ่าย',
+    okClass: 'btn-danger',
+    onConfirm: async () => {
+      delete ROUTE_DATA[route];
+      await deleteRouteFromCloud(route);
+      await saveRouteData(ROUTE_DATA);
+      updateAllRouteDropdownTexts();
+      renderRouteEditorTable();
+      if (!isAddingNewRouteMode) {
+        loadSelectedRouteToEditorForm();
+      }
+      renderEmployeeTable();
+      logActivity('route_delete', `ลบด้านจ่ายที่ ${route} ออกจากตารางอ้างอิง`);
+      showToast(`ลบด้านจ่ายที่ ${route} เรียบร้อยแล้ว!`, 'success');
+    }
+  });
 }
 
 function updateAllRouteDropdownTexts() {
-  if (!deliveryRouteSelect || !missionRouteSelect) return;
-  const currentVal1 = deliveryRouteSelect.value;
-  const currentVal2 = missionRouteSelect.value;
-  deliveryRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
-  missionRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
-  Object.keys(ROUTE_DATA).forEach(route => {
-    const text = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
-    const opt1 = document.createElement('option');
-    opt1.value = route;
-    opt1.textContent = text;
-    deliveryRouteSelect.appendChild(opt1);
-    const opt2 = document.createElement('option');
-    opt2.value = route;
-    opt2.textContent = text;
-    missionRouteSelect.appendChild(opt2);
-  });
-  deliveryRouteSelect.value = currentVal1;
-  missionRouteSelect.value = currentVal2;
+  const sortedRoutes = getSortedRouteKeys();
+  const totalBadge = document.getElementById('routeTotalCountBadge');
+  if (totalBadge) totalBadge.textContent = sortedRoutes.length;
+
+  if (deliveryRouteSelect) {
+    const currentVal1 = deliveryRouteSelect.value;
+    deliveryRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
+    sortedRoutes.forEach(route => {
+      const opt = document.createElement('option');
+      opt.value = route;
+      opt.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      deliveryRouteSelect.appendChild(opt);
+    });
+    if (currentVal1 && ROUTE_DATA[currentVal1]) {
+      deliveryRouteSelect.value = currentVal1;
+    }
+  }
+
+  if (missionRouteSelect) {
+    const currentVal2 = missionRouteSelect.value;
+    missionRouteSelect.innerHTML = '<option value="" disabled selected>-- เลือกด้านจ่าย --</option>';
+    sortedRoutes.forEach(route => {
+      const opt = document.createElement('option');
+      opt.value = route;
+      opt.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      missionRouteSelect.appendChild(opt);
+    });
+    if (currentVal2 && ROUTE_DATA[currentVal2]) {
+      missionRouteSelect.value = currentVal2;
+    } else if (sortedRoutes.length > 0) {
+      missionRouteSelect.value = sortedRoutes[0];
+    }
+  }
+
+  if (editRouteSelect) {
+    const currentVal3 = editRouteSelect.value;
+    editRouteSelect.innerHTML = '';
+    sortedRoutes.forEach(route => {
+      const opt = document.createElement('option');
+      opt.value = route;
+      opt.textContent = `ด้านจ่ายที่ ${route}${ROUTE_DATA[route].hasCar ? ' (รถยนต์)' : ''}`;
+      editRouteSelect.appendChild(opt);
+    });
+    if (currentVal3 && ROUTE_DATA[currentVal3]) {
+      editRouteSelect.value = currentVal3;
+    } else if (sortedRoutes.length > 0) {
+      editRouteSelect.value = sortedRoutes[0];
+    }
+  }
+
+  if (typeof window.populateRouteDropdowns === 'function') {
+    window.populateRouteDropdowns();
+  }
 }
 
 function renderRouteEditorTable() {
+  if (!routeEditorTableBody) return;
   routeEditorTableBody.innerHTML = '';
-  Object.keys(ROUTE_DATA).forEach(route => {
+  const sortedRoutes = getSortedRouteKeys();
+  const totalBadge = document.getElementById('routeTotalCountBadge');
+  if (totalBadge) totalBadge.textContent = sortedRoutes.length;
+
+  sortedRoutes.forEach(route => {
     const info = ROUTE_DATA[route];
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${route}</strong></td>
       <td><span class="badge ${info.hasCar ? 'position-พนักงาน' : 'position-ลูกจ้าง'}">${info.hasCar ? '🚗 รถยนต์' : '🏍️ จักรยานยนต์'}</span></td>
-      <td>${info.workerDist.toFixed(1)} กม.</td>
-      <td>${info.workerLiters.toFixed(2)} ลิตร</td>
-      <td>${info.staffDist.toLocaleString()} กม.</td>
-      <td>${info.staffLiters.toLocaleString()} ลิตร</td>
-      <td><button type="button" class="btn btn-secondary btn-small select-route-btn" style="padding: 0.15rem 0.35rem; font-size: 0.75rem;">แก้ไข</button></td>
+      <td>${Number(info.workerDist || 0).toFixed(1)} กม.</td>
+      <td>${Number(info.workerLiters || 0).toFixed(2)} ลิตร</td>
+      <td>${Number(info.staffDist || 0).toLocaleString()} กม.</td>
+      <td>${Number(info.staffLiters || 0).toLocaleString()} ลิตร</td>
+      <td>
+        <div style="display: flex; gap: 0.35rem; justify-content: center;">
+          <button type="button" class="btn btn-secondary btn-small select-route-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem;">✏️ แก้ไข</button>
+          <button type="button" class="btn btn-danger btn-small delete-route-btn" style="padding: 0.15rem 0.45rem; font-size: 0.75rem;" title="ลบด้านจ่ายที่ ${route}">🗑️</button>
+        </div>
+      </td>
     `;
     tr.querySelector('.select-route-btn').addEventListener('click', () => {
+      setRouteEditorMode(false);
       editRouteSelect.value = route;
       loadSelectedRouteToEditorForm();
+      const formContainer = document.getElementById('routeEditorFormContainer');
+      if (formContainer) formContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    tr.querySelector('.delete-route-btn').addEventListener('click', () => {
+      deleteRouteFromEditor(route);
     });
     routeEditorTableBody.appendChild(tr);
   });
@@ -2377,17 +2596,19 @@ function renderRouteEditorTable() {
 async function resetRouteDataDefaults() {
   showConfirm({
     title: 'รีเซ็ตข้อมูลด้านจ่าย',
-    message: 'คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตสถิติด้านจ่ายอ้างอิงทั้งหมดกลับไปเป็นค่าเริ่มต้นจากโรงงาน? ผลลัพธ์นี้ไม่สามารถย้อนคืนได้',
+    message: 'คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตสถิติด้านจ่ายอ้างอิงทั้งหมดกลับไปเป็นค่าเริ่มต้นจากโรงงาน (ด้านที่ 1 - 40)? ด้านจ่ายที่เพิ่มใหม่จะถูกลบออกทั้งหมด',
     icon: '⚠️',
     okText: 'รีเซ็ตทั้งหมด',
     onConfirm: async () => {
       await resetCloudRouteData();
       ROUTE_DATA = initRouteData();
       await saveRouteData(ROUTE_DATA);
+      setRouteEditorMode(false);
       updateAllRouteDropdownTexts();
       renderRouteEditorTable();
       loadSelectedRouteToEditorForm();
       renderEmployeeTable();
+      logActivity('route_reset', 'รีเซ็ตตารางข้อมูลด้านจ่ายทั้งหมดกลับเป็นค่าเริ่มต้น (ด้านที่ 1 - 40)');
       showToast('รีเซ็ตข้อมูลด้านจ่ายทั้งหมดเรียบร้อยแล้ว!', 'success');
     }
   });
@@ -3178,7 +3399,7 @@ async function handleLoadFromRegistry() {
           name: person.name,
           position: person.position || 'พนักงาน',
           duty: person.duty || 'นำจ่าย',
-          vehicle: person.vehicle || 'จักรยานยนต์',
+          vehicle: person.vehicle || 'รถจักรยานยนต์',
           signature: person.signature || person.name,
           workDays: workDays,
           remarks: statusRemark,

@@ -686,6 +686,10 @@ export async function initAdminPanel() {
                   if (backupData['tp_global_configs']) {
                     await dbMod.saveGlobalConfigs(backupData['tp_global_configs']);
                   }
+                  // Restore route data
+                  if (backupData['tp_route_data']) {
+                    await dbMod.saveRouteData(backupData['tp_route_data']);
+                  }
                   
                   // Sync current lists back to Firestore
                   const activeFuelKey = dbMod.getActiveEmployeesCollectionName();
@@ -776,6 +780,8 @@ export async function renderActivityLogs() {
       typeBadge = `<span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">👤 จัดการบุคลากร</span>`;
     } else if (log.actionType.includes('attendance')) {
       typeBadge = `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: var(--post-blue); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">📅 เวลาเข้างาน</span>`;
+    } else if (log.actionType.includes('route')) {
+      typeBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">🗺️ จัดการด้านจ่าย</span>`;
     } else {
       typeBadge = `<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold;">⚙️ อื่นๆ</span>`;
     }

@@ -299,8 +299,8 @@ export async function fetchRouteData() {
       return null; // Let caller initialize standard route data
     }
     const routeData = {};
-    querySnapshot.forEach((doc) => {
-      routeData[doc.id] = doc.data();
+    querySnapshot.forEach((docSnap) => {
+      routeData[docSnap.id] = docSnap.data();
     });
     // Cache locally
     localStorage.setItem('tp_route_data', JSON.stringify(routeData));
@@ -311,14 +311,52 @@ export async function fetchRouteData() {
   }
 }
 
-// Save all route data
+// Real-time listener for route data
+export function listenToRouteData(callback) {
+  if (!isCloudConnected()) return () => {};
+  return onSnapshot(collection(db, "route_data"), (snapshot) => {
+    if (snapshot.empty) return;
+    const routeData = {};
+    snapshot.forEach((docSnap) => {
+      routeData[docSnap.id] = docSnap.data();
+    });
+    localStorage.setItem('tp_route_data', JSON.stringify(routeData));
+    callback(routeData);
+  }, (error) => {
+    console.error("❌ Real-time route_data listener error:", error);
+  });
+}
+
+// Delete a single route from Cloud Firestore
+export async function deleteRouteFromCloud(routeKey) {
+  if (!isCloudConnected()) return false;
+  try {
+    await deleteDoc(doc(db, "route_data", String(routeKey)));
+    console.log(`🗑️ Deleted route ${routeKey} from Cloud Firestore.`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Firestore deleteRouteFromCloud failed for ${routeKey}.`, error);
+    return false;
+  }
+}
+
+// Save all route data (and remove any deleted route docs in cloud)
 export async function saveRouteData(routeData) {
   localStorage.setItem('tp_route_data', JSON.stringify(routeData));
 
   if (!isCloudConnected()) return false;
 
   try {
+    const existingSnap = await getDocs(collection(db, "route_data"));
     const batch = writeBatch(db);
+    const currentKeys = new Set(Object.keys(routeData).map(String));
+
+    existingSnap.forEach((docSnap) => {
+      if (!currentKeys.has(docSnap.id)) {
+        batch.delete(doc(db, "route_data", docSnap.id));
+      }
+    });
+
     Object.keys(routeData).forEach((routeKey) => {
       const docRef = doc(db, "route_data", String(routeKey));
       batch.set(docRef, routeData[routeKey]);

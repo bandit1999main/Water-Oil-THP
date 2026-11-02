@@ -2,66 +2,118 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Thailand Post Oil, Water, & Attendance Collections (dynamic & static) ---
-    match /{collectionId}/{document} {
-      allow read: if request.auth != null && (
-        collectionId == 'employees' ||
-        collectionId.matches('employees_[0-9]+_[0-9]+') ||
-        collectionId == 'water_employees' ||
-        collectionId.matches('water_employees_[0-9]+_[0-9]+') ||
-        collectionId == 'personnel' ||
-        collectionId == 'templates' ||
-        collectionId == 'signatory_profiles' ||
-        collectionId == 'route_data' ||
-        collectionId == 'global_settings' ||
-        collectionId == 'configs' ||
-        collectionId == 'monthly_summaries' ||
-        collectionId.matches('attendance_[0-9]+_[0-9]+') ||
-        collectionId == 'leave_requests'
-      );
-      allow write: if request.auth != null && (
-        request.auth.token.email == 'bandit1999main@gmail.com' ||
+    // ===============================================================
+    // Assumed Data Model & Collections (Thailand Post Fuel & Water System)
+    // ===============================================================
+    // - employees, employees_YYYY_MM: Fuel calculation records per employee
+    // - water_employees, water_employees_YYYY_MM: Water allowance & tax records
+    // - personnel: Master personnel directory
+    // - templates: Saved calculation templates (fuel / water)
+    // - signatory_profiles: Saved signatory names & positions
+    // - route_data: Custom route names & distances
+    // - global_settings, configs: Global variables, tax brackets, and month locks
+    // - monthly_summaries: Monthly aggregated cost/tax snapshots
+    // - attendance_YYYY_MM: Monthly employee attendance records
+    // - leave_requests: Employee leave request entries
+    // - activity_logs: Audit trail logs (actorEmail, actorName, actionType, description, timestamp)
+    // - app_users/{userId}: User profile, role ('user' | 'admin'), and approval status (approved: bool)
+    // ===============================================================
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMainAdmin() {
+      return isSignedIn() && request.auth.token.email == 'bandit1999main@gmail.com';
+    }
+
+    function isAdmin() {
+      return isMainAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/app_users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
-      ) && (
-        collectionId == 'employees' ||
-        collectionId.matches('employees_[0-9]+_[0-9]+') ||
-        collectionId == 'water_employees' ||
-        collectionId.matches('water_employees_[0-9]+_[0-9]+') ||
-        collectionId == 'personnel' ||
-        collectionId == 'templates' ||
-        collectionId == 'signatory_profiles' ||
-        collectionId == 'route_data' ||
-        collectionId == 'global_settings' ||
-        collectionId == 'configs' ||
-        collectionId == 'monthly_summaries' ||
-        collectionId.matches('attendance_[0-9]+_[0-9]+') ||
-        collectionId == 'leave_requests'
       );
     }
 
+    function isApprovedUser() {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/app_users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.approved == true
+      );
+    }
+
+    function isCoreOperationalCollection(collectionId) {
+      return collectionId == 'employees' ||
+        collectionId.matches('employees_[0-9]+_[0-9]+') ||
+        collectionId == 'water_employees' ||
+        collectionId.matches('water_employees_[0-9]+_[0-9]+') ||
+        collectionId == 'personnel' ||
+        collectionId == 'templates' ||
+        collectionId == 'signatory_profiles' ||
+        collectionId == 'route_data' ||
+        collectionId == 'global_settings' ||
+        collectionId == 'configs' ||
+        collectionId == 'monthly_summaries' ||
+        collectionId.matches('attendance_[0-9]+_[0-9]+');
+    }
+
+    function isOperationalCollection(collectionId) {
+      return isCoreOperationalCollection(collectionId) ||
+        collectionId == 'leave_requests' ||
+        collectionId == 'activity_logs';
+    }
+
+    // --- Activity Audit Logs ---
+    match /activity_logs/{logId} {
+      allow read, create: if isApprovedUser();
+      allow update, delete: if isAdmin();
+    }
+
+    // --- Leave Requests ---
+    match /leave_requests/{requestId} {
+      allow read, create: if isApprovedUser();
+      allow update, delete: if isAdmin();
+    }
+
+    // --- Thailand Post Oil, Water, & Attendance Collections (dynamic & static) ---
+    match /{collectionId}/{document} {
+      allow read: if isApprovedUser() && isOperationalCollection(collectionId);
+      allow create: if (isAdmin() && isOperationalCollection(collectionId)) ||
+        (isApprovedUser() && (collectionId == 'activity_logs' || collectionId == 'leave_requests'));
+      allow update, delete: if isAdmin() && isOperationalCollection(collectionId);
+    }
+
+    // --- Application Users & RBAC Metadata ---
     match /app_users/{userId} {
-      // Any logged-in user can read user profiles
-      allow read: if request.auth != null;
+      // Any signed-in user can read user profiles (required during login/approval check)
+      allow read: if isSignedIn();
 
-      // Any logged-in user can CREATE their own document (first-time registration)
-      // Enforce that new users must have the default 'user' role
-      allow create: if request.auth != null && 
-                    request.auth.uid == userId && 
-                    request.resource.data.role == 'user';
-
-      // Only the user themselves (without changing their role) OR admin can update
-      allow update: if request.auth != null && (
-        (request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))) ||
-        request.auth.token.email == 'bandit1999main@gmail.com' ||
-        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
+      // A signed-in user can create their own profile with default 'user' role (unapproved), or an admin can create
+      allow create: if isSignedIn() && (
+        isAdmin() || (
+          request.auth.uid == userId &&
+          request.resource.data.role == 'user' &&
+          (!('approved' in request.resource.data) || request.resource.data.approved == false)
+        )
       );
 
-      // Only the user themselves OR admin can delete
-      allow delete: if request.auth != null && (
+      // Only the user themselves (without modifying 'role' or 'approved') OR an admin can update
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == userId &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'approved'])
+        ) ||
+        isAdmin()
+      );
+
+      // Only the user themselves OR an admin can delete
+      allow delete: if isSignedIn() && (
         request.auth.uid == userId ||
-        request.auth.token.email == 'bandit1999main@gmail.com' ||
-        get(/databases/$(database)/documents/app_users/$(request.auth.uid)).data.role == 'admin'
+        isAdmin()
       );
     }
   }
 }
+

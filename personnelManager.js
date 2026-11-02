@@ -25,15 +25,17 @@ function getActiveMode() {
   return window.activeMode || 'personnel';
 }
 
-function populateRouteDropdowns() {
+export function populateRouteDropdowns() {
   const routeData = window.ROUTE_DATA || {};
-  const routeKeys = Object.keys(routeData).sort((a, b) => parseInt(a) - parseInt(b));
+  const routeKeys = Object.keys(routeData).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
   
   // If no ROUTE_DATA, generate 1-40 as fallback
-  const maxRoute = routeKeys.length > 0 ? Math.max(...routeKeys.map(Number)) : 40;
-  const routeNums = routeKeys.length > 0 ? routeKeys.map(Number) : Array.from({ length: maxRoute }, (_, i) => i + 1);
+  const routeList = routeKeys.length > 0 ? routeKeys : Array.from({ length: 40 }, (_, i) => String(i + 1));
 
-  const routeOptionsHTML = routeNums.map(n => `<option value="${n}">ด้านที่ ${n}</option>`).join('');
+  const routeOptionsHTML = routeList.map(r => {
+    const hasCarSuffix = routeData[r]?.hasCar ? ' (รถยนต์)' : '';
+    return `<option value="${r}">ด้านที่ ${r}${hasCarSuffix}</option>`;
+  }).join('');
   const blankOption = `<option value="">-- เลือกด้านจ่าย (ถ้ามี) --</option>`;
 
   // Populate registration form route select
@@ -52,6 +54,7 @@ function populateRouteDropdowns() {
     modalRouteSelect.value = currentVal;
   }
 }
+window.populateRouteDropdowns = populateRouteDropdowns;
 
 export function applyDutyBasedRegistryRestrictions() {
   const claimDuties = window.currentUserDuties || ['fuel', 'water'];
