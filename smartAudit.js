@@ -474,79 +474,137 @@ export async function openSmartAuditModal(options = {}) {
 
     bodyEl.innerHTML = `${preflightBanner}${kpiBadges}<div>${cardsHtml}</div>`;
 
-    // Wire individual Auto-Fix buttons
+    const ensureUnlocked = () => {
+      if (window.isCurrentMonthLocked) {
+        window.showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+        return false;
+      }
+      return true;
+    };
+
+    // Wire individual Auto-Fix buttons with explicit confirmation dialogs
     bodyEl.querySelectorAll('.audit-fix-att-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
-        if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
-          window.waterEmployees[m.waterIdx].workDays = m.attDays;
-          await saveWaterEmployees(window.waterEmployees);
-        }
-        if (m.fuelIdx !== -1 && !m.isMonthlyStaff && window.employees[m.fuelIdx]) {
-          window.employees[m.fuelIdx].workDays = m.attDays;
-          await saveEmployees(window.employees);
-        }
-        window.showToast(`ซิงค์วันทำงานของ ${m.name} เป็น ${m.attDays} วัน ตามตารางลงเวลาสำเร็จ!`, 'success');
-        await refreshView();
+        window.showConfirm({
+          title: '⚡ ยืนยันการซิงค์ตามตารางลงเวลา',
+          message: `คุณต้องการปรับจำนวนวันทำงานของ "${m.name}" ให้ตรงกับตารางลงเวลา (${m.attDays} วัน) ใช่หรือไม่?`,
+          icon: '📅',
+          okText: 'ยืนยันปรับข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
+              window.waterEmployees[m.waterIdx].workDays = m.attDays;
+              await saveWaterEmployees(window.waterEmployees);
+            }
+            if (m.fuelIdx !== -1 && !m.isMonthlyStaff && window.employees[m.fuelIdx]) {
+              window.employees[m.fuelIdx].workDays = m.attDays;
+              await saveEmployees(window.employees);
+            }
+            window.showToast(`ซิงค์วันทำงานของ ${m.name} เป็น ${m.attDays} วัน ตามตารางลงเวลาสำเร็จ!`, 'success');
+            await refreshView();
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-fix-water-to-fuel-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
-        if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
-          window.waterEmployees[m.waterIdx].workDays = m.fuelDays;
-          await saveWaterEmployees(window.waterEmployees);
-          window.showToast(`ปรับวันทำงานค่าน้ำดื่มของ ${m.name} เป็น ${m.fuelDays} วัน สำเร็จ!`, 'success');
-          await refreshView();
-        }
+        window.showConfirm({
+          title: '⚡ ยืนยันการปรับวันทำงานค่าน้ำดื่ม',
+          message: `คุณต้องการปรับวันทำงานค่าน้ำดื่มของ "${m.name}" จาก ${m.waterDays} วัน เป็น ${m.fuelDays} วัน (ให้เท่ากับค่าน้ำมัน) ใช่หรือไม่?`,
+          icon: '🥤',
+          okText: 'ยืนยันปรับข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
+              window.waterEmployees[m.waterIdx].workDays = m.fuelDays;
+              await saveWaterEmployees(window.waterEmployees);
+              window.showToast(`ปรับวันทำงานค่าน้ำดื่มของ ${m.name} เป็น ${m.fuelDays} วัน สำเร็จ!`, 'success');
+              await refreshView();
+            }
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-fix-fuel-to-water-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
-        if (m.fuelIdx !== -1 && window.employees[m.fuelIdx]) {
-          window.employees[m.fuelIdx].workDays = m.waterDays;
-          await saveEmployees(window.employees);
-          window.showToast(`ปรับวันทำงานค่าน้ำมันของ ${m.name} เป็น ${m.waterDays} วัน สำเร็จ!`, 'success');
-          await refreshView();
-        }
+        window.showConfirm({
+          title: '⚡ ยืนยันการปรับวันทำงานค่าน้ำมัน',
+          message: `คุณต้องการปรับวันทำงานค่าน้ำมันของ "${m.name}" จาก ${m.fuelDays} วัน เป็น ${m.waterDays} วัน (ให้เท่ากับค่าน้ำดื่ม) ใช่หรือไม่?`,
+          icon: '⛽',
+          okText: 'ยืนยันปรับข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            if (m.fuelIdx !== -1 && window.employees[m.fuelIdx]) {
+              window.employees[m.fuelIdx].workDays = m.waterDays;
+              await saveEmployees(window.employees);
+              window.showToast(`ปรับวันทำงานค่าน้ำมันของ ${m.name} เป็น ${m.waterDays} วัน สำเร็จ!`, 'success');
+              await refreshView();
+            }
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-fix-sub-staff-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
-        if (window.employees[m.ownerIdx]) {
-          window.employees[m.ownerIdx].daysNotWorked = m.totalSubDays;
-          await saveEmployees(window.employees);
-          window.showToast(`ปรับวันไม่ได้นำรถมาใช้ของ ${m.ownerName} เป็น ${m.totalSubDays} วัน สำเร็จ!`, 'success');
-          await refreshView();
-        }
+        window.showConfirm({
+          title: '⚡ ยืนยันการปรับวันไม่ได้นำรถมาใช้',
+          message: `คุณต้องการปรับ "วันไม่ได้นำรถมาใช้" ของเจ้าของด้านจ่ายที่ ${m.route} (${m.ownerName}) จาก ${m.ownerNotWorked} วัน เป็น ${m.totalSubDays} วัน เพื่อให้ตรงกับวันวิ่งแทนใช่หรือไม่?`,
+          icon: '🏃',
+          okText: 'ยืนยันปรับข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            if (window.employees[m.ownerIdx]) {
+              window.employees[m.ownerIdx].daysNotWorked = m.totalSubDays;
+              await saveEmployees(window.employees);
+              window.showToast(`ปรับวันไม่ได้นำรถมาใช้ของ ${m.ownerName} เป็น ${m.totalSubDays} วัน สำเร็จ!`, 'success');
+              await refreshView();
+            }
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-fix-sub-daily-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
         const suggestedDays = Math.max(0, 26 - m.totalSubDays);
-        if (window.employees[m.ownerIdx]) {
-          window.employees[m.ownerIdx].workDays = suggestedDays;
-          await saveEmployees(window.employees);
-          window.showToast(`ปรับวันทำงานของ ${m.ownerName} เป็น ${suggestedDays} วัน สำเร็จ!`, 'success');
-          await refreshView();
-        }
+        window.showConfirm({
+          title: '⚡ ยืนยันการปรับวันทำงานเจ้าของด้านจ่าย',
+          message: `คุณต้องการปรับวันทำงานของ "${m.ownerName}" (ด้านจ่ายที่ ${m.route}) จาก ${m.ownerWorkDays} วัน เป็น ${suggestedDays} วัน (หักวันวิ่งแทน ${m.totalSubDays} วัน) ใช่หรือไม่?`,
+          icon: '🏃',
+          okText: 'ยืนยันปรับข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            if (window.employees[m.ownerIdx]) {
+              window.employees[m.ownerIdx].workDays = suggestedDays;
+              await saveEmployees(window.employees);
+              window.showToast(`ปรับวันทำงานของ ${m.ownerName} เป็น ${suggestedDays} วัน สำเร็จ!`, 'success');
+              await refreshView();
+            }
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-save-tax-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.idx);
         const issue = issues[idx];
         const m = issue.meta;
@@ -562,42 +620,61 @@ export async function openSmartAuditModal(options = {}) {
           return;
         }
 
-        let regList = JSON.parse(localStorage.getItem('tp_personnel')) || [];
-        const pIdx = regList.findIndex(p => (p.name || '').trim() === m.name.trim());
-        if (pIdx !== -1) {
-          regList[pIdx].taxId = taxIdVal;
-          regList[pIdx].address = addrVal;
-        } else {
-          regList.push({
-            name: m.name,
-            position: window.waterEmployees[m.waterIdx]?.position || 'พนักงาน',
-            duty: window.waterEmployees[m.waterIdx]?.duty || 'นำจ่าย',
-            salary: window.waterEmployees[m.waterIdx]?.salary || 0,
-            taxId: taxIdVal,
-            address: addrVal
-          });
-        }
-        localStorage.setItem('tp_personnel', JSON.stringify(regList));
-        window.personnel = regList;
-        await savePersonnelList(regList);
-        window.showToast(`บันทึกข้อมูล 50 ทวิ ของ ${m.name} สำเร็จ!`, 'success');
-        await refreshView();
+        window.showConfirm({
+          title: '💾 ยืนยันบันทึกข้อมูล 50 ทวิ',
+          message: `คุณต้องการบันทึกเลขผู้เสียภาษี (${taxIdVal}) และที่อยู่ของ "${m.name}" ลงในทะเบียนประวัติบุคลากรใช่หรือไม่?`,
+          icon: '🧾',
+          okText: 'บันทึกข้อมูล',
+          okClass: 'btn-primary',
+          onConfirm: async () => {
+            let regList = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+            const pIdx = regList.findIndex(p => (p.name || '').trim() === m.name.trim());
+            if (pIdx !== -1) {
+              regList[pIdx].taxId = taxIdVal;
+              regList[pIdx].address = addrVal;
+            } else {
+              regList.push({
+                name: m.name,
+                position: window.waterEmployees[m.waterIdx]?.position || 'พนักงาน',
+                duty: window.waterEmployees[m.waterIdx]?.duty || 'นำจ่าย',
+                salary: window.waterEmployees[m.waterIdx]?.salary || 0,
+                taxId: taxIdVal,
+                address: addrVal
+              });
+            }
+            localStorage.setItem('tp_personnel', JSON.stringify(regList));
+            window.personnel = regList;
+            await savePersonnelList(regList);
+            window.showToast(`บันทึกข้อมูล 50 ทวิ ของ ${m.name} สำเร็จ!`, 'success');
+            await refreshView();
+          }
+        });
       });
     });
 
     bodyEl.querySelectorAll('.audit-delete-anomaly-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
+        if (!ensureUnlocked()) return;
         const issue = issues[parseInt(btn.dataset.idx)];
         const m = issue.meta;
-        if (m.anomalyType === 'dup_fuel' || m.anomalyType === 'zero_fuel') {
-          window.employees.splice(m.index, 1);
-          await saveEmployees(window.employees);
-        } else if (m.anomalyType === 'dup_water' || m.anomalyType === 'zero_water') {
-          window.waterEmployees.splice(m.index, 1);
-          await saveWaterEmployees(window.waterEmployees);
-        }
-        window.showToast(`ลบรายการของ ${m.name} เรียบร้อยแล้ว!`, 'success');
-        await refreshView();
+        window.showConfirm({
+          title: '🗑️ ยืนยันการลบรายการผิดปกติ',
+          message: `คุณแน่ใจหรือไม่ว่าต้องการลบรายการของ "${m.name}" (${issue.title}) ออกจากตารางเดือนนี้?`,
+          icon: '🗑️',
+          okText: 'ยืนยันลบรายการ',
+          okClass: 'btn-danger',
+          onConfirm: async () => {
+            if (m.anomalyType === 'dup_fuel' || m.anomalyType === 'zero_fuel') {
+              window.employees.splice(m.index, 1);
+              await saveEmployees(window.employees);
+            } else if (m.anomalyType === 'dup_water' || m.anomalyType === 'zero_water') {
+              window.waterEmployees.splice(m.index, 1);
+              await saveWaterEmployees(window.waterEmployees);
+            }
+            window.showToast(`ลบรายการของ ${m.name} เรียบร้อยแล้ว!`, 'success');
+            await refreshView();
+          }
+        });
       });
     });
   }
@@ -635,45 +712,64 @@ export async function openSmartAuditModal(options = {}) {
     onProceed();
   });
 
-  footerEl.querySelector('#auditBulkAutoFixBtn')?.addEventListener('click', async () => {
-    let fixedCount = 0;
-    let fuelChanged = false;
-    let waterChanged = false;
+  footerEl.querySelector('#auditBulkAutoFixBtn')?.addEventListener('click', () => {
+    if (window.isCurrentMonthLocked) {
+      window.showToast('🔒 รอบประจำเดือนนี้ถูกปิดยอดเรียบร้อยแล้ว ไม่สามารถแก้ไขข้อมูลได้', 'warning');
+      return;
+    }
 
-    issues.forEach(issue => {
-      if (issue.category === 'attendance_mismatch') {
-        const m = issue.meta;
-        if (m.attDays !== null && m.attDays > 0) {
-          if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
-            window.waterEmployees[m.waterIdx].workDays = m.attDays;
-            waterChanged = true;
-            fixedCount++;
+    const fixableCount = issues.filter(i =>
+      (i.category === 'attendance_mismatch' && ((i.meta.attDays && i.meta.attDays > 0) || (i.meta.fuelIdx !== -1 && i.meta.waterIdx !== -1))) ||
+      (i.category === 'route_substitute_conflict' && i.meta.conflictType === 'staff_not_worked')
+    ).length;
+
+    window.showConfirm({
+      title: '⚡ ยืนยันการแก้ไขอัตโนมัติทั้งหมด',
+      message: `คุณต้องการให้ระบบปรับปรุงข้อมูลวันทำงานและวันไม่ได้นำรถมาใช้โดยอัตโนมัติรวม ${fixableCount} รายการใช่หรือไม่?`,
+      icon: '⚡',
+      okText: 'ยืนยันแก้ไขทั้งหมด',
+      okClass: 'btn-primary',
+      onConfirm: async () => {
+        let fixedCount = 0;
+        let fuelChanged = false;
+        let waterChanged = false;
+
+        issues.forEach(issue => {
+          if (issue.category === 'attendance_mismatch') {
+            const m = issue.meta;
+            if (m.attDays !== null && m.attDays > 0) {
+              if (m.waterIdx !== -1 && window.waterEmployees[m.waterIdx]) {
+                window.waterEmployees[m.waterIdx].workDays = m.attDays;
+                waterChanged = true;
+                fixedCount++;
+              }
+              if (m.fuelIdx !== -1 && !m.isMonthlyStaff && window.employees[m.fuelIdx]) {
+                window.employees[m.fuelIdx].workDays = m.attDays;
+                fuelChanged = true;
+                fixedCount++;
+              }
+            } else if (m.fuelIdx !== -1 && m.waterIdx !== -1 && !m.isMonthlyStaff) {
+              window.waterEmployees[m.waterIdx].workDays = m.fuelDays;
+              waterChanged = true;
+              fixedCount++;
+            }
+          } else if (issue.category === 'route_substitute_conflict' && issue.meta.conflictType === 'staff_not_worked') {
+            const m = issue.meta;
+            if (window.employees[m.ownerIdx]) {
+              window.employees[m.ownerIdx].daysNotWorked = m.totalSubDays;
+              fuelChanged = true;
+              fixedCount++;
+            }
           }
-          if (m.fuelIdx !== -1 && !m.isMonthlyStaff && window.employees[m.fuelIdx]) {
-            window.employees[m.fuelIdx].workDays = m.attDays;
-            fuelChanged = true;
-            fixedCount++;
-          }
-        } else if (m.fuelIdx !== -1 && m.waterIdx !== -1 && !m.isMonthlyStaff) {
-          window.waterEmployees[m.waterIdx].workDays = m.fuelDays;
-          waterChanged = true;
-          fixedCount++;
-        }
-      } else if (issue.category === 'route_substitute_conflict' && issue.meta.conflictType === 'staff_not_worked') {
-        const m = issue.meta;
-        if (window.employees[m.ownerIdx]) {
-          window.employees[m.ownerIdx].daysNotWorked = m.totalSubDays;
-          fuelChanged = true;
-          fixedCount++;
-        }
+        });
+
+        if (fuelChanged) await saveEmployees(window.employees);
+        if (waterChanged) await saveWaterEmployees(window.waterEmployees);
+
+        window.showToast(`แก้ไขอัตโนมัติสำเร็จ ${fixedCount} จุด!`, 'success');
+        await refreshView();
       }
     });
-
-    if (fuelChanged) await saveEmployees(window.employees);
-    if (waterChanged) await saveWaterEmployees(window.waterEmployees);
-
-    window.showToast(`แก้ไขอัตโนมัติสำเร็จ ${fixedCount} จุด!`, 'success');
-    await refreshView();
   });
 }
 
