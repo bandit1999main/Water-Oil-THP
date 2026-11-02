@@ -100,6 +100,96 @@
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;
 }
 
+/* --- DYNAMIC MODE STYLING (LEAVE THEME - EMERALD/TEAL) --- */
+[data-mode="leave"] {
+  --post-orange-rgb: 16, 185, 129;
+  --post-orange: hsl(160, 84%, 39%);
+  --post-orange-hover: hsl(160, 84%, 32%);
+  --post-red: hsl(172, 80%, 34%);
+  --text-highlight: hsl(160, 84%, 34%);
+}
+
+[data-mode="leave"][data-theme="dark"] {
+  --post-orange-rgb: 52, 211, 153;
+  --post-orange: hsl(160, 84%, 50%);
+  --post-orange-hover: hsl(160, 84%, 42%);
+  --post-red: hsl(172, 80%, 45%);
+  --text-highlight: hsl(160, 84%, 55%);
+}
+
+[data-mode="leave"] .orb-red {
+  background: radial-gradient(circle, hsl(160, 84%, 45%) 0%, transparent 70%) !important;
+}
+
+[data-mode="leave"] .orb-orange {
+  background: radial-gradient(circle, hsl(175, 80%, 40%) 0%, transparent 70%) !important;
+}
+
+[data-mode="leave"] .brand-logo {
+  background: linear-gradient(135deg, hsl(160, 84%, 39%), hsl(172, 80%, 34%)) !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* --- DYNAMIC MODE STYLING (HISTORY THEME - INDIGO/ROYAL BLUE) --- */
+[data-mode="history"] {
+  --post-orange-rgb: 79, 70, 229;
+  --post-orange: hsl(239, 84%, 60%);
+  --post-orange-hover: hsl(239, 84%, 50%);
+  --post-red: hsl(221, 83%, 53%);
+  --text-highlight: hsl(239, 84%, 55%);
+}
+
+[data-mode="history"][data-theme="dark"] {
+  --post-orange-rgb: 129, 140, 248;
+  --post-orange: hsl(239, 84%, 67%);
+  --post-orange-hover: hsl(239, 84%, 58%);
+  --post-red: hsl(221, 83%, 60%);
+  --text-highlight: hsl(239, 84%, 70%);
+}
+
+[data-mode="history"] .orb-red {
+  background: radial-gradient(circle, hsl(239, 84%, 60%) 0%, transparent 70%) !important;
+}
+
+[data-mode="history"] .orb-orange {
+  background: radial-gradient(circle, hsl(215, 85%, 50%) 0%, transparent 70%) !important;
+}
+
+[data-mode="history"] .brand-logo {
+  background: linear-gradient(135deg, hsl(239, 84%, 60%), hsl(221, 83%, 53%)) !important;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3) !important;
+}
+
+/* --- DYNAMIC MODE STYLING (ADMIN THEME - AMBER/GOLD) --- */
+[data-mode="admin"] {
+  --post-orange-rgb: 217, 119, 6;
+  --post-orange: hsl(36, 92%, 46%);
+  --post-orange-hover: hsl(36, 92%, 38%);
+  --post-red: hsl(24, 90%, 45%);
+  --text-highlight: hsl(36, 92%, 42%);
+}
+
+[data-mode="admin"][data-theme="dark"] {
+  --post-orange-rgb: 251, 191, 36;
+  --post-orange: hsl(38, 92%, 55%);
+  --post-orange-hover: hsl(38, 92%, 46%);
+  --post-red: hsl(24, 90%, 52%);
+  --text-highlight: hsl(38, 92%, 60%);
+}
+
+[data-mode="admin"] .orb-red {
+  background: radial-gradient(circle, hsl(38, 92%, 52%) 0%, transparent 70%) !important;
+}
+
+[data-mode="admin"] .orb-orange {
+  background: radial-gradient(circle, hsl(24, 90%, 48%) 0%, transparent 70%) !important;
+}
+
+[data-mode="admin"] .brand-logo {
+  background: linear-gradient(135deg, hsl(36, 92%, 46%), hsl(24, 90%, 45%)) !important;
+  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3) !important;
+}
+
 /* --- BASE STYLING --- */
 * {
   box-sizing: border-box;
@@ -184,29 +274,28 @@ body {
 
 .header-container {
   max-width: 100%;
-  padding: 0.8rem 2rem;
+  padding: 0.65rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .header-container {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: center;
-    text-align: center;
-    padding: 1rem;
+    flex-wrap: wrap;
+    padding: 0.65rem 1rem;
+    gap: 0.5rem;
   }
   .header-controls {
-    justify-content: center;
+    justify-content: space-between;
     flex-wrap: wrap;
     width: 100%;
   }
@@ -214,9 +303,14 @@ body {
 
 @media (max-width: 768px) {
   .mode-selector-tabs {
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
     width: 100%;
+    scrollbar-width: none;
+  }
+  .mode-selector-tabs::-webkit-scrollbar {
+    display: none;
   }
 }
 

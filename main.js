@@ -340,6 +340,89 @@ function showConfirm({ title = 'ยืนยัน', message = '', icon = '⚠�
 window.showToast = showToast;
 window.showConfirm = showConfirm;
 
+function showPrompt({
+  title = 'กรอกข้อมูล',
+  message = '',
+  icon = '✏️',
+  placeholder = '',
+  defaultValue = '',
+  okText = 'ตกลง',
+  okClass = 'btn-primary',
+  validate = null,
+  onConfirm,
+  onCancel
+}) {
+  const modal = document.getElementById('promptModal');
+  if (!modal) return;
+  const titleEl = document.getElementById('promptModalTitle');
+  const msgEl = document.getElementById('promptModalMsg');
+  const iconEl = document.getElementById('promptModalIcon');
+  const inputEl = document.getElementById('promptModalInput');
+  const errorEl = document.getElementById('promptModalError');
+  const okBtn = document.getElementById('promptModalOk');
+  const cancelBtn = document.getElementById('promptModalCancel');
+
+  titleEl.textContent = title;
+  msgEl.textContent = message;
+  iconEl.textContent = icon;
+  inputEl.placeholder = placeholder;
+  inputEl.value = defaultValue;
+  if (errorEl) {
+    errorEl.textContent = '';
+    errorEl.classList.add('hidden');
+  }
+  okBtn.textContent = okText;
+  okBtn.className = `btn ${okClass}`;
+  modal.classList.add('active');
+  setTimeout(() => inputEl.focus(), 50);
+
+  const cleanup = () => modal.classList.remove('active');
+
+  const newOkBtn = okBtn.cloneNode(true);
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newInputEl = inputEl.cloneNode(true);
+  okBtn.replaceWith(newOkBtn);
+  cancelBtn.replaceWith(newCancelBtn);
+  inputEl.replaceWith(newInputEl);
+
+  const trySubmit = () => {
+    const val = newInputEl.value;
+    if (typeof validate === 'function') {
+      const errMsg = validate(val);
+      if (errMsg) {
+        if (errorEl) {
+          errorEl.textContent = errMsg;
+          errorEl.classList.remove('hidden');
+        }
+        newInputEl.focus();
+        return;
+      }
+    }
+    cleanup();
+    if (onConfirm) onConfirm(val);
+  };
+
+  newOkBtn.addEventListener('click', trySubmit);
+  newCancelBtn.addEventListener('click', () => {
+    cleanup();
+    if (onCancel) onCancel();
+  }, { once: true });
+  newInputEl.addEventListener('keydown', (e) => {
+    if (errorEl && !errorEl.classList.contains('hidden')) {
+      errorEl.classList.add('hidden');
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      trySubmit();
+    } else if (e.key === 'Escape') {
+      cleanup();
+      if (onCancel) onCancel();
+    }
+  });
+}
+
+window.showPrompt = showPrompt;
+
 function openAvgCalcModal() {
   const avgCalcModal = document.getElementById('avgCalcModal');
   if (avgCalcModal) {
@@ -3573,19 +3656,19 @@ export function populateMonthDropdown(selectedYear) {
 }
 
 async function handleAddCustomCycle() {
-  const name = prompt("กรุณาระบุชื่อรอบพิเศษ (เช่น 'รอบตกค้าง ม.ค. - มี.ค. 69'):");
-  if (!name || !name.trim()) return;
-
-  const trimmedName = name.trim();
   const yearVal = document.getElementById('globalYear')?.value || '2569';
   const yearNum = parseInt(yearVal);
-  
-  window.showConfirm({
-    title: 'ยืนยันการเพิ่มรอบพิเศษ',
-    message: `คุณต้องการเพิ่มรอบพิเศษ "${trimmedName}" ประจำปี พ.ศ. ${yearNum} ลงในระบบใช่หรือไม่?`,
+
+  showPrompt({
+    title: '➕ เพิ่มรอบประจำเดือนพิเศษ',
+    message: `กรุณาระบุชื่อรอบพิเศษประจำปี พ.ศ. ${yearNum}`,
     icon: '➕',
+    placeholder: "เช่น รอบตกค้าง ม.ค. - มี.ค. 69",
     okText: 'เพิ่มรอบทำงาน',
-    onConfirm: async () => {
+    okClass: 'btn-primary',
+    validate: (val) => (!val || !val.trim() ? 'กรุณาระบุชื่อรอบพิเศษ' : ''),
+    onConfirm: async (val) => {
+      const trimmedName = val.trim();
       const configs = JSON.parse(localStorage.getItem('tp_global_configs')) || {};
       if (!configs.customCycles) configs.customCycles = [];
 

@@ -400,7 +400,7 @@ export function renderPersonnelTable() {
       <td class="water-only-col">${person.salary ? person.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
       <td class="fuel-only-col">${person.route ? 'ด้านจ่ายที่ ' + person.route : '-'}</td>
       <td class="fuel-only-col">${person.vehicle || '-'}</td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #ddd; font-weight: 300;">${person.signature || person.name}</span></td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${person.signature || person.name}</span></td>
       <td class="actions-col">
         <button class="row-action-btn edit-person-btn" data-index="${originalIdx}" title="แก้ไข">✏️</button>
         ${isResigned ?
@@ -593,37 +593,38 @@ function toggleResignPersonnel(index, shouldResign) {
   const actionText = shouldResign ? 'บันทึกสถานะลาออก' : 'กลับเข้าทำงาน';
 
   if (shouldResign) {
-    let resignDate = '';
-    let parsedDate = null;
-    while (true) {
-      resignDate = prompt(`กรุณาระบุวันที่ลาออกของ "${person.name}" (ตัวอย่าง: 15/6/2569 หรือ 15 มิ.ย. 2569):`);
-      if (resignDate === null) return; // Cancelled
-      resignDate = resignDate.trim();
-      if (!resignDate) {
-        alert("กรุณากรอกวันที่ลาออก");
-        continue;
-      }
-      parsedDate = parseThaiDate(resignDate);
-      if (parsedDate) {
-        break;
-      } else {
-        alert("รูปแบบวันที่ไม่ถูกต้อง! กรุณากรอกตัวอย่างเช่น:\n- 15/6/2569\n- 15 มิ.ย. 2569");
-      }
-    }
+    window.showPrompt({
+      title: '🚪 บันทึกสถานะลาออก',
+      message: `กรุณาระบุวันที่ลาออกของ "${person.name}" (ตัวอย่าง: 15/6/2569 หรือ 15 มิ.ย. 2569)`,
+      icon: '🚪',
+      placeholder: 'เช่น 15/6/2569 หรือ 15 มิ.ย. 2569',
+      okText: 'บันทึกสถานะลาออก',
+      okClass: 'btn-danger',
+      validate: (val) => {
+        if (!val || !val.trim()) return 'กรุณากรอกวันที่ลาออก';
+        if (!parseThaiDate(val.trim())) return 'รูปแบบวันที่ไม่ถูกต้อง! ตัวอย่าง: 15/6/2569 หรือ 15 มิ.ย. 2569';
+        return '';
+      },
+      onConfirm: (val) => {
+        const resignDate = val.trim();
+        const parsedDate = parseThaiDate(resignDate);
+        if (!parsedDate) return;
 
-    personnel[index].status = 'resigned';
-    personnel[index].resignDate = resignDate;
-    personnel[index].resignMonth = parsedDate.month;
-    personnel[index].resignYear = parsedDate.year;
+        personnel[index].status = 'resigned';
+        personnel[index].resignDate = resignDate;
+        personnel[index].resignMonth = parsedDate.month;
+        personnel[index].resignYear = parsedDate.year;
 
-    setPersonnel(personnel);
-    renderPersonnelTable();
-    if (window.updateEmployeeSelectDropdown) {
-      window.updateEmployeeSelectDropdown();
-    }
-    savePersonnelList(personnel);
-    logActivity('personnel_resign', `บันทึกสถานะลาออก: ${person.name} (มีผลวันที่ ${resignDate})`);
-    window.showToast(`บันทึกสถานะลาออกของ "${person.name}" สำเร็จ!`, 'success');
+        setPersonnel(personnel);
+        renderPersonnelTable();
+        if (window.updateEmployeeSelectDropdown) {
+          window.updateEmployeeSelectDropdown();
+        }
+        savePersonnelList(personnel);
+        logActivity('personnel_resign', `บันทึกสถานะลาออก: ${person.name} (มีผลวันที่ ${resignDate})`);
+        window.showToast(`บันทึกสถานะลาออกของ "${person.name}" สำเร็จ!`, 'success');
+      }
+    });
   } else {
     window.showConfirm({
       title: '🏃 ให้กลับเข้าทำงาน',
@@ -808,8 +809,8 @@ function openDuplicateResolutionModal(newItem, duplicates) {
         <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; line-height: 1.35;">
           <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: var(--post-orange); padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">${dup.position}</span>
           <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #e11d48; padding: 0.15rem 0.35rem; border-radius: 4px; font-size: 0.75rem;">${dup.department || 'ทั่วไป'}</span>
-          <span style="color: #ddd;">หน้าที่: ${dup.duty || '-'}</span>
-          ${dup.route ? `<span style="color: #ddd;">ด้านจ่ายที่: ${dup.route}</span>` : ''}
+          <span style="color: var(--text-secondary);">หน้าที่: ${dup.duty || '-'}</span>
+          ${dup.route ? `<span style="color: var(--text-secondary);">ด้านจ่ายที่: ${dup.route}</span>` : ''}
         </div>
       </div>
     `;
@@ -939,8 +940,8 @@ function scanForDuplicateNames() {
         : '';
 
       row.innerHTML = `
-        <div style="flex: 1; min-width: 0; text-align: left; color: #bbb;">
-          <strong>${person.position}</strong> - แผนก: ${person.department || 'ทั่วไป'} | หน้าที่: ${person.duty || '-'} | เงินเดือน: ${person.salary ? person.salary.toLocaleString() : '0.00'} ฿${restDaysText}
+        <div style="flex: 1; min-width: 0; text-align: left; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">${person.position}</strong> - แผนก: ${person.department || 'ทั่วไป'} | หน้าที่: ${person.duty || '-'} | เงินเดือน: ${person.salary ? person.salary.toLocaleString() : '0.00'} ฿${restDaysText}
         </div>
       `;
 
@@ -1422,7 +1423,7 @@ function handlePersonnelPaste() {
         <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
         <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
         <td style="padding: 0.5rem 0.75rem;">${restDaysText}</td>
-        <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
+        <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">${signature}</span></td>
       `;
       previewTableBody.appendChild(tr);
     });
@@ -1497,7 +1498,7 @@ function processUploadedPersonnelFile(file) {
             <td style="padding: 0.5rem 0.75rem;">${route ? 'ด้านที่ ' + route : '-'}</td>
             <td style="padding: 0.5rem 0.75rem;">${vehicle}</td>
             <td style="padding: 0.5rem 0.75rem;">${restDaysText}</td>
-            <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: #ddd; font-weight: 300; font-size: 0.85rem;">${signature}</span></td>
+            <td style="padding: 0.5rem 0.75rem;"><span style="font-family: var(--font-title); font-style: italic; color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">${signature}</span></td>
           `;
           previewTableBody.appendChild(tr);
         }

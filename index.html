@@ -245,6 +245,25 @@
       </div>
     </div>
 
+    <!-- Custom Prompt Input Modal -->
+    <div id="promptModal" class="modal-overlay" style="z-index: 5100;">
+      <div class="modal-content glass-modal animate-slide-in" style="max-width: 440px; padding: 2rem;">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+          <div id="promptModalIcon" style="font-size: 2.3rem; margin-bottom: 0.6rem;">✏️</div>
+          <h3 id="promptModalTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem;"></h3>
+          <p id="promptModalMsg" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;"></p>
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <input type="text" id="promptModalInput" class="form-input" style="text-align: center; font-weight: 600;" />
+          <div id="promptModalError" class="hidden" style="color: var(--post-red); font-size: 0.8rem; margin-top: 0.35rem; text-align: center; font-weight: 600;"></div>
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+          <button type="button" id="promptModalCancel" class="btn btn-secondary" style="min-width: 100px;">ยกเลิก</button>
+          <button type="button" id="promptModalOk" class="btn btn-primary" style="min-width: 110px;">ตกลง</button>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ===== EDIT REGISTRY PERSONNEL MODAL ===== -->
     <div id="editRegistryPersonnelModal" class="modal-overlay" style="z-index: 4000;">

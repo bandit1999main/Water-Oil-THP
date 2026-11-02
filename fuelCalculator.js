@@ -404,7 +404,7 @@ export function renderFuelTable() {
       <td>${row.fuelCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
       <td>${row.maintCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</td>
       <td><strong style="color: var(--text-primary);">${row.sumTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿</strong></td>
-      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: #eee; font-weight: 300;">${row.signature}</span></td>
+      <td><span style="font-family: var(--font-title); font-size: 0.85rem; font-style: italic; color: var(--text-secondary); font-weight: 500;">${row.signature}</span></td>
       <td class="actions-col" style="width: 280px; white-space: nowrap;">
         <button class="btn btn-secondary btn-small edit-row-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✏️ แก้ไข</button>
         ${planBtnHtml}
@@ -2241,18 +2241,19 @@ export function getCalculatorsTemplate() {
                 <span class="card-icon">📋</span>
                 <h3>รายการพนักงานเบิกจ่ายค่าน้ำมันค้างจ่ายประจำ ปณ.</h3>
               </div>
-              <div class="header-actions-flex">
-                <button type="button" id="openRouteEditorBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange);">
-                  ⚙️ ตั้งค่าระยะทาง/น้ำมัน
+              <div class="header-actions-flex" style="align-items: center; flex-wrap: wrap;">
+                <button type="button" id="openRouteEditorBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange);" title="เพิ่ม/แก้ไข/ลบตารางด้านจ่ายอ้างอิง">
+                  ⚙️ จัดการด้านจ่าย
                 </button>
-                <button type="button" id="pullAttendanceDaysBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(251, 80, 18, 0.05); font-weight: bold;">
-                  ⚡ ดึงวันทำงานจากระบบลงเวลา
+                <button type="button" id="pullAttendanceDaysBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-orange); color: var(--post-orange); background: rgba(251, 80, 18, 0.05); font-weight: bold;" title="ซิงค์วันทำงานจากตารางลงเวลารายเดือน">
+                  ⚡ ดึงวันทำงาน
                 </button>
-                <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);">
-                  📥 นำเข้าวันทำงานจาก Excel
+                <button type="button" id="importExcelAttendanceBtn" class="btn btn-secondary btn-small" style="border: 1px solid var(--post-emerald); color: var(--post-emerald); background: rgba(16, 185, 129, 0.05);" title="นำเข้าวันทำงานจากไฟล์ Excel">
+                  📥 นำเข้า Excel
                 </button>
-                <button type="button" id="exportCsvBtn" class="btn btn-secondary btn-small">
-                  📊 ส่งออก Excel (CSV)
+                <span style="height: 22px; width: 1px; background: var(--border-glass); margin: 0 0.15rem;"></span>
+                <button type="button" id="exportCsvBtn" class="btn btn-secondary btn-small" title="ดาวน์โหลดตารางเป็นไฟล์ Excel">
+                  📊 ส่งออก Excel
                 </button>
                 <button type="button" id="printAll50TawiBtn" class="btn btn-primary btn-small hidden" style="background: var(--post-emerald); border-color: var(--post-emerald);">
                   🖨️ พิมพ์ 50 ทวิ ทั้งหมด
@@ -2260,7 +2261,8 @@ export function getCalculatorsTemplate() {
                 <button type="button" id="printReportBtn" class="btn btn-primary btn-small">
                   🖨️ พิมพ์ใบเบิกเงิน / PDF
                 </button>
-                <button type="button" id="clearAllBtn" class="btn btn-danger btn-small">
+                <span style="height: 22px; width: 1px; background: var(--border-glass); margin: 0 0.15rem;"></span>
+                <button type="button" id="clearAllBtn" class="btn btn-danger btn-small" title="ล้างรายการในเดือนนี้ทั้งหมด">
                   🗑️ ล้างทั้งหมด
                 </button>
               </div>
