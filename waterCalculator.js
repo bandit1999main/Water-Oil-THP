@@ -226,36 +226,609 @@ export async function handleWaterFormSubmit(e) {
   );
 }
 
-export function exportWaterCsv() {
+export async function exportWaterCsv() {
   const waterEmployees = getWaterEmployees();
   if (waterEmployees.length === 0) {
     window.showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
     return;
   }
-  let csvContent = "\uFEFF";
-  csvContent += "ลำดับ,ชื่อ-นามสกุล,ปฏิบัติหน้าที่,เงินเดือน (บาท),จำนวนวันทำงาน,รวมค่าน้ำดื่ม (บาท),ภาษีหัก ณ ที่จ่าย (บาท),ยอดเงินจ่ายสุทธิ (บาท),ลายมือชื่อผู้รับเงิน,หมายเหตุ\n";
-  
-  waterEmployees.forEach((item, index) => {
-    const allowance = item.workDays * (window.waterAllowancePerDay || 30);
-    const tax = calculateWaterTax(item.salary, allowance);
-    const net = Math.round((allowance - tax) * 100) / 100;
-    csvContent += `${index + 1},"${item.name}","${item.position} / ${item.duty || '-'}",${item.salary},${item.workDays},${allowance.toFixed(2)},${tax.toFixed(2)},${net.toFixed(2)},"${item.signature}","${item.remarks}"\n`;
-  });
-  
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  
+
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    return;
+  }
+
   const globalMonthSelect = document.getElementById('globalMonth');
   const globalYearSelect = document.getElementById('globalYear');
-  const m = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
-  const y = globalYearSelect.value;
-  link.setAttribute("download", `เบิกค่าน้ำดื่ม_${m}_${y}.csv`);
-  
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const monthText = globalMonthSelect.options[globalMonthSelect.selectedIndex].text;
+  const yearText = globalYearSelect.value;
+  const month = parseInt(globalMonthSelect.value);
+  const year = parseInt(globalYearSelect.value);
+
+  const sigMakerTitleVal = document.getElementById('sigMakerTitle')?.value.trim() || 'ผู้จัดทำ';
+  const sigMakerNameVal = document.getElementById('sigMakerName')?.value.trim() || '..........................................................';
+  const sigMakerPosVal = document.getElementById('sigMakerPos')?.value.trim() || '..........................................................';
+
+  const sigCheckerTitleVal = document.getElementById('sigCheckerTitle')?.value.trim() || 'ผู้ตรวจสอบ';
+  const sigCheckerNameVal = document.getElementById('sigCheckerName')?.value.trim() || '..........................................................';
+  const sigCheckerPosVal = document.getElementById('sigCheckerPos')?.value.trim() || '..........................................................';
+
+  const sigApproverTitleVal = document.getElementById('sigApproverTitle')?.value.trim() || 'ผู้อนุมัติ';
+  const sigApproverNameVal = document.getElementById('sigApproverName')?.value.trim() || '..........................................................';
+  const sigApproverPosVal = document.getElementById('sigApproverPos')?.value.trim() || '..........................................................';
+
+  const personnelRegistry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  const sortedList = [...waterEmployees].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
+
+  const classifyWaterItem = (item) => {
+    const pos = (item.position || '').trim();
+    const duty = (item.duty || '').trim();
+    const regPerson = personnelRegistry.find(p => p.name === item.name);
+    const regDuty = (regPerson?.duty || '').trim();
+
+    if (
+      duty.includes('หัวหน้าโซน') ||
+      duty.includes('ชนจ') ||
+      pos.includes('ชนจ') ||
+      regDuty.includes('หัวหน้าโซน') ||
+      regDuty.includes('ชนจ')
+    ) {
+      return 'supervisor';
+    }
+    if (pos.includes('เหมา')) {
+      return 'contractor';
+    }
+    if (pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ' || pos === 'หน.ปณ.') {
+      return 'staff';
+    }
+    return 'worker';
+  };
+
+  const categoryDefs = [
+    {
+      key: 'staff',
+      sheetName: '1.พนง-ลูกจ้างประจำ',
+      sectionTitle: '1. พนักงาน และ ลูกจ้างประจำ',
+      reportTitle: 'หลักฐานการจ่ายเงินค่าน้ำดื่ม (พนักงาน และ ลูกจ้างประจำ)',
+      headerFill: '1E3A8A',
+      subHeaderFill: 'DBEAFE',
+      subHeaderFont: '1E3A8A'
+    },
+    {
+      key: 'worker',
+      sheetName: '2.ลูกจ้าง',
+      sectionTitle: '2. ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว',
+      reportTitle: 'หลักฐานการจ่ายเงินค่าน้ำดื่ม (ลูกจ้าง)',
+      headerFill: '0F766E',
+      subHeaderFill: 'CCFBF1',
+      subHeaderFont: '0F766E'
+    },
+    {
+      key: 'contractor',
+      sheetName: '3.ลูกจ้างเหมา',
+      sectionTitle: '3. ลูกจ้างเหมาบริการนำจ่าย',
+      reportTitle: 'หลักฐานการจ่ายเงินค่าน้ำดื่ม (ลูกจ้างเหมา)',
+      headerFill: 'B45309',
+      subHeaderFill: 'FEF3C7',
+      subHeaderFont: '92400E'
+    },
+    {
+      key: 'supervisor',
+      sheetName: '4.ชนจ.',
+      sectionTitle: '4. หัวหน้าโซนนำจ่าย (ชนจ.)',
+      reportTitle: 'หลักฐานการจ่ายเงินค่าน้ำดื่ม (หัวหน้าโซนนำจ่าย / ชนจ.)',
+      headerFill: '3730A3',
+      subHeaderFill: 'E0E7FF',
+      subHeaderFont: '312E81'
+    }
+  ];
+
+  const grouped = {
+    staff: [],
+    worker: [],
+    contractor: [],
+    supervisor: []
+  };
+
+  sortedList.forEach(item => {
+    const cat = classifyWaterItem(item);
+    grouped[cat].push(item);
+  });
+
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const mediumTotalBorder = {
+    top: { style: 'medium', color: { rgb: '334155' } },
+    bottom: { style: 'double', color: { rgb: '334155' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const tableHeaders = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง',
+    'ปฏิบัติหน้าที่',
+    'เงินเดือน (บาท)',
+    'จำนวนวันทำงาน',
+    'รวมค่าน้ำดื่ม (บาท)',
+    'ภาษีหัก ณ ที่จ่าย (บาท)',
+    'ยอดเงินจ่ายสุทธิ (บาท)',
+    'ลายมือชื่อผู้รับเงิน',
+    'หมายเหตุ'
+  ];
+
+  const colWidths = [
+    { wch: 7 },  // ลำดับ
+    { wch: 24 }, // ชื่อ-นามสกุล
+    { wch: 15 }, // ตำแหน่ง
+    { wch: 28 }, // ปฏิบัติหน้าที่
+    { wch: 15 }, // เงินเดือน
+    { wch: 14 }, // จำนวนวันทำงาน
+    { wch: 18 }, // รวมค่าน้ำดื่ม
+    { wch: 18 }, // ภาษีหัก ณ ที่จ่าย
+    { wch: 18 }, // ยอดเงินจ่ายสุทธิ
+    { wch: 16 }, // ลายมือชื่อ
+    { wch: 26 }  // หมายเหตุ
+  ];
+
+  const computeRowMetrics = (item) => {
+    const allowance = Math.round((item.workDays * (window.waterAllowancePerDay || 30)) * 100) / 100;
+    const tax = calculateWaterTax(item.salary, allowance);
+    const net = Math.round((allowance - tax) * 100) / 100;
+    const remarkText = getResignRemarkForEmployee(item.name, year, month, item.remarks) || '';
+    return { allowance, tax, net, remarkText };
+  };
+
+  const makeHeaderCell = (text, bgHex = '0284C7') => ({
+    v: text,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: bgHex } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
+  });
+
+  const makeDataRowCells = (item, idx) => {
+    const { allowance, tax, net, remarkText } = computeRowMetrics(item);
+    const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+    const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+    const netFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0369A1' } };
+    const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } };
+
+    return {
+      metrics: { allowance, tax, net },
+      cells: [
+        { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: item.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: item.position || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: item.duty || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: Number(item.salary || 0), t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: Number(item.workDays || 0), t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: allowance, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: tax, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: net, t: 'n', z: '#,##0.00', s: { font: netFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: item.signature || '', t: 's', s: { font: { name: 'Sarabun', sz: 10, italic: true, color: { rgb: '64748B' } }, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: remarkText, t: 's', s: { font: { name: 'Sarabun', sz: 10, color: { rgb: '334155' } }, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } }
+      ]
+    };
+  };
+
+  const makeTotalRowCells = (label, totals, fillHex = 'F1F5F9', fontHex = '0F172A') => {
+    const totalStyle = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: fontHex } },
+      fill: { fgColor: { rgb: fillHex } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: mediumTotalBorder
+    };
+    const centerTotalStyle = {
+      ...totalStyle,
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    const netTotalStyle = {
+      ...totalStyle,
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0369A1' } }
+    };
+
+    return [
+      { v: label, t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: Math.round(totals.days), t: 'n', z: '#,##0', s: centerTotalStyle },
+      { v: Math.round(totals.allowance * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.tax * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.net * 100) / 100, t: 'n', z: '#,##0.00', s: netTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle }
+    ];
+  };
+
+  const appendSignatoryFooter = (rows, merges) => {
+    rows.push([]);
+    const sigStartRow = rows.length;
+    const sigStyle = {
+      font: { name: 'Sarabun', sz: 10, color: { rgb: '1E293B' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+    const sigBoldStyle = {
+      font: { name: 'Sarabun', sz: 10, bold: true, color: { rgb: '0F172A' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+
+    const emptyRow = () => Array.from({ length: 11 }, () => ({ v: '', t: 's', s: sigStyle }));
+
+    const r1 = emptyRow();
+    r1[0] = { v: `ลงชื่อ .................................................... ${sigMakerTitleVal}`, t: 's', s: sigStyle };
+    r1[4] = { v: `ลงชื่อ .................................................... ${sigCheckerTitleVal}`, t: 's', s: sigStyle };
+    r1[8] = { v: `ลงชื่อ .................................................... ${sigApproverTitleVal}`, t: 's', s: sigStyle };
+
+    const r2 = emptyRow();
+    r2[0] = { v: `( ${sigMakerNameVal} )`, t: 's', s: sigBoldStyle };
+    r2[4] = { v: `( ${sigCheckerNameVal} )`, t: 's', s: sigBoldStyle };
+    r2[8] = { v: `( ${sigApproverNameVal} )`, t: 's', s: sigBoldStyle };
+
+    const r3 = emptyRow();
+    r3[0] = { v: `ตำแหน่ง ${sigMakerPosVal}`, t: 's', s: sigStyle };
+    r3[4] = { v: `ตำแหน่ง ${sigCheckerPosVal}`, t: 's', s: sigStyle };
+    r3[8] = { v: `ตำแหน่ง ${sigApproverPosVal}`, t: 's', s: sigStyle };
+
+    rows.push(r1, r2, r3);
+
+    for (let offset = 0; offset < 3; offset++) {
+      const rIdx = sigStartRow + offset;
+      merges.push(
+        { s: { r: rIdx, c: 0 }, e: { r: rIdx, c: 3 } },
+        { s: { r: rIdx, c: 4 }, e: { r: rIdx, c: 7 } },
+        { s: { r: rIdx, c: 8 }, e: { r: rIdx, c: 10 } }
+      );
+    }
+  };
+
+  const wb = XLSX.utils.book_new();
+
+  // ─────────────────────────────────────────────────────────
+  // SHEET 1: รวมทั้งหมด (แยกตามหมวดหมู่ในหน้าเดียว)
+  // ─────────────────────────────────────────────────────────
+  const combinedRows = [];
+  const combinedMerges = [];
+  const combinedRowHeights = [];
+
+  combinedRows.push([
+    {
+      v: `สรุปหลักฐานการจ่ายเงินค่าน้ำดื่ม (แยกตามกลุ่มปฏิบัติงาน) ประจำเดือน ${monthText} พ.ศ. ${yearText}`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+  ]);
+  combinedMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+  combinedRowHeights.push({ hpt: 28 });
+
+  combinedRows.push([
+    {
+      v: `ที่ทำการไปรษณีย์ | อัตราค่าน้ำดื่มวันละ ${(window.waterAllowancePerDay || 30).toFixed(2)} บาท | รวมผู้เบิกทั้งสิ้น ${sortedList.length} รายการ`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 11, color: { rgb: '475569' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+  ]);
+  combinedMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+  combinedRowHeights.push({ hpt: 20 });
+
+  combinedRows.push([]);
+  combinedRowHeights.push({ hpt: 10 });
+
+  const grandTotals = { days: 0, allowance: 0, tax: 0, net: 0 };
+
+  categoryDefs.forEach(catDef => {
+    const items = grouped[catDef.key] || [];
+    if (items.length === 0) return;
+
+    const bannerRowIdx = combinedRows.length;
+    combinedRows.push([
+      {
+        v: `📌 ${catDef.sectionTitle} (จำนวน ${items.length} ราย)`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: catDef.subHeaderFont } },
+          fill: { fgColor: { rgb: catDef.subHeaderFill } },
+          alignment: { horizontal: 'left', vertical: 'center' },
+          border: thinBorder
+        }
+      },
+      ...Array.from({ length: 10 }, () => ({
+        v: '',
+        t: 's',
+        s: { fill: { fgColor: { rgb: catDef.subHeaderFill } }, border: thinBorder }
+      }))
+    ]);
+    combinedMerges.push({ s: { r: bannerRowIdx, c: 0 }, e: { r: bannerRowIdx, c: 10 } });
+    combinedRowHeights.push({ hpt: 24 });
+
+    combinedRows.push(tableHeaders.map(h => makeHeaderCell(h, catDef.headerFill)));
+    combinedRowHeights.push({ hpt: 26 });
+
+    const subTotals = { days: 0, allowance: 0, tax: 0, net: 0 };
+
+    items.forEach((item, idx) => {
+      const { cells, metrics } = makeDataRowCells(item, idx);
+      combinedRows.push(cells);
+      combinedRowHeights.push({ hpt: 22 });
+
+      subTotals.days += Number(item.workDays || 0);
+      subTotals.allowance += metrics.allowance;
+      subTotals.tax += metrics.tax;
+      subTotals.net += metrics.net;
+    });
+
+    const subTotalRowIdx = combinedRows.length;
+    combinedRows.push(makeTotalRowCells(`รวมเฉพาะกลุ่ม: ${catDef.sectionTitle} (${items.length} ราย)`, subTotals, catDef.subHeaderFill, catDef.subHeaderFont));
+    combinedMerges.push({ s: { r: subTotalRowIdx, c: 0 }, e: { r: subTotalRowIdx, c: 4 } });
+    combinedRowHeights.push({ hpt: 24 });
+
+    combinedRows.push([]);
+    combinedRowHeights.push({ hpt: 12 });
+
+    grandTotals.days += subTotals.days;
+    grandTotals.allowance += subTotals.allowance;
+    grandTotals.tax += subTotals.tax;
+    grandTotals.net += subTotals.net;
+  });
+
+  const grandTotalRowIdx = combinedRows.length;
+  combinedRows.push(makeTotalRowCells(`รวมทั้งสิ้นทุกกลุ่ม (${sortedList.length} รายการ)`, grandTotals, 'FEF08A', '0F172A'));
+  combinedMerges.push({ s: { r: grandTotalRowIdx, c: 0 }, e: { r: grandTotalRowIdx, c: 4 } });
+  combinedRowHeights.push({ hpt: 26 });
+
+  appendSignatoryFooter(combinedRows, combinedMerges);
+
+  const combinedWs = XLSX.utils.aoa_to_sheet(combinedRows);
+  combinedWs['!cols'] = colWidths;
+  combinedWs['!merges'] = combinedMerges;
+  combinedWs['!rows'] = combinedRowHeights;
+  XLSX.utils.book_append_sheet(wb, combinedWs, 'รวมทั้งหมด (แยกกลุ่ม)');
+
+  // ─────────────────────────────────────────────────────────
+  // SHEETS 2..5: แยกแต่ละกลุ่มเป็น Sheet ของตัวเอง
+  // ─────────────────────────────────────────────────────────
+  categoryDefs.forEach(catDef => {
+    const items = grouped[catDef.key] || [];
+    const sheetRows = [];
+    const sheetMerges = [];
+    const sheetRowHeights = [];
+
+    sheetRows.push([
+      {
+        v: `${catDef.reportTitle} ประจำเดือน ${monthText} พ.ศ. ${yearText}`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: catDef.subHeaderFont } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        }
+      },
+      ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+    ]);
+    sheetMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+    sheetRowHeights.push({ hpt: 28 });
+
+    sheetRows.push([
+      {
+        v: `หมวดหมู่: ${catDef.sectionTitle} | จำนวน ${items.length} รายการ`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 11, color: { rgb: '475569' } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        }
+      },
+      ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+    ]);
+    sheetMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+    sheetRowHeights.push({ hpt: 20 });
+
+    sheetRows.push([]);
+    sheetRowHeights.push({ hpt: 10 });
+
+    sheetRows.push(tableHeaders.map(h => makeHeaderCell(h, catDef.headerFill)));
+    sheetRowHeights.push({ hpt: 26 });
+
+    const subTotals = { days: 0, allowance: 0, tax: 0, net: 0 };
+
+    if (items.length === 0) {
+      const emptyRowIdx = sheetRows.length;
+      sheetRows.push([
+        {
+          v: `ไม่มีรายการเบิกในหมวด "${catDef.sectionTitle}" สำหรับเดือนนี้`,
+          t: 's',
+          s: {
+            font: { name: 'Sarabun', sz: 11, italic: true, color: { rgb: '64748B' } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: thinBorder
+          }
+        },
+        ...Array.from({ length: 10 }, () => ({ v: '', t: 's', s: { border: thinBorder } }))
+      ]);
+      sheetMerges.push({ s: { r: emptyRowIdx, c: 0 }, e: { r: emptyRowIdx, c: 10 } });
+      sheetRowHeights.push({ hpt: 26 });
+    } else {
+      items.forEach((item, idx) => {
+        const { cells, metrics } = makeDataRowCells(item, idx);
+        sheetRows.push(cells);
+        sheetRowHeights.push({ hpt: 22 });
+
+        subTotals.days += Number(item.workDays || 0);
+        subTotals.allowance += metrics.allowance;
+        subTotals.tax += metrics.tax;
+        subTotals.net += metrics.net;
+      });
+    }
+
+    const totalRowIdx = sheetRows.length;
+    sheetRows.push(makeTotalRowCells(`รวมทั้งสิ้น (${items.length} รายการ)`, subTotals, catDef.subHeaderFill, catDef.subHeaderFont));
+    sheetMerges.push({ s: { r: totalRowIdx, c: 0 }, e: { r: totalRowIdx, c: 4 } });
+    sheetRowHeights.push({ hpt: 25 });
+
+    appendSignatoryFooter(sheetRows, sheetMerges);
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+    ws['!cols'] = colWidths;
+    ws['!merges'] = sheetMerges;
+    ws['!rows'] = sheetRowHeights;
+    XLSX.utils.book_append_sheet(wb, ws, catDef.sheetName);
+  });
+
+  // ─────────────────────────────────────────────────────────
+  // SHEET 6: 5.สรุปหักภาษี 50 ทวิ (เฉพาะผู้ที่ถูกหักภาษี > 0)
+  // ─────────────────────────────────────────────────────────
+  const taxRows = [];
+  const taxMerges = [];
+  const taxRowHeights = [];
+
+  taxRows.push([
+    {
+      v: `สรุปรายชื่อผู้ถูกหักภาษี ณ ที่จ่าย (50 ทวิ - ค่าน้ำดื่ม) ประจำเดือน ${monthText} พ.ศ. ${yearText}`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '991B1B' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 8 }, () => ({ v: '', t: 's' }))
+  ]);
+  taxMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+  taxRowHeights.push({ hpt: 28 });
+
+  taxRows.push([]);
+  taxRowHeights.push({ hpt: 10 });
+
+  const taxHeaders = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'เลขประจำตัวผู้เสียภาษี (13 หลัก)',
+    'ที่อยู่ตามทะเบียน',
+    'ตำแหน่ง',
+    'เงินเดือน (บาท)',
+    'รวมค่าน้ำดื่ม (บาท)',
+    'ภาษีหัก ณ ที่จ่าย (บาท)',
+    'ยอดรับสุทธิ (บาท)'
+  ];
+  taxRows.push(taxHeaders.map(h => makeHeaderCell(h, '991B1B')));
+  taxRowHeights.push({ hpt: 26 });
+
+  const taxedItems = sortedList.filter(item => {
+    const { tax } = computeRowMetrics(item);
+    return tax > 0;
+  });
+
+  let totalTaxAllowance = 0;
+  let totalTaxWithheld = 0;
+  let totalTaxNet = 0;
+
+  if (taxedItems.length === 0) {
+    const emptyIdx = taxRows.length;
+    taxRows.push([
+      {
+        v: 'ไม่มีผู้ถูกหักภาษี ณ ที่จ่ายในเดือนนี้',
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 11, italic: true, color: { rgb: '64748B' } },
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border: thinBorder
+        }
+      },
+      ...Array.from({ length: 8 }, () => ({ v: '', t: 's', s: { border: thinBorder } }))
+    ]);
+    taxMerges.push({ s: { r: emptyIdx, c: 0 }, e: { r: emptyIdx, c: 8 } });
+    taxRowHeights.push({ hpt: 26 });
+  } else {
+    taxedItems.forEach((item, idx) => {
+      const { allowance, tax, net } = computeRowMetrics(item);
+      const regPerson = personnelRegistry.find(p => p.name === item.name);
+      const taxId = regPerson?.taxId || '-';
+      const address = regPerson?.address || '-';
+      const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+      const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+      const redBold = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'DC2626' } };
+      const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'FEF2F2' } } : { fgColor: { rgb: 'FFFFFF' } };
+
+      totalTaxAllowance += allowance;
+      totalTaxWithheld += tax;
+      totalTaxNet += net;
+
+      taxRows.push([
+        { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: item.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: taxId, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: address, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: item.position || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: Number(item.salary || 0), t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: allowance, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: tax, t: 'n', z: '#,##0.00', s: { font: redBold, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: net, t: 'n', z: '#,##0.00', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } }
+      ]);
+      taxRowHeights.push({ hpt: 22 });
+    });
+  }
+
+  const taxTotalIdx = taxRows.length;
+  const taxTotalStyle = {
+    font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '991B1B' } },
+    fill: { fgColor: { rgb: 'FEE2E2' } },
+    alignment: { horizontal: 'right', vertical: 'center' },
+    border: mediumTotalBorder
+  };
+  const taxCenterTotalStyle = { ...taxTotalStyle, alignment: { horizontal: 'center', vertical: 'center' } };
+
+  taxRows.push([
+    { v: `รวมผู้ถูกหักภาษี (${taxedItems.length} ราย)`, t: 's', s: taxCenterTotalStyle },
+    { v: '', t: 's', s: taxCenterTotalStyle },
+    { v: '', t: 's', s: taxCenterTotalStyle },
+    { v: '', t: 's', s: taxCenterTotalStyle },
+    { v: '', t: 's', s: taxCenterTotalStyle },
+    { v: '', t: 's', s: taxCenterTotalStyle },
+    { v: Math.round(totalTaxAllowance * 100) / 100, t: 'n', z: '#,##0.00', s: taxTotalStyle },
+    { v: Math.round(totalTaxWithheld * 100) / 100, t: 'n', z: '#,##0.00', s: taxTotalStyle },
+    { v: Math.round(totalTaxNet * 100) / 100, t: 'n', z: '#,##0.00', s: taxTotalStyle }
+  ]);
+  taxMerges.push({ s: { r: taxTotalIdx, c: 0 }, e: { r: taxTotalIdx, c: 5 } });
+  taxRowHeights.push({ hpt: 25 });
+
+  const taxWs = XLSX.utils.aoa_to_sheet(taxRows);
+  taxWs['!cols'] = [
+    { wch: 7 },
+    { wch: 24 },
+    { wch: 22 },
+    { wch: 36 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 }
+  ];
+  taxWs['!merges'] = taxMerges;
+  taxWs['!rows'] = taxRowHeights;
+  XLSX.utils.book_append_sheet(wb, taxWs, '5.สรุปหักภาษี 50 ทวิ');
+
+  XLSX.writeFile(wb, `เบิกค่าน้ำดื่ม_${monthText}_${yearText}.xlsx`);
+  window.showToast('ส่งออกไฟล์ Excel แยกหมวดหมู่ค่าน้ำดื่มสำเร็จ!', 'success');
 }
 
 export function printWaterReport() {

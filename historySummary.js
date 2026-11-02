@@ -180,9 +180,14 @@ export function getHistoryTemplate() {
             <span class="card-icon">📊</span>
             <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">ตารางบันทึกประวัติการเบิกจ่ายรายเดือน</h3>
           </div>
-          <button type="button" id="recalculateAllSummariesBtn" class="btn btn-secondary btn-small" style="background: var(--post-orange); color: white; border: none; font-weight: bold; border-radius: 8px; padding: 0.4rem 0.8rem;">
-            🔄 ปรับปรุงยอดรวมประวัติทั้งหมด
-          </button>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" id="exportHistoryExcelBtn" class="btn btn-secondary btn-small" style="border: 1px solid #0284c7; color: #0284c7; background: rgba(2, 132, 199, 0.06); font-weight: bold; border-radius: 8px; padding: 0.4rem 0.8rem;">
+              📊 ส่งออก Excel สรุปรายปี
+            </button>
+            <button type="button" id="recalculateAllSummariesBtn" class="btn btn-secondary btn-small" style="background: var(--post-orange); color: white; border: none; font-weight: bold; border-radius: 8px; padding: 0.4rem 0.8rem;">
+              🔄 ปรับปรุงยอดรวมประวัติทั้งหมด
+            </button>
+          </div>
         </div>
 
         <div class="table-container" style="overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-glass);">
@@ -226,10 +231,11 @@ export function getHistoryTemplate() {
       <div class="modal-body" style="padding-top: 0.5rem; overflow-y: auto;">
         
         <!-- Toggle Category tab inside modal -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; flex-wrap: wrap;">
           <button type="button" id="historyTabFuel" class="btn btn-small" style="font-weight: bold; background: var(--post-orange); color: white;">⛽ รายชื่อเบิกค่าน้ำมัน</button>
           <button type="button" id="historyTabWater" class="btn btn-small btn-secondary" style="font-weight: bold;">🥤 รายชื่อเบิกค่าน้ำดื่ม</button>
-          <button type="button" id="printHistoryModalBtn" class="btn btn-small btn-secondary" style="margin-left: auto; border-color: var(--post-orange); color: var(--post-orange); background: transparent;">🖨️ พิมพ์รายงานของเดือนนี้</button>
+          <button type="button" id="exportHistoryModalExcelBtn" class="btn btn-small btn-secondary" style="margin-left: auto; border-color: #0284c7; color: #0284c7; background: rgba(2, 132, 199, 0.06); font-weight: bold;">📊 ส่งออก Excel เดือนนี้</button>
+          <button type="button" id="printHistoryModalBtn" class="btn btn-small btn-secondary" style="border-color: var(--post-orange); color: var(--post-orange); background: transparent;">🖨️ พิมพ์รายงานของเดือนนี้</button>
         </div>
 
         <div class="table-container" style="max-height: 400px; overflow-y: auto;">
@@ -275,6 +281,13 @@ export async function initHistoryView() {
     tabWater.addEventListener('click', () => switchHistoryModalCategory('water'));
   }
 
+  const exportModalExcelBtn = document.getElementById('exportHistoryModalExcelBtn');
+  if (exportModalExcelBtn) {
+    exportModalExcelBtn.addEventListener('click', () => {
+      exportHistoryModalExcel();
+    });
+  }
+
   const printModalBtn = document.getElementById('printHistoryModalBtn');
   if (printModalBtn) {
     printModalBtn.addEventListener('click', () => {
@@ -283,6 +296,13 @@ export async function initHistoryView() {
       } else {
         printHistoricalWaterReport(currentViewingSnapshot.year, currentViewingSnapshot.month, currentViewingSnapshot.waterList);
       }
+    });
+  }
+
+  const exportHistoryBtn = document.getElementById('exportHistoryExcelBtn');
+  if (exportHistoryBtn) {
+    exportHistoryBtn.addEventListener('click', () => {
+      exportHistoryExcel();
     });
   }
 
@@ -1927,4 +1947,391 @@ function printHistorical50Tawi(idx) {
     </html>
   `);
   printWindow.document.close();
+}
+
+export async function exportHistoryExcel() {
+  if (!summariesList || summariesList.length === 0) {
+    window.showToast('ไม่มีข้อมูลประวัติการเบิกจ่ายที่จะส่งออก!', 'warning');
+    return;
+  }
+
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    return;
+  }
+
+  const monthNames = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const mediumTotalBorder = {
+    top: { style: 'medium', color: { rgb: '334155' } },
+    bottom: { style: 'double', color: { rgb: '334155' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const headers = [
+    'ลำดับ',
+    'เดือน/ปี พ.ศ.',
+    'ค่าน้ำมันสุทธิ (บาท)',
+    'ค่าน้ำดื่มรวม (บาท)',
+    'ภาษีค่าน้ำรวม (บาท)',
+    'ค่าน้ำดื่มสุทธิ (บาท)',
+    'รวมเบิกจ่ายสุทธิทั้งสิ้น (บาท)',
+    'จำนวนบุคลากร (คน)'
+  ];
+
+  const colWidths = [
+    { wch: 8 },
+    { wch: 22 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 24 },
+    { wch: 18 }
+  ];
+
+  const makeHeaderCell = (text, bgHex = '1E3A8A') => ({
+    v: text,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: bgHex } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
+  });
+
+  const makeSummaryRow = (item, idx) => {
+    const mName = monthNames[(item.month || 1) - 1] || item.month;
+    const fuelNet = Number(item.fuelTotalNet || 0);
+    const waterGross = Number(item.waterTotalAllowance || (Number(item.waterTotalNet || 0) + Number(item.waterTotalTax || 0)));
+    const waterTax = Number(item.waterTotalTax || 0);
+    const waterNet = Number(item.waterTotalNet || 0);
+    const grandNet = Math.round((fuelNet + waterNet) * 100) / 100;
+    const empCount = Math.max(Number(item.fuelCount || 0), Number(item.waterCount || 0));
+
+    const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+    const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+    const orangeBold = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'C2410C' } };
+    const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } };
+
+    return {
+      metrics: { fuelNet, waterGross, waterTax, waterNet, grandNet },
+      cells: [
+        { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+        { v: `${mName} ${item.year}`, t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: fuelNet, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: waterGross, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: waterTax, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: waterNet, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: grandNet, t: 'n', z: '#,##0.00', s: { font: orangeBold, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+        { v: empCount, t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } }
+      ]
+    };
+  };
+
+  const makeTotalRow = (label, totals, fillHex = 'F1F5F9', fontHex = '0F172A') => {
+    const totalStyle = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: fontHex } },
+      fill: { fgColor: { rgb: fillHex } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: mediumTotalBorder
+    };
+    const centerTotalStyle = { ...totalStyle, alignment: { horizontal: 'center', vertical: 'center' } };
+    const netTotalStyle = {
+      ...totalStyle,
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'C2410C' } }
+    };
+
+    return [
+      { v: label, t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: Math.round(totals.fuelNet * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.waterGross * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.waterTax * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.waterNet * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: Math.round(totals.grandNet * 100) / 100, t: 'n', z: '#,##0.00', s: netTotalStyle },
+      { v: '-', t: 's', s: centerTotalStyle }
+    ];
+  };
+
+  const allYears = [...new Set(summariesList.map(s => s.year))].sort((a, b) => b - a);
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: สรุปรวมทุกปี (แยกตามปี พ.ศ.)
+  const combinedRows = [];
+  const combinedMerges = [];
+  const combinedRowHeights = [];
+
+  combinedRows.push([
+    {
+      v: 'สรุปประวัติการเบิกจ่ายค่าน้ำมันและค่าน้ำดื่มรายเดือน (แยกตามปี พ.ศ.) - ไปรษณีย์ไทย',
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 7 }, () => ({ v: '', t: 's' }))
+  ]);
+  combinedMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+  combinedRowHeights.push({ hpt: 28 });
+
+  combinedRows.push([]);
+  combinedRowHeights.push({ hpt: 10 });
+
+  const grandTotals = { fuelNet: 0, waterGross: 0, waterTax: 0, waterNet: 0, grandNet: 0 };
+
+  allYears.forEach(yr => {
+    const yearItems = summariesList
+      .filter(s => s.year === yr)
+      .sort((a, b) => a.month - b.month);
+
+    if (yearItems.length === 0) return;
+
+    const bannerIdx = combinedRows.length;
+    combinedRows.push([
+      {
+        v: `📌 ประจำปี พ.ศ. ${yr} (จำนวน ${yearItems.length} เดือน)`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: '1E3A8A' } },
+          fill: { fgColor: { rgb: 'DBEAFE' } },
+          alignment: { horizontal: 'left', vertical: 'center' },
+          border: thinBorder
+        }
+      },
+      ...Array.from({ length: 7 }, () => ({
+        v: '',
+        t: 's',
+        s: { fill: { fgColor: { rgb: 'DBEAFE' } }, border: thinBorder }
+      }))
+    ]);
+    combinedMerges.push({ s: { r: bannerIdx, c: 0 }, e: { r: bannerIdx, c: 7 } });
+    combinedRowHeights.push({ hpt: 24 });
+
+    combinedRows.push(headers.map(h => makeHeaderCell(h, '1E3A8A')));
+    combinedRowHeights.push({ hpt: 26 });
+
+    const yearTotals = { fuelNet: 0, waterGross: 0, waterTax: 0, waterNet: 0, grandNet: 0 };
+
+    yearItems.forEach((item, idx) => {
+      const { cells, metrics } = makeSummaryRow(item, idx);
+      combinedRows.push(cells);
+      combinedRowHeights.push({ hpt: 22 });
+
+      yearTotals.fuelNet += metrics.fuelNet;
+      yearTotals.waterGross += metrics.waterGross;
+      yearTotals.waterTax += metrics.waterTax;
+      yearTotals.waterNet += metrics.waterNet;
+      yearTotals.grandNet += metrics.grandNet;
+    });
+
+    const subTotalIdx = combinedRows.length;
+    combinedRows.push(makeTotalRow(`รวมทั้งสิ้นปี พ.ศ. ${yr} (${yearItems.length} เดือน)`, yearTotals, 'DBEAFE', '1E3A8A'));
+    combinedMerges.push({ s: { r: subTotalIdx, c: 0 }, e: { r: subTotalIdx, c: 1 } });
+    combinedRowHeights.push({ hpt: 24 });
+
+    combinedRows.push([]);
+    combinedRowHeights.push({ hpt: 12 });
+
+    grandTotals.fuelNet += yearTotals.fuelNet;
+    grandTotals.waterGross += yearTotals.waterGross;
+    grandTotals.waterTax += yearTotals.waterTax;
+    grandTotals.waterNet += yearTotals.waterNet;
+    grandTotals.grandNet += yearTotals.grandNet;
+  });
+
+  const grandIdx = combinedRows.length;
+  combinedRows.push(makeTotalRow(`รวมเบิกจ่ายสะสมทั้งหมด (${summariesList.length} เดือน)`, grandTotals, 'FEF08A', '0F172A'));
+  combinedMerges.push({ s: { r: grandIdx, c: 0 }, e: { r: grandIdx, c: 1 } });
+  combinedRowHeights.push({ hpt: 26 });
+
+  const combinedWs = XLSX.utils.aoa_to_sheet(combinedRows);
+  combinedWs['!cols'] = colWidths;
+  combinedWs['!merges'] = combinedMerges;
+  combinedWs['!rows'] = combinedRowHeights;
+  XLSX.utils.book_append_sheet(wb, combinedWs, 'สรุปรวมทุกปี');
+
+  // Separate Sheet per Year
+  allYears.forEach(yr => {
+    const yearItems = summariesList
+      .filter(s => s.year === yr)
+      .sort((a, b) => a.month - b.month);
+
+    if (yearItems.length === 0) return;
+
+    const rows = [];
+    const merges = [];
+    const rowHeights = [];
+
+    rows.push([
+      {
+        v: `สรุปประวัติการเบิกจ่ายค่าน้ำมันและค่าน้ำดื่ม ประจำปี พ.ศ. ${yr}`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '1E3A8A' } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        }
+      },
+      ...Array.from({ length: 7 }, () => ({ v: '', t: 's' }))
+    ]);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+    rowHeights.push({ hpt: 28 });
+
+    rows.push([]);
+    rowHeights.push({ hpt: 10 });
+
+    rows.push(headers.map(h => makeHeaderCell(h, '1E3A8A')));
+    rowHeights.push({ hpt: 26 });
+
+    const yearTotals = { fuelNet: 0, waterGross: 0, waterTax: 0, waterNet: 0, grandNet: 0 };
+
+    yearItems.forEach((item, idx) => {
+      const { cells, metrics } = makeSummaryRow(item, idx);
+      rows.push(cells);
+      rowHeights.push({ hpt: 22 });
+
+      yearTotals.fuelNet += metrics.fuelNet;
+      yearTotals.waterGross += metrics.waterGross;
+      yearTotals.waterTax += metrics.waterTax;
+      yearTotals.waterNet += metrics.waterNet;
+      yearTotals.grandNet += metrics.grandNet;
+    });
+
+    const totalIdx = rows.length;
+    rows.push(makeTotalRow(`รวมทั้งสิ้นปี พ.ศ. ${yr} (${yearItems.length} เดือน)`, yearTotals, 'DBEAFE', '1E3A8A'));
+    merges.push({ s: { r: totalIdx, c: 0 }, e: { r: totalIdx, c: 1 } });
+    rowHeights.push({ hpt: 25 });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = colWidths;
+    ws['!merges'] = merges;
+    ws['!rows'] = rowHeights;
+    XLSX.utils.book_append_sheet(wb, ws, `ปี พ.ศ. ${yr}`);
+  });
+
+  XLSX.writeFile(wb, 'สรุปประวัติเบิกจ่ายรายเดือน_ไปรษณีย์ไทย.xlsx');
+  window.showToast('ส่งออกไฟล์ Excel สรุปประวัติเบิกจ่ายรายปีสำเร็จ!', 'success');
+}
+
+export async function exportHistoryModalExcel() {
+  const { year, month, fuelList = [], waterList = [] } = currentViewingSnapshot || {};
+  if (!year || !month) {
+    window.showToast('ไม่พบข้อมูลเดือนที่กำลังเปิดดู!', 'warning');
+    return;
+  }
+
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    return;
+  }
+
+  const monthNames = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  const monthText = monthNames[(month || 1) - 1] || month;
+
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const makeHeaderCell = (text, bgHex = '1E3A8A') => ({
+    v: text,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: bgHex } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: รายชื่อเบิกค่าน้ำมันของเดือนนี้
+  const fuelHeaders = ['ลำดับ', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'ด้านจ่าย', 'วันทำงาน', 'กม./วัน', 'ค่าน้ำมัน (บาท)', 'ค่าเหมาจ่าย (บาท)', 'รวมสุทธิ (บาท)', 'หมายเหตุ'];
+  const fuelRows = [
+    fuelHeaders.map(h => makeHeaderCell(h, 'C2410C')),
+    ...fuelList.map((item, idx) => {
+      const days = Number(item.workDays || 0);
+      const dist = Number(item.distancePerDay || 0);
+      const rate = Number(item.fuelRatePerKm || 0);
+      const maintRate = Number(item.maintenanceRatePerKm || 0);
+      const fuelCost = Math.round(days * dist * rate * 100) / 100;
+      const maintCost = Math.round(days * dist * maintRate * 100) / 100;
+      const net = Math.round((fuelCost + maintCost) * 100) / 100;
+      const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+      return [
+        { v: idx + 1, t: 'n', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: item.name || '', t: 's', s: { font: { ...baseFont, bold: true }, border: thinBorder } },
+        { v: item.position || '-', t: 's', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: item.route || '-', t: 's', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: days, t: 'n', z: '#,##0.0', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: dist, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: fuelCost, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: maintCost, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: net, t: 'n', z: '#,##0.00', s: { font: { ...baseFont, bold: true }, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: item.remarks || '', t: 's', s: { font: baseFont, border: thinBorder } }
+      ];
+    })
+  ];
+  const fuelWs = XLSX.utils.aoa_to_sheet(fuelRows);
+  fuelWs['!cols'] = [{ wch: 7 }, { wch: 24 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, fuelWs, '1.เบิกค่าน้ำมัน');
+
+  // Sheet 2: รายชื่อเบิกค่าน้ำดื่มของเดือนนี้
+  const waterHeaders = ['ลำดับ', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'หน้าที่', 'เงินเดือน (บาท)', 'วันทำงาน', 'รวมค่าน้ำดื่ม (บาท)', 'ภาษีหัก ณ ที่จ่าย (บาท)', 'รับสุทธิ (บาท)', 'หมายเหตุ'];
+  const waterRows = [
+    waterHeaders.map(h => makeHeaderCell(h, '0284C7')),
+    ...waterList.map((item, idx) => {
+      const days = Number(item.workDays || 0);
+      const allowance = Math.round(days * (window.waterAllowancePerDay || 30) * 100) / 100;
+      const salary = Number(item.salary || 0);
+      const tax = salary * 12 >= 150000 ? Math.round(allowance * 0.05 * 100) / 100 : 0;
+      const net = Math.round((allowance - tax) * 100) / 100;
+      const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+      return [
+        { v: idx + 1, t: 'n', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: item.name || '', t: 's', s: { font: { ...baseFont, bold: true }, border: thinBorder } },
+        { v: item.position || '-', t: 's', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: item.duty || '-', t: 's', s: { font: baseFont, border: thinBorder } },
+        { v: salary, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: days, t: 'n', z: '#,##0', s: { font: baseFont, alignment: { horizontal: 'center' }, border: thinBorder } },
+        { v: allowance, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: tax, t: 'n', z: '#,##0.00', s: { font: baseFont, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: net, t: 'n', z: '#,##0.00', s: { font: { ...baseFont, bold: true }, alignment: { horizontal: 'right' }, border: thinBorder } },
+        { v: item.remarks || '', t: 's', s: { font: baseFont, border: thinBorder } }
+      ];
+    })
+  ];
+  const waterWs = XLSX.utils.aoa_to_sheet(waterRows);
+  waterWs['!cols'] = [{ wch: 7 }, { wch: 24 }, { wch: 15 }, { wch: 24 }, { wch: 15 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, waterWs, '2.เบิกค่าน้ำดื่ม');
+
+  XLSX.writeFile(wb, `ประวัติเบิกจ่าย_${monthText}_${year}.xlsx`);
+  window.showToast(`ส่งออกไฟล์ Excel ประจำเดือน ${monthText} ${year} สำเร็จ!`, 'success');
 }

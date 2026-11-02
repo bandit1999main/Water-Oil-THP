@@ -1288,93 +1288,78 @@ function normalizeDepartment(text) {
 
 
 async function downloadPersonnelTemplateXlsx() {
-  if (!window.ExcelJS) {
-    window.showToast('เกิดข้อผิดพลาดในการโหลดโมดูล ExcelJS', 'error');
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
     return;
   }
-  const workbook = new window.ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('รายชื่อบุคลากร');
 
-  worksheet.columns = [
-    { header: 'ลำดับ', key: 'id', width: 8 },
-    { header: 'ชื่อ-นามสกุล', key: 'name', width: 25 },
-    { header: 'ตำแหน่ง', key: 'position', width: 18 },
-    { header: 'แผนก/กลุ่มงาน', key: 'department', width: 18 },
-    { header: 'หน้าที่', key: 'duty', width: 45 },
-    { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
-    { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
-    { header: 'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)', key: 'vehicle', width: 35 },
-    { header: 'วันหยุดประจำสัปดาห์', key: 'restDaysText', width: 20 },
-    { header: 'ลงนามเริ่มต้น (ชื่อเรียก)', key: 'signature', width: 25 }
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const headers = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง',
+    'แผนก/กลุ่มงาน',
+    'หน้าที่',
+    'เงินเดือน (บาท)',
+    'ด้านจ่ายหลัก',
+    'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)',
+    'วันหยุดประจำสัปดาห์',
+    'ลงนามเริ่มต้น (ชื่อเรียก)'
   ];
 
-  worksheet.addRow({
-    id: 1,
-    name: 'นายสมศักดิ์ รักดี',
-    position: 'ลูกจ้างประจำ',
-    department: 'นำจ่าย',
-    duty: 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ',
-    salary: 15000,
-    route: '5',
-    vehicle: 'รถจักรยานยนต์',
-    restDaysText: 'เสาร์-อาทิตย์',
-    signature: 'สมศักดิ์'
-  });
+  const headerRow = headers.map(h => ({
+    v: h,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E3A8A' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
+  }));
 
-  worksheet.addRow({
-    id: 2,
-    name: 'นางสาวสมศรี ทรงดี',
-    position: 'ลูกจ้างเหมา',
-    department: 'ไขตู้/ขนส่ง',
-    duty: 'เจ้าหน้าที่ไขตู้ไปรษณีย์',
-    salary: 12000,
-    route: '12',
-    vehicle: 'รถยนต์',
-    restDaysText: 'วันอาทิตย์',
-    signature: 'สมศรี'
-  });
+  const sampleRows = [
+    [1, 'นายสมศักดิ์ รักดี', 'ลูกจ้างประจำ', 'นำจ่าย', 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ', 15000, '5', 'รถจักรยานยนต์', 'เสาร์-อาทิตย์', 'สมศักดิ์'],
+    [2, 'นางสาวสมศรี ทรงดี', 'ลูกจ้างเหมา', 'ไขตู้/ขนส่ง', 'เจ้าหน้าที่ไขตู้ไปรษณีย์', 12000, '12', 'รถยนต์', 'วันอาทิตย์', 'สมศรี']
+  ].map(row => row.map((val, idx) => ({
+    v: val,
+    t: typeof val === 'number' ? 'n' : 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } },
+      alignment: { horizontal: idx === 0 || idx === 6 ? 'center' : (idx === 5 ? 'right' : 'left'), vertical: 'center' },
+      border: thinBorder
+    }
+  })));
 
-  for (let i = 2; i <= 500; i++) {
-    worksheet.getCell(`C${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"']
-    };
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headerRow, ...sampleRows]);
+  ws['!cols'] = [
+    { wch: 8 },
+    { wch: 25 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 45 },
+    { wch: 18 },
+    { wch: 15 },
+    { wch: 35 },
+    { wch: 20 },
+    { wch: 25 }
+  ];
+  ws['!rows'] = [{ hpt: 26 }, { hpt: 22 }, { hpt: 22 }];
 
-    worksheet.getCell(`D${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"นำจ่าย,ไขตู้/ขนส่ง,รับฝาก,บริหาร/ธุรการ"']
-    };
-
-    worksheet.getCell(`E${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"']
-    };
-
-    worksheet.getCell(`H${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์,รถจักรยาน,เดินเท้า,ไม่ได้ใช้งาน"']
-    };
-
-    worksheet.getCell(`I${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"เสาร์-อาทิตย์,วันอาทิตย์,วันเสาร์,จันทร์,อังคาร,พุธ,พฤหัสบดี,ศุกร์,ไม่มี"']
-    };
-  }
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'เทมเพลตรายชื่อบุคลากร.xlsx';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อบุคลากร');
+  XLSX.writeFile(wb, 'เทมเพลตรายชื่อบุคลากร.xlsx');
+  window.showToast('ดาวน์โหลดเทมเพลต Excel สำเร็จ!', 'success');
 }
 
 function handlePersonnelPaste() {
@@ -1711,88 +1696,364 @@ export async function exportPersonnelCsv() {
     window.showToast('ไม่มีข้อมูลที่จะส่งออก!', 'warning');
     return;
   }
-  if (!window.ExcelJS) {
-    window.showToast('เกิดข้อผิดพลาดในการโหลดโมดูล ExcelJS', 'error');
+
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
     return;
   }
-  const workbook = new window.ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('ทะเบียนบุคลากร');
 
-  worksheet.columns = [
-    { header: 'ลำดับ', key: 'id', width: 8 },
-    { header: 'ชื่อ-นามสกุล', key: 'name', width: 25 },
-    { header: 'ตำแหน่ง', key: 'position', width: 18 },
-    { header: 'แผนก/กลุ่มงาน', key: 'department', width: 18 },
-    { header: 'หน้าที่', key: 'duty', width: 45 },
-    { header: 'เงินเดือน (บาท)', key: 'salary', width: 18 },
-    { header: 'ด้านจ่ายหลัก', key: 'route', width: 15 },
-    { header: 'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)', key: 'vehicle', width: 35 },
-    { header: 'วันหยุดประจำสัปดาห์', key: 'restDaysText', width: 20 },
-    { header: 'ลงนามเริ่มต้น (ชื่อเรียก)', key: 'signature', width: 25 }
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const mediumTotalBorder = {
+    top: { style: 'medium', color: { rgb: '334155' } },
+    bottom: { style: 'double', color: { rgb: '334155' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const headers = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง',
+    'แผนก/กลุ่มงาน',
+    'หน้าที่',
+    'เงินเดือน (บาท)',
+    'ด้านจ่ายหลัก',
+    'ประเภทพาหนะ (รถจักรยานยนต์/รถยนต์)',
+    'วันหยุดประจำสัปดาห์',
+    'ลงนามเริ่มต้น (ชื่อเรียก)'
   ];
 
-  personnel.forEach((item, index) => {
-    const restDaysText = item.restDays && item.restDays.length > 0 
+  const colWidths = [
+    { wch: 8 },
+    { wch: 25 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 42 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 28 },
+    { wch: 20 },
+    { wch: 22 }
+  ];
+
+  const formatRestDays = (item) => {
+    return item.restDays && item.restDays.length > 0
       ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join('-')
       : 'ไม่มี';
-    
-    worksheet.addRow({
-      id: index + 1,
-      name: item.name,
-      position: item.position || '',
-      department: item.department || 'ทั่วไป',
-      duty: item.duty || '-',
-      salary: item.salary || 0,
-      route: item.route || '',
-      vehicle: item.vehicle || '-',
-      restDaysText: restDaysText,
-      signature: item.signature || item.name
-    });
+  };
+
+  const makeHeaderCell = (text, bgHex = '1E3A8A') => ({
+    v: text,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: bgHex } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
   });
 
-  const maxRows = Math.max(500, personnel.length + 100);
-  for (let i = 2; i <= maxRows; i++) {
-    worksheet.getCell(`C${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"หน.ปณ.,พนักงาน,ลูกจ้างประจำ,ลูกจ้าง,ลูกจ้างเหมา"']
-    };
+  const makePersonnelRow = (item, idx) => {
+    const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+    const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+    const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } };
+    const restDaysText = formatRestDays(item);
 
-    worksheet.getCell(`D${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"นำจ่าย,ไขตู้/ขนส่ง,รับฝาก,บริหาร/ธุรการ"']
-    };
+    return [
+      { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: item.position || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.department || 'ทั่วไป', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.duty || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: Number(item.salary || 0), t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+      { v: item.route || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.vehicle || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: restDaysText, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.signature || item.name || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } }
+    ];
+  };
 
-    worksheet.getCell(`E${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ,เจ้าหน้าที่ไขตู้ไปรษณีย์,หัวหน้าโซนนำจ่าย,เจ้าหน้าที่รับฝากนอกที่ทำการ,ปณอ.(รับ/จ่าย)/ผู้ช่วยนำจ่าย"']
+  const makeSalaryTotalRow = (label, count, totalSalary, fillHex = 'F1F5F9', fontHex = '0F172A') => {
+    const totalStyle = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: fontHex } },
+      fill: { fgColor: { rgb: fillHex } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: mediumTotalBorder
     };
+    const centerTotalStyle = { ...totalStyle, alignment: { horizontal: 'center', vertical: 'center' } };
 
-    worksheet.getCell(`H${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"รถจักรยานยนต์,รถจักรยานยนต์ไฟฟ้า,เรือยนต์,รถยนต์,รถจักรยาน,เดินเท้า,ไม่ได้ใช้งาน"']
-    };
+    return [
+      { v: `${label} (${count} ราย)`, t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: Math.round(totalSalary * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
+      { v: '', t: 's', s: centerTotalStyle }
+    ];
+  };
 
-    worksheet.getCell(`I${i}`).dataValidation = {
-      type: 'list',
-      allowBlank: true,
-      formulae: ['"เสาร์-อาทิตย์,วันอาทิตย์,วันเสาร์,จันทร์,อังคาร,พุธ,พฤหัสบดี,ศุกร์,ไม่มี"']
-    };
-  }
+  const sortedPersonnel = [...personnel].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'ทะเบียนบุคลากร_ไปรษณีย์ไทย.xlsx';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.showToast('ส่งออกข้อมูลบุคลากรสำเร็จ!', 'success');
+  const wb = XLSX.utils.book_new();
+
+  // ─────────────────────────────────────────────────────────
+  // SHEET 1: รวมทั้งหมด (นำเข้าได้) - รักษาโครงสร้างแถวที่ 1 เป็น Header เพื่อรองรับการนำเข้ากลับ
+  // ─────────────────────────────────────────────────────────
+  const importableRows = [
+    headers.map(h => makeHeaderCell(h, '1E3A8A')),
+    ...sortedPersonnel.map((item, idx) => makePersonnelRow(item, idx))
+  ];
+  const importableWs = XLSX.utils.aoa_to_sheet(importableRows);
+  importableWs['!cols'] = colWidths;
+  importableWs['!rows'] = [{ hpt: 26 }, ...sortedPersonnel.map(() => ({ hpt: 22 }))];
+  XLSX.utils.book_append_sheet(wb, importableWs, 'รวมทั้งหมด (นำเข้าได้)');
+
+  // ─────────────────────────────────────────────────────────
+  // จัดกลุ่มบุคลากรตามหมวดหมู่
+  // ─────────────────────────────────────────────────────────
+  const classifyPerson = (item) => {
+    if (item.status === 'resigned') return 'resigned';
+    const pos = (item.position || '').trim();
+    const duty = (item.duty || '').trim();
+    if (duty.includes('หัวหน้าโซน') || duty.includes('ชนจ') || pos.includes('ชนจ')) {
+      return 'supervisor';
+    }
+    if (pos.includes('เหมา')) {
+      return 'contractor';
+    }
+    if (pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ' || pos === 'หน.ปณ.') {
+      return 'staff';
+    }
+    return 'worker';
+  };
+
+  const categoryDefs = [
+    {
+      key: 'staff',
+      sheetName: '1.พนง-ลูกจ้างประจำ',
+      sectionTitle: '1. พนักงาน และ ลูกจ้างประจำ',
+      headerFill: '1E3A8A',
+      subHeaderFill: 'DBEAFE',
+      subHeaderFont: '1E3A8A'
+    },
+    {
+      key: 'worker',
+      sheetName: '2.ลูกจ้าง',
+      sectionTitle: '2. ลูกจ้างรายวัน และ ลูกจ้างชั่วคราว',
+      headerFill: '0F766E',
+      subHeaderFill: 'CCFBF1',
+      subHeaderFont: '0F766E'
+    },
+    {
+      key: 'contractor',
+      sheetName: '3.ลูกจ้างเหมา',
+      sectionTitle: '3. ลูกจ้างเหมาบริการนำจ่าย',
+      headerFill: 'B45309',
+      subHeaderFill: 'FEF3C7',
+      subHeaderFont: '92400E'
+    },
+    {
+      key: 'supervisor',
+      sheetName: '4.ชนจ.',
+      sectionTitle: '4. หัวหน้าโซนนำจ่าย (ชนจ.)',
+      headerFill: '3730A3',
+      subHeaderFill: 'E0E7FF',
+      subHeaderFont: '312E81'
+    },
+    {
+      key: 'resigned',
+      sheetName: '5.ผู้ลาออก',
+      sectionTitle: '5. รายชื่อผู้ลาออก / พ้นสภาพ',
+      headerFill: '64748B',
+      subHeaderFill: 'F1F5F9',
+      subHeaderFont: '334155'
+    }
+  ];
+
+  const grouped = {
+    staff: [],
+    worker: [],
+    contractor: [],
+    supervisor: [],
+    resigned: []
+  };
+
+  sortedPersonnel.forEach(item => {
+    const cat = classifyPerson(item);
+    grouped[cat].push(item);
+  });
+
+  // ─────────────────────────────────────────────────────────
+  // SHEET 2: สรุปแยกหมวดหมู่ (รวมในหน้าเดียว แยกเป็นบล็อก)
+  // ─────────────────────────────────────────────────────────
+  const summaryRows = [];
+  const summaryMerges = [];
+  const summaryRowHeights = [];
+
+  summaryRows.push([
+    {
+      v: 'ทะเบียนประวัติบุคลากร (แยกตามหมวดหมู่ปฏิบัติงาน) - ไปรษณีย์ไทย',
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
+  ]);
+  summaryMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+  summaryRowHeights.push({ hpt: 28 });
+
+  summaryRows.push([]);
+  summaryRowHeights.push({ hpt: 10 });
+
+  let grandTotalSalary = 0;
+  let grandTotalActiveCount = 0;
+
+  categoryDefs.forEach(catDef => {
+    const items = grouped[catDef.key] || [];
+    if (items.length === 0) return;
+
+    const bannerIdx = summaryRows.length;
+    summaryRows.push([
+      {
+        v: `📌 ${catDef.sectionTitle} (จำนวน ${items.length} ราย)`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: catDef.subHeaderFont } },
+          fill: { fgColor: { rgb: catDef.subHeaderFill } },
+          alignment: { horizontal: 'left', vertical: 'center' },
+          border: thinBorder
+        }
+      },
+      ...Array.from({ length: 9 }, () => ({
+        v: '',
+        t: 's',
+        s: { fill: { fgColor: { rgb: catDef.subHeaderFill } }, border: thinBorder }
+      }))
+    ]);
+    summaryMerges.push({ s: { r: bannerIdx, c: 0 }, e: { r: bannerIdx, c: 9 } });
+    summaryRowHeights.push({ hpt: 24 });
+
+    summaryRows.push(headers.map(h => makeHeaderCell(h, catDef.headerFill)));
+    summaryRowHeights.push({ hpt: 26 });
+
+    let groupSalary = 0;
+    items.forEach((item, idx) => {
+      summaryRows.push(makePersonnelRow(item, idx));
+      summaryRowHeights.push({ hpt: 22 });
+      groupSalary += Number(item.salary || 0);
+    });
+
+    const subTotalIdx = summaryRows.length;
+    summaryRows.push(makeSalaryTotalRow(`รวมเฉพาะกลุ่ม: ${catDef.sectionTitle}`, items.length, groupSalary, catDef.subHeaderFill, catDef.subHeaderFont));
+    summaryMerges.push({ s: { r: subTotalIdx, c: 0 }, e: { r: subTotalIdx, c: 4 } });
+    summaryRowHeights.push({ hpt: 24 });
+
+    summaryRows.push([]);
+    summaryRowHeights.push({ hpt: 12 });
+
+    if (catDef.key !== 'resigned') {
+      grandTotalSalary += groupSalary;
+      grandTotalActiveCount += items.length;
+    }
+  });
+
+  const grandTotalIdx = summaryRows.length;
+  summaryRows.push(makeSalaryTotalRow('รวมบุคลากรที่ปฏิบัติงานอยู่ทั้งสิ้น', grandTotalActiveCount, grandTotalSalary, 'FEF08A', '0F172A'));
+  summaryMerges.push({ s: { r: grandTotalIdx, c: 0 }, e: { r: grandTotalIdx, c: 4 } });
+  summaryRowHeights.push({ hpt: 26 });
+
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+  summaryWs['!cols'] = colWidths;
+  summaryWs['!merges'] = summaryMerges;
+  summaryWs['!rows'] = summaryRowHeights;
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'สรุปแยกหมวดหมู่');
+
+  // ─────────────────────────────────────────────────────────
+  // SHEETS 3..7: แยกแต่ละหมวดหมู่เป็น Sheet ของตัวเอง
+  // ─────────────────────────────────────────────────────────
+  categoryDefs.forEach(catDef => {
+    const items = grouped[catDef.key] || [];
+    if (catDef.key === 'resigned' && items.length === 0) return;
+
+    const sheetRows = [];
+    const sheetMerges = [];
+    const sheetRowHeights = [];
+
+    sheetRows.push([
+      {
+        v: `ทะเบียนประวัติบุคลากร หมวด: ${catDef.sectionTitle}`,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: catDef.subHeaderFont } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        }
+      },
+      ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
+    ]);
+    sheetMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+    sheetRowHeights.push({ hpt: 28 });
+
+    sheetRows.push([]);
+    sheetRowHeights.push({ hpt: 10 });
+
+    sheetRows.push(headers.map(h => makeHeaderCell(h, catDef.headerFill)));
+    sheetRowHeights.push({ hpt: 26 });
+
+    let groupSalary = 0;
+    if (items.length === 0) {
+      const emptyIdx = sheetRows.length;
+      sheetRows.push([
+        {
+          v: `ไม่มีรายชื่อบุคลากรในหมวด "${catDef.sectionTitle}"`,
+          t: 's',
+          s: {
+            font: { name: 'Sarabun', sz: 11, italic: true, color: { rgb: '64748B' } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: thinBorder
+          }
+        },
+        ...Array.from({ length: 9 }, () => ({ v: '', t: 's', s: { border: thinBorder } }))
+      ]);
+      sheetMerges.push({ s: { r: emptyIdx, c: 0 }, e: { r: emptyIdx, c: 9 } });
+      sheetRowHeights.push({ hpt: 26 });
+    } else {
+      items.forEach((item, idx) => {
+        sheetRows.push(makePersonnelRow(item, idx));
+        sheetRowHeights.push({ hpt: 22 });
+        groupSalary += Number(item.salary || 0);
+      });
+    }
+
+    const totalIdx = sheetRows.length;
+    sheetRows.push(makeSalaryTotalRow('รวมทั้งสิ้น', items.length, groupSalary, catDef.subHeaderFill, catDef.subHeaderFont));
+    sheetMerges.push({ s: { r: totalIdx, c: 0 }, e: { r: totalIdx, c: 4 } });
+    sheetRowHeights.push({ hpt: 25 });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+    ws['!cols'] = colWidths;
+    ws['!merges'] = sheetMerges;
+    ws['!rows'] = sheetRowHeights;
+    XLSX.utils.book_append_sheet(wb, ws, catDef.sheetName);
+  });
+
+  XLSX.writeFile(wb, 'ทะเบียนบุคลากร_ไปรษณีย์ไทย.xlsx');
+  window.showToast('ส่งออกไฟล์ Excel ทะเบียนบุคลากรแยกหมวดหมู่สำเร็จ!', 'success');
 }
 
 export function printPersonnelReport() {

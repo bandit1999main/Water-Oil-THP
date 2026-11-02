@@ -88,6 +88,9 @@ export function getLeaveTemplate() {
               </div>
             </div>
             <div class="header-actions-flex" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" id="exportLeaveExcelBtn" class="btn btn-secondary btn-small" style="border: 1px solid #0284c7; color: #0284c7; background: rgba(2, 132, 199, 0.06); font-weight: 700;">
+                📊 ส่งออก Excel
+              </button>
               <button type="button" id="printAllLeavesBtn" class="btn btn-secondary btn-small">
                 🖨️ รายงานขอลาทั้งหมด
               </button>
@@ -245,10 +248,12 @@ export function initLeaveManager() {
     }
   });
 
-  // Bind print buttons
+  // Bind print & export buttons
+  const exportExcelBtn = document.getElementById('exportLeaveExcelBtn');
   const printAllBtn = document.getElementById('printAllLeavesBtn');
   const printAppBtn = document.getElementById('printApprovedLeavesBtn');
   const printCalBtn = document.getElementById('printCalendarReportBtn');
+  if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportLeaveExcel);
   if (printAllBtn) printAllBtn.addEventListener('click', printAllLeavesReport);
   if (printAppBtn) printAppBtn.addEventListener('click', printApprovedLeavesReport);
   if (printCalBtn) printCalBtn.addEventListener('click', printCalendarReport);
@@ -1398,4 +1403,393 @@ function resetLeaveForm() {
   if (cancelBtn) {
     cancelBtn.remove();
   }
+}
+
+export async function exportLeaveExcel() {
+  if (!leaveList || leaveList.length === 0) {
+    window.showToast('ไม่มีข้อมูลรายการลาที่จะส่งออก!', 'warning');
+    return;
+  }
+
+  let XLSX;
+  try {
+    XLSX = await window.getXLSX();
+  } catch (e) {
+    console.error('Failed to load XLSX library:', e);
+    window.showToast('ไม่สามารถโหลดระบบสร้างไฟล์ Excel ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    return;
+  }
+
+  const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
+
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const mediumTotalBorder = {
+    top: { style: 'medium', color: { rgb: '334155' } },
+    bottom: { style: 'double', color: { rgb: '334155' } },
+    left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+  };
+
+  const formatThaiDate = (dStr) => {
+    if (!dStr) return '-';
+    const parts = dStr.split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0]) + 543;
+      return `${parts[2]}/${parts[1]}/${y}`;
+    }
+    return dStr;
+  };
+
+  const calcDays = (req) => {
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate);
+    return Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+  };
+
+  const getStatusText = (status) => {
+    if (status === 'approved') return 'อนุมัติแล้ว';
+    if (status === 'rejected') return 'ปฏิเสธการลา';
+    return 'รออนุมัติ';
+  };
+
+  const leaveTypeDefs = [
+    {
+      key: 'sick',
+      title: '1. ลาป่วย (ป)',
+      headerFill: 'DC2626',
+      subHeaderFill: 'FEE2E2',
+      subHeaderFont: '991B1B'
+    },
+    {
+      key: 'personal',
+      title: '2. ลากิจ (ก)',
+      headerFill: 'D97706',
+      subHeaderFill: 'FEF3C7',
+      subHeaderFont: '92400E'
+    },
+    {
+      key: 'vacation',
+      title: '3. ลาพักผ่อน (พ)',
+      headerFill: '0284C7',
+      subHeaderFill: 'E0F2FE',
+      subHeaderFont: '075985'
+    }
+  ];
+
+  const headers = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง',
+    'ประเภทการลา',
+    'วันที่เริ่มลา',
+    'วันที่สิ้นสุด',
+    'จำนวนวันลา',
+    'เหตุผลการลา / หมายเหตุ',
+    'สถานะ'
+  ];
+
+  const colWidths = [
+    { wch: 7 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 13 },
+    { wch: 28 },
+    { wch: 15 }
+  ];
+
+  const makeHeaderCell = (text, bgHex = '1E3A8A') => ({
+    v: text,
+    t: 's',
+    s: {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: bgHex } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: thinBorder
+    }
+  });
+
+  const buildCategorizedLeaveSheet = (records, sheetTitle) => {
+    const rows = [];
+    const merges = [];
+    const rowHeights = [];
+
+    rows.push([
+      {
+        v: sheetTitle,
+        t: 's',
+        s: {
+          font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '0F172A' } },
+          alignment: { horizontal: 'center', vertical: 'center' }
+        }
+      },
+      ...Array.from({ length: 8 }, () => ({ v: '', t: 's' }))
+    ]);
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+    rowHeights.push({ hpt: 28 });
+
+    rows.push([]);
+    rowHeights.push({ hpt: 10 });
+
+    let grandTotalDays = 0;
+
+    leaveTypeDefs.forEach(typeDef => {
+      const items = records
+        .filter(r => r.leaveType === typeDef.key)
+        .sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+
+      if (items.length === 0) return;
+
+      const bannerIdx = rows.length;
+      rows.push([
+        {
+          v: `📌 ${typeDef.title} (จำนวน ${items.length} รายการ)`,
+          t: 's',
+          s: {
+            font: { name: 'Sarabun', sz: 12, bold: true, color: { rgb: typeDef.subHeaderFont } },
+            fill: { fgColor: { rgb: typeDef.subHeaderFill } },
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: thinBorder
+          }
+        },
+        ...Array.from({ length: 8 }, () => ({
+          v: '',
+          t: 's',
+          s: { fill: { fgColor: { rgb: typeDef.subHeaderFill } }, border: thinBorder }
+        }))
+      ]);
+      merges.push({ s: { r: bannerIdx, c: 0 }, e: { r: bannerIdx, c: 8 } });
+      rowHeights.push({ hpt: 24 });
+
+      rows.push(headers.map(h => makeHeaderCell(h, typeDef.headerFill)));
+      rowHeights.push({ hpt: 26 });
+
+      let subTotalDays = 0;
+      items.forEach((req, idx) => {
+        const days = calcDays(req);
+        subTotalDays += days;
+        const regPerson = registry.find(p => p.name === req.name);
+        const pos = regPerson?.position || '-';
+        const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+        const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+        const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } };
+
+        rows.push([
+          { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: req.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+          { v: pos, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: typeDef.title.replace(/^\d+\.\s*/, ''), t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: formatThaiDate(req.startDate), t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: formatThaiDate(req.endDate), t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: days, t: 'n', z: '#,##0', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+          { v: req.reason || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+          { v: getStatusText(req.status), t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } }
+        ]);
+        rowHeights.push({ hpt: 22 });
+      });
+
+      const subTotalIdx = rows.length;
+      const subTotalStyle = {
+        font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: typeDef.subHeaderFont } },
+        fill: { fgColor: { rgb: typeDef.subHeaderFill } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: mediumTotalBorder
+      };
+      rows.push([
+        { v: `รวม ${typeDef.title} (${items.length} รายการ)`, t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle },
+        { v: subTotalDays, t: 'n', z: '#,##0', s: subTotalStyle },
+        { v: 'วัน', t: 's', s: subTotalStyle },
+        { v: '', t: 's', s: subTotalStyle }
+      ]);
+      merges.push({ s: { r: subTotalIdx, c: 0 }, e: { r: subTotalIdx, c: 5 } });
+      rowHeights.push({ hpt: 24 });
+
+      rows.push([]);
+      rowHeights.push({ hpt: 12 });
+
+      grandTotalDays += subTotalDays;
+    });
+
+    const grandIdx = rows.length;
+    const grandStyle = {
+      font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } },
+      fill: { fgColor: { rgb: 'FEF08A' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: mediumTotalBorder
+    };
+    rows.push([
+      { v: `รวมทั้งสิ้น (${records.length} รายการ)`, t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle },
+      { v: grandTotalDays, t: 'n', z: '#,##0', s: grandStyle },
+      { v: 'วัน', t: 's', s: grandStyle },
+      { v: '', t: 's', s: grandStyle }
+    ]);
+    merges.push({ s: { r: grandIdx, c: 0 }, e: { r: grandIdx, c: 5 } });
+    rowHeights.push({ hpt: 26 });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = colWidths;
+    ws['!merges'] = merges;
+    ws['!rows'] = rowHeights;
+    return ws;
+  };
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: รายการขอลาทั้งหมด (แยกตามประเภทการลา)
+  const allWs = buildCategorizedLeaveSheet(
+    leaveList,
+    `สรุปรายการขอลาปฏิบัติงานทั้งหมด (แยกตามประเภทการลา) ประจำปี พ.ศ. ${currentViewYear}`
+  );
+  XLSX.utils.book_append_sheet(wb, allWs, '1.รายการลาทั้งหมด');
+
+  // Sheet 2: เฉพาะอนุมัติแล้ว
+  const approvedList = leaveList.filter(r => r.status === 'approved');
+  const approvedWs = buildCategorizedLeaveSheet(
+    approvedList,
+    `สรุปรายการลาที่ได้รับอนุมัติแล้ว ประจำปี พ.ศ. ${currentViewYear}`
+  );
+  XLSX.utils.book_append_sheet(wb, approvedWs, '2.เฉพาะอนุมัติแล้ว');
+
+  // Sheet 3: สรุปสถิติวันลารายคน
+  const statsMap = {};
+  approvedList.forEach(req => {
+    const days = calcDays(req);
+    if (!statsMap[req.name]) {
+      const regPerson = registry.find(p => p.name === req.name);
+      statsMap[req.name] = {
+        name: req.name,
+        position: regPerson?.position || '-',
+        department: regPerson?.department || 'ทั่วไป',
+        sick: 0,
+        personal: 0,
+        vacation: 0,
+        total: 0,
+        count: 0
+      };
+    }
+    if (req.leaveType === 'sick') statsMap[req.name].sick += days;
+    else if (req.leaveType === 'personal') statsMap[req.name].personal += days;
+    else if (req.leaveType === 'vacation') statsMap[req.name].vacation += days;
+    statsMap[req.name].total += days;
+    statsMap[req.name].count += 1;
+  });
+
+  const statsList = Object.values(statsMap).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'th'));
+  const statsRows = [];
+  const statsMerges = [];
+  const statsRowHeights = [];
+
+  statsRows.push([
+    {
+      v: `สรุปสถิติวันลาสะสมรายบุคคล (เฉพาะที่อนุมัติแล้ว) ประจำปี พ.ศ. ${currentViewYear}`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 14, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 7 }, () => ({ v: '', t: 's' }))
+  ]);
+  statsMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } });
+  statsRowHeights.push({ hpt: 28 });
+
+  statsRows.push([]);
+  statsRowHeights.push({ hpt: 10 });
+
+  const statsHeaders = [
+    'ลำดับ',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง',
+    'แผนก/กลุ่มงาน',
+    'ลาป่วย (วัน)',
+    'ลากิจ (วัน)',
+    'ลาพักผ่อน (วัน)',
+    'รวมวันลาทั้งสิ้น (วัน)'
+  ];
+  statsRows.push(statsHeaders.map(h => makeHeaderCell(h, '0F766E')));
+  statsRowHeights.push({ hpt: 26 });
+
+  let sumSick = 0;
+  let sumPersonal = 0;
+  let sumVacation = 0;
+  let sumAll = 0;
+
+  statsList.forEach((st, idx) => {
+    sumSick += st.sick;
+    sumPersonal += st.personal;
+    sumVacation += st.vacation;
+    sumAll += st.total;
+
+    const baseFont = { name: 'Sarabun', sz: 11, color: { rgb: '0F172A' } };
+    const boldFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F172A' } };
+    const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F0FDFA' } } : { fgColor: { rgb: 'FFFFFF' } };
+
+    statsRows.push([
+      { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.name, t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: st.position, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.department, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.sick, t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.personal, t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.vacation, t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: st.total, t: 'n', z: '#,##0', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } }
+    ]);
+    statsRowHeights.push({ hpt: 22 });
+  });
+
+  const statsTotalIdx = statsRows.length;
+  const statsTotalStyle = {
+    font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0F766E' } },
+    fill: { fgColor: { rgb: 'CCFBF1' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: mediumTotalBorder
+  };
+  statsRows.push([
+    { v: `รวมทั้งสิ้น (${statsList.length} คน)`, t: 's', s: statsTotalStyle },
+    { v: '', t: 's', s: statsTotalStyle },
+    { v: '', t: 's', s: statsTotalStyle },
+    { v: '', t: 's', s: statsTotalStyle },
+    { v: sumSick, t: 'n', z: '#,##0', s: statsTotalStyle },
+    { v: sumPersonal, t: 'n', z: '#,##0', s: statsTotalStyle },
+    { v: sumVacation, t: 'n', z: '#,##0', s: statsTotalStyle },
+    { v: sumAll, t: 'n', z: '#,##0', s: statsTotalStyle }
+  ]);
+  statsMerges.push({ s: { r: statsTotalIdx, c: 0 }, e: { r: statsTotalIdx, c: 3 } });
+  statsRowHeights.push({ hpt: 25 });
+
+  const statsWs = XLSX.utils.aoa_to_sheet(statsRows);
+  statsWs['!cols'] = [
+    { wch: 7 },
+    { wch: 24 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 15 },
+    { wch: 18 }
+  ];
+  statsWs['!merges'] = statsMerges;
+  statsWs['!rows'] = statsRowHeights;
+  XLSX.utils.book_append_sheet(wb, statsWs, '3.สรุปสถิติวันลารายคน');
+
+  XLSX.writeFile(wb, `สรุปการลาปฏิบัติงาน_${currentViewYear}.xlsx`);
+  window.showToast('ส่งออกไฟล์ Excel สรุปการลาปฏิบัติงานสำเร็จ!', 'success');
 }
