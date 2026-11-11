@@ -423,7 +423,6 @@ export async function exportWaterCsv() {
     'ชื่อ-นามสกุล',
     'ตำแหน่ง',
     'ปฏิบัติหน้าที่',
-    'เงินเดือน (บาท)',
     'จำนวนวันทำงาน',
     'รวมค่าน้ำดื่ม (บาท)',
     'ภาษีหัก ณ ที่จ่าย (บาท)',
@@ -437,7 +436,6 @@ export async function exportWaterCsv() {
     { wch: 24 }, // ชื่อ-นามสกุล
     { wch: 15 }, // ตำแหน่ง
     { wch: 28 }, // ปฏิบัติหน้าที่
-    { wch: 15 }, // เงินเดือน
     { wch: 14 }, // จำนวนวันทำงาน
     { wch: 18 }, // รวมค่าน้ำดื่ม
     { wch: 18 }, // ภาษีหัก ณ ที่จ่าย
@@ -487,7 +485,6 @@ export async function exportWaterCsv() {
         { v: displayExcelName, t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
         { v: item.position || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
         { v: item.duty || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
-        { v: Number(item.salary || 0), t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
         { v: Number(item.workDays || 0), t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
         { v: allowance, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
         { v: tax, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
@@ -519,7 +516,6 @@ export async function exportWaterCsv() {
       { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
-      { v: '', t: 's', s: centerTotalStyle },
       { v: Math.round(totals.days), t: 'n', z: '#,##0', s: centerTotalStyle },
       { v: Math.round(totals.allowance * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
       { v: Math.round(totals.tax * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
@@ -541,22 +537,22 @@ export async function exportWaterCsv() {
       alignment: { horizontal: 'center', vertical: 'center' }
     };
 
-    const emptyRow = () => Array.from({ length: 11 }, () => ({ v: '', t: 's', s: sigStyle }));
+    const emptyRow = () => Array.from({ length: 10 }, () => ({ v: '', t: 's', s: sigStyle }));
 
     const r1 = emptyRow();
     r1[0] = { v: `ลงชื่อ .................................................... ${sigMakerTitleVal}`, t: 's', s: sigStyle };
     r1[4] = { v: `ลงชื่อ .................................................... ${sigCheckerTitleVal}`, t: 's', s: sigStyle };
-    r1[8] = { v: `ลงชื่อ .................................................... ${sigApproverTitleVal}`, t: 's', s: sigStyle };
+    r1[7] = { v: `ลงชื่อ .................................................... ${sigApproverTitleVal}`, t: 's', s: sigStyle };
 
     const r2 = emptyRow();
     r2[0] = { v: `( ${sigMakerNameVal} )`, t: 's', s: sigBoldStyle };
     r2[4] = { v: `( ${sigCheckerNameVal} )`, t: 's', s: sigBoldStyle };
-    r2[8] = { v: `( ${sigApproverNameVal} )`, t: 's', s: sigBoldStyle };
+    r2[7] = { v: `( ${sigApproverNameVal} )`, t: 's', s: sigBoldStyle };
 
     const r3 = emptyRow();
     r3[0] = { v: `ตำแหน่ง ${sigMakerPosVal}`, t: 's', s: sigStyle };
     r3[4] = { v: `ตำแหน่ง ${sigCheckerPosVal}`, t: 's', s: sigStyle };
-    r3[8] = { v: `ตำแหน่ง ${sigApproverPosVal}`, t: 's', s: sigStyle };
+    r3[7] = { v: `ตำแหน่ง ${sigApproverPosVal}`, t: 's', s: sigStyle };
 
     rows.push(r1, r2, r3);
 
@@ -564,8 +560,8 @@ export async function exportWaterCsv() {
       const rIdx = sigStartRow + offset;
       merges.push(
         { s: { r: rIdx, c: 0 }, e: { r: rIdx, c: 3 } },
-        { s: { r: rIdx, c: 4 }, e: { r: rIdx, c: 7 } },
-        { s: { r: rIdx, c: 8 }, e: { r: rIdx, c: 10 } }
+        { s: { r: rIdx, c: 4 }, e: { r: rIdx, c: 6 } },
+        { s: { r: rIdx, c: 7 }, e: { r: rIdx, c: 9 } }
       );
     }
   };
@@ -588,9 +584,9 @@ export async function exportWaterCsv() {
         alignment: { horizontal: 'center', vertical: 'center' }
       }
     },
-    ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+    ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
   ]);
-  combinedMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+  combinedMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
   combinedRowHeights.push({ hpt: 28 });
 
   combinedRows.push([
@@ -602,9 +598,9 @@ export async function exportWaterCsv() {
         alignment: { horizontal: 'center', vertical: 'center' }
       }
     },
-    ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+    ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
   ]);
-  combinedMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+  combinedMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 9 } });
   combinedRowHeights.push({ hpt: 20 });
 
   combinedRows.push([]);
@@ -628,13 +624,13 @@ export async function exportWaterCsv() {
           border: thinBorder
         }
       },
-      ...Array.from({ length: 10 }, () => ({
+      ...Array.from({ length: 9 }, () => ({
         v: '',
         t: 's',
         s: { fill: { fgColor: { rgb: catDef.subHeaderFill } }, border: thinBorder }
       }))
     ]);
-    combinedMerges.push({ s: { r: bannerRowIdx, c: 0 }, e: { r: bannerRowIdx, c: 10 } });
+    combinedMerges.push({ s: { r: bannerRowIdx, c: 0 }, e: { r: bannerRowIdx, c: 9 } });
     combinedRowHeights.push({ hpt: 24 });
 
     combinedRows.push(tableHeaders.map(h => makeHeaderCell(h, catDef.headerFill)));
@@ -655,7 +651,7 @@ export async function exportWaterCsv() {
 
     const subTotalRowIdx = combinedRows.length;
     combinedRows.push(makeTotalRowCells(`รวมเฉพาะกลุ่ม: ${catDef.sectionTitle} (${items.length} ราย)`, subTotals, catDef.subHeaderFill, catDef.subHeaderFont));
-    combinedMerges.push({ s: { r: subTotalRowIdx, c: 0 }, e: { r: subTotalRowIdx, c: 4 } });
+    combinedMerges.push({ s: { r: subTotalRowIdx, c: 0 }, e: { r: subTotalRowIdx, c: 3 } });
     combinedRowHeights.push({ hpt: 24 });
 
     combinedRows.push([]);
@@ -669,7 +665,7 @@ export async function exportWaterCsv() {
 
   const grandTotalRowIdx = combinedRows.length;
   combinedRows.push(makeTotalRowCells(`รวมทั้งสิ้นทุกกลุ่ม (${sortedList.length} รายการ)`, grandTotals, 'FEF08A', '0F172A'));
-  combinedMerges.push({ s: { r: grandTotalRowIdx, c: 0 }, e: { r: grandTotalRowIdx, c: 4 } });
+  combinedMerges.push({ s: { r: grandTotalRowIdx, c: 0 }, e: { r: grandTotalRowIdx, c: 3 } });
   combinedRowHeights.push({ hpt: 26 });
 
   appendSignatoryFooter(combinedRows, combinedMerges);
@@ -698,9 +694,9 @@ export async function exportWaterCsv() {
           alignment: { horizontal: 'center', vertical: 'center' }
         }
       },
-      ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+      ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
     ]);
-    sheetMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } });
+    sheetMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
     sheetRowHeights.push({ hpt: 28 });
 
     sheetRows.push([
@@ -712,9 +708,9 @@ export async function exportWaterCsv() {
           alignment: { horizontal: 'center', vertical: 'center' }
         }
       },
-      ...Array.from({ length: 10 }, () => ({ v: '', t: 's' }))
+      ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
     ]);
-    sheetMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 10 } });
+    sheetMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 9 } });
     sheetRowHeights.push({ hpt: 20 });
 
     sheetRows.push([]);
@@ -737,9 +733,9 @@ export async function exportWaterCsv() {
             border: thinBorder
           }
         },
-        ...Array.from({ length: 10 }, () => ({ v: '', t: 's', s: { border: thinBorder } }))
+        ...Array.from({ length: 9 }, () => ({ v: '', t: 's', s: { border: thinBorder } }))
       ]);
-      sheetMerges.push({ s: { r: emptyRowIdx, c: 0 }, e: { r: emptyRowIdx, c: 10 } });
+      sheetMerges.push({ s: { r: emptyRowIdx, c: 0 }, e: { r: emptyRowIdx, c: 9 } });
       sheetRowHeights.push({ hpt: 26 });
     } else {
       items.forEach((item, idx) => {
@@ -756,7 +752,7 @@ export async function exportWaterCsv() {
 
     const totalRowIdx = sheetRows.length;
     sheetRows.push(makeTotalRowCells(`รวมทั้งสิ้น (${items.length} รายการ)`, subTotals, catDef.subHeaderFill, catDef.subHeaderFont));
-    sheetMerges.push({ s: { r: totalRowIdx, c: 0 }, e: { r: totalRowIdx, c: 4 } });
+    sheetMerges.push({ s: { r: totalRowIdx, c: 0 }, e: { r: totalRowIdx, c: 3 } });
     sheetRowHeights.push({ hpt: 25 });
 
     appendSignatoryFooter(sheetRows, sheetMerges);
@@ -1154,7 +1150,6 @@ export function printWaterReport() {
           <td>${index + 1}</td>
           <td><strong>${item.name}</strong>${empCodePrint}</td>
           <td>${item.position} / ${item.duty || '-'}</td>
-          <td style="text-align: right !important; padding-right: 4px !important;">${effSalary > 0 ? effSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
           <td>${item.workDays} วัน</td>
           <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1188,15 +1183,14 @@ export function printWaterReport() {
           <thead>
             <tr>
               <th style="width: 4%">ลำดับ</th>
-              <th style="width: 17%">ชื่อ - นามสกุลผู้รับเงิน</th>
-              <th style="width: 15%">ปฏิบัติหน้าที่</th>
-              <th style="width: 9%">อัตราเงินเดือน</th>
-              <th style="width: 6%">วันทำงาน</th>
-              <th style="width: 9%">รวมเป็นเงิน</th>
+              <th style="width: 19%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 18%">ปฏิบัติหน้าที่</th>
+              <th style="width: 7%">วันปฏิบัติงาน</th>
+              <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
               <th style="width: 7%">ภาษี (ถ้ามี)</th>
-              <th style="width: 9%">คงเหลือสุทธิ</th>
-              <th style="width: 13%">ลายมือชื่อผู้รับเงิน</th>
-              <th style="width: 11%">หมายเหตุ</th>
+              <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
+              <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 10%">หมายเหตุ</th>
             </tr>
           </thead>
           <tbody>
