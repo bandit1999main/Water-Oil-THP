@@ -569,6 +569,13 @@ async function syncLeaveToAttendance(req) {
       
       // Save updated attendance
       await saveAttendanceList(target.year, target.month, attendance);
+      if (
+        typeof window.syncWorkDaysToCalculators === 'function' &&
+        String(target.year) === String(window.activeYear) &&
+        String(target.month) === String(window.activeMonth)
+      ) {
+        await window.syncWorkDaysToCalculators(req.name, empRecord.checkedDays.length, empRecord.dayStatuses);
+      }
     }
     
     return true;
@@ -926,6 +933,13 @@ async function rollbackLeaveFromAttendance(req) {
 
         empRecord.checkedDays = Array.from(checkedDaysSet).sort((a, b) => a - b);
         await saveAttendanceList(target.year, target.month, attendance);
+        if (
+          typeof window.syncWorkDaysToCalculators === 'function' &&
+          String(target.year) === String(window.activeYear) &&
+          String(target.month) === String(window.activeMonth)
+        ) {
+          await window.syncWorkDaysToCalculators(req.name, empRecord.checkedDays.length, empRecord.dayStatuses);
+        }
       }
     }
     return true;

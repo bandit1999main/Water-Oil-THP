@@ -276,9 +276,15 @@
         </div>
         <form id="editRegistryPersonnelForm" autocomplete="off">
           <input type="hidden" id="modalRegistryEditIndex" value="">
-          <div class="form-group">
-            <label class="form-label">ชื่อ - นามสกุล</label>
-            <input type="text" id="modalPersonName" class="form-input" placeholder="ชื่อ - นามสกุล" required>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">ชื่อ - นามสกุล</label>
+              <input type="text" id="modalPersonName" class="form-input" placeholder="ชื่อ - นามสกุล" required>
+            </div>
+            <div class="form-group">
+              <label id="modalPersonEmpCodeLabel" class="form-label" for="modalPersonEmpCode">เลขประจำตัวพนักงาน</label>
+              <input type="text" id="modalPersonEmpCode" class="form-input" placeholder="เช่น 560123">
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">ตำแหน่ง</label>

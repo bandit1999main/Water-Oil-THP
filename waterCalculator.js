@@ -1,6 +1,7 @@
 import {
   saveWaterEmployees,
-  fetchWaterEmployees
+  fetchWaterEmployees,
+  savePersonnelList
 } from './database.js';
 
 // Helpers to read/write global state on window
@@ -25,7 +26,8 @@ function resolveEmployeeTaxInfo(empName, empItem = {}, registry = null) {
   return {
     taxId: String(person?.taxId || vaultEntry.taxId || empItem?.taxId || '').trim(),
     branch: String(person?.branch || vaultEntry.branch || empItem?.branch || '00000').trim() || '00000',
-    address: String(person?.address || vaultEntry.address || empItem?.address || '').trim()
+    address: String(person?.address || vaultEntry.address || empItem?.address || '').trim(),
+    empCode: String(empItem?.empCode || person?.empCode || vaultEntry.empCode || '').trim()
   };
 }
 
@@ -94,9 +96,11 @@ export function renderWaterTable() {
   const query = (window.employeeSearchQuery || '').toLowerCase().trim();
   const filtered = [];
   waterEmployees.forEach((item, originalIdx) => {
+    const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, registry);
     const matches = !query ||
       item.name.toLowerCase().includes(query) ||
       item.position.toLowerCase().includes(query) ||
+      (resolvedInfo.empCode && resolvedInfo.empCode.toLowerCase().includes(query)) ||
       (item.duty && item.duty.toLowerCase().includes(query));
     if (matches) {
       filtered.push({ item, originalIdx });
@@ -134,11 +138,25 @@ export function renderWaterTable() {
     }
 
     const esc = window.escapeHtml || ((s) => s);
+    const globalMonthSelect = document.getElementById('globalMonth');
+    const globalYearSelect = document.getElementById('globalYear');
+    const month = globalMonthSelect ? parseInt(globalMonthSelect.value) : 5;
+    const year = globalYearSelect ? parseInt(globalYearSelect.value) : 2569;
+    const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, registry);
+    const empCodeVal = resolvedInfo.empCode;
+    const empCodeBadge = empCodeVal
+      ? `<div style="font-size: 0.72rem; color: #2563eb; font-weight: 600; margin-top: 0.15rem;">${item.position === 'ลูกจ้างเหมา' ? '📄 สัญญา: ' : '🆔 รหัส: '}${esc(empCodeVal)}</div>`
+      : '';
+    const displayRemark = getResignRemarkForEmployee(item.name, year, month, item.remarks);
+    const remarkSub = displayRemark
+      ? `<div style="font-size: 0.72rem; color: var(--post-orange); font-weight: 600; margin-top: 0.15rem;">📝 หมายเหตุ: ${esc(displayRemark)}</div>`
+      : '';
+
     const tr = document.createElement('tr');
     if (isResigned) tr.style.opacity = '0.7';
     tr.innerHTML = `
       <td>${displayNo}</td>
-      <td style="font-weight: 700; color: var(--text-primary);">${esc(item.name)}</td>
+      <td style="font-weight: 700; color: var(--text-primary);">${esc(item.name)}${empCodeBadge}${remarkSub}</td>
       <td><span style="background: rgba(14, 165, 233, 0.1); color: var(--post-orange); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">${esc(item.position)} / ${esc(item.duty || '-')}</span></td>
       <td>${item.salary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</td>
       <td style="text-align: center;">${item.workDays} วัน</td>
@@ -207,11 +225,14 @@ export async function handleWaterFormSubmit(e) {
   const duty = document.getElementById('empDuty').value;
   const salary = parseFloat(document.getElementById('empSalary').value) || 0;
   const workDays = parseInt(document.getElementById('workDays').value) || 0;
+  const empCodeInput = document.getElementById('empCodeInput');
+  const empCode = empCodeInput ? empCodeInput.value.trim() : '';
 
   const waterEmployees = getWaterEmployees();
 
   const item = {
     name,
+    empCode,
     position,
     duty,
     salary,
@@ -219,6 +240,14 @@ export async function handleWaterFormSubmit(e) {
     remarks,
     signature
   };
+
+  if (empCode && Array.isArray(window.personnel)) {
+    const pIdx = window.personnel.findIndex(p => p.name === name);
+    if (pIdx !== -1 && window.personnel[pIdx].empCode !== empCode) {
+      window.personnel[pIdx].empCode = empCode;
+      savePersonnelList(window.personnel);
+    }
+  }
 
   if (editIndexVal !== '') {
     const idx = parseInt(editIndexVal);
@@ -425,11 +454,16 @@ export async function exportWaterCsv() {
     const netFont = { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '0369A1' } };
     const rowFill = idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } };
 
+    const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+    const displayExcelName = resolvedInfo.empCode
+      ? `${item.name || ''} (${(item.position || '').includes('เหมา') ? 'สัญญา' : 'รหัส'}: ${resolvedInfo.empCode})`
+      : (item.name || '');
+
     return {
       metrics: { allowance, tax, net },
       cells: [
         { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
-        { v: item.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+        { v: displayExcelName, t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
         { v: item.position || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
         { v: item.duty || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
         { v: Number(item.salary || 0), t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
@@ -947,10 +981,15 @@ export function printWaterReport() {
       subTax += tax;
       subNet += net;
 
+      const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+      const empCodePrint = resolvedInfo.empCode
+        ? `<div style="font-size: 7pt; font-weight: normal; color: #444; margin-top: 1px;">${item.position === 'ลูกจ้างเหมา' ? 'สัญญา: ' : 'รหัส: '}${resolvedInfo.empCode}</div>`
+        : '';
+
       return `
         <tr>
           <td>${index + 1}</td>
-          <td><strong>${item.name}</strong></td>
+          <td><strong>${item.name}</strong>${empCodePrint}</td>
           <td>${item.position} / ${item.duty || '-'}</td>
           <td>${item.workDays} วัน</td>
           <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1367,15 +1406,22 @@ export async function clearWaterData() {
 }
 
 function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
+  let finalRemark = String(existingRemark || '').trim();
   try {
+    if (typeof window.mergeAttendanceRemark === 'function') {
+      const attList = JSON.parse(localStorage.getItem(`tp_attendance_${year}_${month}`)) || [];
+      const attRec = attList.find(a => a.name === name);
+      if (attRec && attRec.dayStatuses) {
+        finalRemark = window.mergeAttendanceRemark(finalRemark, attRec.dayStatuses);
+      }
+    }
     const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
     const person = registry.find(p => p.name === name);
     if (person && person.status === 'resigned' && person.resignYear && person.resignMonth) {
       if (year === person.resignYear && month === person.resignMonth) {
         const resignStr = `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}`;
-        const cleanExisting = (existingRemark || '').trim();
-        if (cleanExisting && !cleanExisting.includes('ลาออก')) {
-          return `${resignStr} | ${cleanExisting}`;
+        if (finalRemark && !finalRemark.includes('ลาออก')) {
+          return `${resignStr} | ${finalRemark}`;
         }
         return resignStr;
       }
@@ -1383,7 +1429,7 @@ function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
   } catch (e) {
     console.error("Error reading resignation remark:", e);
   }
-  return existingRemark || '';
+  return finalRemark;
 }
 
 function arabicToBahtText(number) {

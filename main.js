@@ -769,6 +769,11 @@ function setupCalculatorDOMReferencesAndEvents() {
     }
   });
   empPositionSelect.addEventListener('change', () => {
+    const pos = empPositionSelect.value;
+    const empCodeLabel = document.getElementById('empCodeLabel');
+    const empCodeInput = document.getElementById('empCodeInput');
+    if (empCodeLabel && window.getEmpCodeLabel) empCodeLabel.textContent = window.getEmpCodeLabel(pos);
+    if (empCodeInput && window.getEmpCodePlaceholder) empCodeInput.placeholder = window.getEmpCodePlaceholder(pos);
     if (activeMode === 'fuel') {
       import('./fuelCalculator.js').then(m => m.handlePositionSelect());
     }
@@ -2139,6 +2144,16 @@ function handleEmpNameSelectChange(e) {
   const person = personnel.find(p => p.name === selectedName);
   if (!person) return;
 
+  const empCodeInput = document.getElementById('empCodeInput');
+  const empCodeLabel = document.getElementById('empCodeLabel');
+  if (empCodeInput) {
+    empCodeInput.value = person.empCode || '';
+    if (window.getEmpCodePlaceholder) empCodeInput.placeholder = window.getEmpCodePlaceholder(person.position);
+  }
+  if (empCodeLabel && window.getEmpCodeLabel) {
+    empCodeLabel.textContent = window.getEmpCodeLabel(person.position);
+  }
+
   if (activeMode === 'fuel') {
     if (person.duty === 'หัวหน้าโซนนำจ่าย') {
       switchFormMode('supervisor', true);
@@ -2161,6 +2176,25 @@ function handleEmpNameSelectChange(e) {
     empSalaryInput.value = person.salary || 0;
   }
   document.getElementById('signature').value = person.signature || person.name;
+
+  // Auto-fill leave/absence remarks from active month's attendance if present
+  try {
+    const year = parseInt(globalYearSelect?.value) || 2569;
+    const month = parseInt(globalMonthSelect?.value) || 1;
+    const attRaw = localStorage.getItem(`tp_attendance_${year}_${month}`);
+    if (attRaw) {
+      const attList = JSON.parse(attRaw) || [];
+      const attRec = attList.find(a => a && a.name && a.name.trim() === selectedName);
+      if (attRec) {
+        const remarksInput = document.getElementById('remarks');
+        if (remarksInput && typeof window.mergeAttendanceRemark === 'function') {
+          remarksInput.value = window.mergeAttendanceRemark(remarksInput.value, attRec.dayStatuses);
+        }
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
 }
 
 function switchFormMode(mode, keepEditState = false) {
@@ -2252,6 +2286,8 @@ function openEditModal(isWaterMode, idx) {
   const modalDaysNotWorked = document.getElementById('modalDaysNotWorked');
   const modalDaysNotWorkedGroup = document.getElementById('modalDaysNotWorkedGroup');
   const modalEmpSalary = document.getElementById('modalEmpSalary');
+  const modalEmpCode = document.getElementById('modalEmpCode');
+  const modalEmpCodeLabel = document.getElementById('modalEmpCodeLabel');
 
   modalEditIndex.value = idx;
   modal.dataset.isWater = isWaterMode ? '1' : '0';
@@ -2261,8 +2297,16 @@ function openEditModal(isWaterMode, idx) {
     modalFuelFields.classList.add('hidden');
     modalWaterFields.classList.remove('hidden');
     const item = waterEmployees[idx];
+    const regPerson = personnel.find(p => p.name === item.name);
     modalEmpName.value = item.name;
     modalEmpPosition.value = item.position;
+    if (modalEmpCode) {
+      modalEmpCode.value = item.empCode || (regPerson && regPerson.empCode) || '';
+      if (window.getEmpCodePlaceholder) modalEmpCode.placeholder = window.getEmpCodePlaceholder(item.position);
+    }
+    if (modalEmpCodeLabel && window.getEmpCodeLabel) {
+      modalEmpCodeLabel.textContent = window.getEmpCodeLabel(item.position);
+    }
     document.getElementById('modalEmpDuty').value = item.duty || '';
     modalEmpSalary.value = item.salary;
     modalWorkDays.value = item.workDays;
@@ -2282,8 +2326,16 @@ function openEditModal(isWaterMode, idx) {
     });
 
     const item = employees[idx];
+    const regPerson = personnel.find(p => p.name === item.name);
     modalEmpName.value = item.name;
     modalEmpPosition.value = item.position;
+    if (modalEmpCode) {
+      modalEmpCode.value = item.empCode || (regPerson && regPerson.empCode) || '';
+      if (window.getEmpCodePlaceholder) modalEmpCode.placeholder = window.getEmpCodePlaceholder(item.position);
+    }
+    if (modalEmpCodeLabel && window.getEmpCodeLabel) {
+      modalEmpCodeLabel.textContent = window.getEmpCodeLabel(item.position);
+    }
     document.getElementById('modalEmpDuty').value = item.duty || '';
     modalDeliveryRoute.value = item.route || '';
     modalVehicleType.value = item.vehicle || 'รถจักรยานยนต์';
@@ -2306,13 +2358,20 @@ function openEditModal(isWaterMode, idx) {
 
 function adjustModalClaimMethod() {
   const modal = document.getElementById('editEmployeeModal');
+  const modalEmpPosition = document.getElementById('modalEmpPosition');
+  const modalEmpCode = document.getElementById('modalEmpCode');
+  const modalEmpCodeLabel = document.getElementById('modalEmpCodeLabel');
+  if (modalEmpPosition) {
+    const posVal = modalEmpPosition.value;
+    if (modalEmpCodeLabel && window.getEmpCodeLabel) modalEmpCodeLabel.textContent = window.getEmpCodeLabel(posVal);
+    if (modalEmpCode && window.getEmpCodePlaceholder) modalEmpCode.placeholder = window.getEmpCodePlaceholder(posVal);
+  }
   const isWater = modal.dataset.isWater === '1';
   if (isWater) {
     document.getElementById('modalWorkDays').disabled = false;
     return;
   }
 
-  const modalEmpPosition = document.getElementById('modalEmpPosition');
   const modalClaimMethod = document.getElementById('modalClaimMethod');
   const modalDaysNotWorkedGroup = document.getElementById('modalDaysNotWorkedGroup');
   const modalIsSubstitute = document.getElementById('modalIsSubstitute');
@@ -2367,16 +2426,25 @@ function wireEditModal() {
     const isWater = modal.dataset.isWater === '1';
     const idx = parseInt(document.getElementById('modalEditIndex').value);
     const name = document.getElementById('modalEmpName').value.trim();
+    const empCode = document.getElementById('modalEmpCode') ? document.getElementById('modalEmpCode').value.trim() : '';
     const position = document.getElementById('modalEmpPosition').value;
     const duty = document.getElementById('modalEmpDuty').value;
     const workDays = parseInt(document.getElementById('modalWorkDays').value) || 0;
     const remarks = document.getElementById('modalRemarks').value.trim();
     const signature = document.getElementById('modalSignature').value.trim() || name;
 
+    if (empCode && personnel) {
+      const pIdx = personnel.findIndex(p => p.name.trim() === name);
+      if (pIdx !== -1 && personnel[pIdx].empCode !== empCode) {
+        personnel[pIdx].empCode = empCode;
+        await savePersonnelList(personnel);
+      }
+    }
+
     if (isWater) {
       const salary = parseFloat(document.getElementById('modalEmpSalary').value) || 0;
       const existingId = waterEmployees[idx]?.id;
-      const updatedItem = { name, position, duty, salary, workDays, remarks, signature };
+      const updatedItem = { ...waterEmployees[idx], name, empCode, position, duty, salary, workDays, remarks, signature };
       if (existingId) updatedItem.id = existingId;
       waterEmployees[idx] = updatedItem;
       await saveWaterEmployees(waterEmployees);
@@ -2398,7 +2466,7 @@ function wireEditModal() {
       
       const daysNotWorked = parseInt(daysNotWorkedRaw) || 0;
       const existingId = employees[idx]?.id;
-      employees[idx] = { ...employees[idx], name, position, duty, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
+      employees[idx] = { ...employees[idx], name, empCode, position, duty, route, vehicle, method, workDays, daysNotWorked, remarks, signature, isSubstitute };
       if (existingId) employees[idx].id = existingId;
       await saveEmployees(employees);
     }
@@ -2476,10 +2544,16 @@ async function handlePullAttendanceDays() {
             if (activeMode === 'fuel') {
               if (emp.formMode !== 'supervisor') {
                 emp.workDays = totalWorked;
+                if (typeof window.mergeAttendanceRemark === 'function') {
+                  emp.remarks = window.mergeAttendanceRemark(emp.remarks, attRec.dayStatuses);
+                }
                 matchCount++;
               }
             } else {
               emp.workDays = totalWorked;
+              if (typeof window.mergeAttendanceRemark === 'function') {
+                emp.remarks = window.mergeAttendanceRemark(emp.remarks, attRec.dayStatuses);
+              }
               matchCount++;
             }
           }
@@ -3346,9 +3420,15 @@ async function handleConfirmImport() {
     rec.targets.forEach(target => {
       if (target.type === 'fuel') {
         updatedEmployees[target.index].workDays = rec.newDays;
+        if (rec.dayStatuses && typeof window.mergeAttendanceRemark === 'function') {
+          updatedEmployees[target.index].remarks = window.mergeAttendanceRemark(updatedEmployees[target.index].remarks, rec.dayStatuses);
+        }
         updatedFuelCount++;
       } else if (target.type === 'water') {
         updatedWaterEmployees[target.index].workDays = rec.newDays;
+        if (rec.dayStatuses && typeof window.mergeAttendanceRemark === 'function') {
+          updatedWaterEmployees[target.index].remarks = window.mergeAttendanceRemark(updatedWaterEmployees[target.index].remarks, rec.dayStatuses);
+        }
         updatedWaterCount++;
       }
     });
@@ -3661,10 +3741,13 @@ function processUploadedFile(file) {
         
         let workDays = 0;
         let dayColumnFilled = false;
+        const parsedDayStatuses = {};
         for (let c = 2; c <= lastDayColIdx; c++) {
           const val = String(row[c] || '').trim();
+          const dayNum = c - 1;
           if (val) {
             dayColumnFilled = true;
+            parsedDayStatuses[dayNum] = val;
             if (val === '/') workDays++;
           }
         }
@@ -3694,7 +3777,7 @@ function processUploadedFile(file) {
           }
         }
         const recordIndex = tempParsedRecords.length;
-        tempParsedRecords.push({ name: nameVal, newDays: workDays, matched: matchFound, targets: targetLists });
+        tempParsedRecords.push({ name: nameVal, newDays: workDays, dayStatuses: parsedDayStatuses, matched: matchFound, targets: targetLists });
         
         let matchStatusHtml = '';
         if (matchFound) {
@@ -3826,9 +3909,16 @@ async function processCopy(prevList, isOverwrite) {
   const cleanedPrevList = prevList.map(emp => {
     const clone = { ...emp };
     delete clone.id; // clear original document ID so we save as new document
+    const regPerson = personnel.find(p => p.name === clone.name);
+    if (!clone.empCode && regPerson && regPerson.empCode) {
+      clone.empCode = regPerson.empCode;
+    }
     
     const attRec = attList.find(a => a.name === clone.name);
     clone.workDays = attRec ? attRec.checkedDays.length : 0;
+    if (typeof window.mergeAttendanceRemark === 'function') {
+      clone.remarks = window.mergeAttendanceRemark('', attRec ? attRec.dayStatuses : null);
+    }
 
     if (clone.daysNotWorked !== undefined) clone.daysNotWorked = 0;
     if (clone.missions !== undefined) clone.missions = [];
@@ -3920,12 +4010,16 @@ async function handleLoadFromRegistry() {
         person.resignYear && person.resignMonth && 
         (year === person.resignYear && month === person.resignMonth);
       
-      const statusRemark = isResignedInActiveMonth ? `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}` : '';
+      const baseResignRemark = isResignedInActiveMonth ? `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}` : '';
+      const statusRemark = (typeof window.mergeAttendanceRemark === 'function' && attRec && attRec.dayStatuses)
+        ? window.mergeAttendanceRemark(baseResignRemark, attRec.dayStatuses)
+        : baseResignRemark;
 
       if (activeMode === 'fuel') {
         const isSupervisor = person.position === 'หัวหน้าโซน' || person.position === 'หัวหน้าโซนนำจ่าย' || person.duty === 'หัวหน้าโซนนำจ่าย';
         const item = {
           name: person.name,
+          empCode: person.empCode || '',
           position: person.position || 'พนักงาน',
           duty: person.duty || 'นำจ่าย',
           vehicle: person.vehicle || 'รถจักรยานยนต์',
@@ -3949,6 +4043,7 @@ async function handleLoadFromRegistry() {
         // activeMode === 'water'
         return {
           name: person.name,
+          empCode: person.empCode || '',
           position: person.position || 'พนักงาน',
           duty: person.duty || 'นำจ่าย',
           salary: person.salary || 0,

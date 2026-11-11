@@ -646,17 +646,20 @@ export function updateLocalTaxAddressVault(personnelList = []) {
     const taxId = String(person.taxId || '').trim();
     const address = String(person.address || '').trim();
     const branch = String(person.branch || '').trim();
-    if (taxId || address || branch) {
+    const empCode = String(person.empCode || '').trim();
+    if (taxId || address || branch || empCode) {
       const prev = vault[key] || {};
       const mergedTaxId = taxId || prev.taxId || '';
       const mergedAddress = address || prev.address || '';
       const mergedBranch = branch || prev.branch || '';
-      if (prev.taxId !== mergedTaxId || prev.address !== mergedAddress || prev.branch !== mergedBranch) {
+      const mergedEmpCode = empCode || prev.empCode || '';
+      if (prev.taxId !== mergedTaxId || prev.address !== mergedAddress || prev.branch !== mergedBranch || prev.empCode !== mergedEmpCode) {
         vault[key] = {
           name: String(person.name || '').trim(),
           taxId: mergedTaxId,
           address: mergedAddress,
           branch: mergedBranch,
+          empCode: mergedEmpCode,
           updatedAt: Date.now()
         };
         changed = true;
@@ -687,8 +690,9 @@ export function enrichPersonnelWithTaxVault(personnelList = []) {
     const resolvedTaxId = String(person.taxId || vaultEntry.taxId || localMatch.taxId || '').trim();
     const resolvedAddress = String(person.address || vaultEntry.address || localMatch.address || '').trim();
     const resolvedBranch = String(person.branch || vaultEntry.branch || localMatch.branch || '').trim();
+    const resolvedEmpCode = String(person.empCode || vaultEntry.empCode || localMatch.empCode || '').trim();
 
-    if ((resolvedTaxId && !person.taxId) || (resolvedAddress && !person.address)) {
+    if ((resolvedTaxId && !person.taxId) || (resolvedAddress && !person.address) || (resolvedEmpCode && !person.empCode)) {
       rescuedAny = true;
     }
 
@@ -696,6 +700,7 @@ export function enrichPersonnelWithTaxVault(personnelList = []) {
       ...person,
       taxId: resolvedTaxId,
       address: resolvedAddress,
+      empCode: resolvedEmpCode,
       ...(resolvedBranch ? { branch: resolvedBranch } : {})
     };
   });
@@ -739,6 +744,7 @@ export async function savePersonnelList(personnelList) {
     if (!person.id) person.id = `person_${now}_${i}`;
     person.taxId = String(person.taxId || '').trim();
     person.address = String(person.address || '').trim();
+    person.empCode = String(person.empCode || '').trim();
   });
 
   const vault = updateLocalTaxAddressVault(personnelList);

@@ -14,6 +14,20 @@ function getRouteData() {
   return window.ROUTE_DATA || {};
 }
 
+function resolveEmpCode(name, item = {}, registry = null) {
+  const direct = String(item?.empCode || '').trim();
+  if (direct) return direct;
+  const reg = registry || JSON.parse(localStorage.getItem('tp_personnel')) || [];
+  const person = reg.find(p => p.name === name);
+  if (person?.empCode) return String(person.empCode).trim();
+  try {
+    const normKey = String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const vault = JSON.parse(localStorage.getItem('tp_tax_address_vault')) || {};
+    if (vault[normKey]?.empCode) return String(vault[normKey].empCode).trim();
+  } catch (e) {}
+  return '';
+}
+
 export function enrichEmployeesWithCalculations(list) {
   const globalFuelInput = document.getElementById('globalFuelPrice');
   const fuelPrice = globalFuelInput ? parseFloat(globalFuelInput.value) : (window.appConfigs?.defaultFuelPrice || 35.00);
@@ -278,7 +292,7 @@ export function renderFuelTable() {
         maintCost: maintCost,
         sumTotal: sumTotal,
         signature: item.signature,
-        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks, item.isSubstitute)
       });
     } else {
       // 1. Group 'ตรวจสอบการนำจ่าย' into a single row
@@ -396,9 +410,16 @@ export function renderFuelTable() {
     }
 
     const esc = window.escapeHtml || ((s) => s);
+    const empCodeVal = resolveEmpCode(row.name, row.item, registry);
+    const empCodeBadge = empCodeVal
+      ? `<div style="font-size: 0.72rem; color: #2563eb; font-weight: 600; margin-top: 0.15rem;">${row.position === 'ลูกจ้างเหมา' ? '📄 สัญญา: ' : '🆔 รหัส: '}${esc(empCodeVal)}</div>`
+      : '';
+    const remarkSub = row.remarks
+      ? `<div style="font-size: 0.72rem; color: var(--post-orange); font-weight: 600; margin-top: 0.15rem;">📝 หมายเหตุ: ${esc(row.remarks)}</div>`
+      : '';
     tr.innerHTML = `
       <td>${displayNo}</td>
-      <td><strong>${esc(row.name)}</strong></td>
+      <td><strong>${esc(row.name)}</strong>${empCodeBadge}${remarkSub}</td>
       <td><span class="badge position-${esc(row.position.replace(/[\s\(\)\.]/g, ''))}">${esc(row.position)} / ${esc(row.item.duty || '-')}</span></td>
       <td style="font-size: 0.85rem; max-width: 220px; white-space: normal; word-break: break-word; line-height: 1.3;" title="${esc(row.routeDescPlain)}">${row.routeDescHtml}</td>
       <td>${row.liters.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ลิตร</td>
@@ -611,6 +632,14 @@ export function handlePositionSelect() {
   if (!empPositionSelect || !claimMethodSelect) return;
 
   const pos = empPositionSelect.value;
+  const empCodeLabel = document.getElementById('empCodeLabel');
+  const empCodeInput = document.getElementById('empCodeInput');
+  if (empCodeLabel && window.getEmpCodeLabel) {
+    empCodeLabel.textContent = window.getEmpCodeLabel(pos);
+  }
+  if (empCodeInput && window.getEmpCodePlaceholder) {
+    empCodeInput.placeholder = window.getEmpCodePlaceholder(pos);
+  }
   const isSub = isSubstitute ? isSubstitute.checked : false;
   const isStaff = pos === 'พนักงาน' || pos === 'ลูกจ้างประจำ';
 
@@ -652,6 +681,7 @@ export async function handleFuelFormSubmit(e) {
   e.preventDefault();
 
   const name = document.getElementById('empName').value.trim();
+  const empCode = document.getElementById('empCodeInput') ? document.getElementById('empCodeInput').value.trim() : '';
   const formMode = document.getElementById('formMode').value;
   const remarks = document.getElementById('remarks').value.trim();
   const signatureInput = document.getElementById('signature').value.trim();
@@ -659,6 +689,14 @@ export async function handleFuelFormSubmit(e) {
   const editIndexVal = document.getElementById('editIndex').value;
   const saveBtn = document.getElementById('saveBtn');
   const resetBtn = document.getElementById('resetBtn');
+
+  if (empCode && window.personnel) {
+    const pIdx = window.personnel.findIndex(p => p.name.trim() === name);
+    if (pIdx !== -1 && window.personnel[pIdx].empCode !== empCode) {
+      window.personnel[pIdx].empCode = empCode;
+      if (window.savePersonnelList) window.savePersonnelList(window.personnel);
+    }
+  }
 
   const vehicle = document.getElementById('vehicleType').value;
   const employees = getEmployees();
@@ -675,6 +713,7 @@ export async function handleFuelFormSubmit(e) {
     item = {
       formMode,
       name,
+      empCode,
       position: document.getElementById('empPosition').value,
       duty: 'หัวหน้าโซนนำจ่าย',
       vehicle,
@@ -707,6 +746,7 @@ export async function handleFuelFormSubmit(e) {
     item = {
       formMode,
       name,
+      empCode,
       position,
       duty,
       route,
@@ -760,6 +800,8 @@ export function editSupervisorInForm(parentIndex) {
   if (!emp) return;
 
   document.getElementById('empName').value = emp.name;
+  const empCodeInput = document.getElementById('empCodeInput');
+  if (empCodeInput) empCodeInput.value = resolveEmpCode(emp.name, emp);
   document.getElementById('formMode').value = emp.formMode; // 'supervisor'
   document.getElementById('remarks').value = emp.remarks || '';
   document.getElementById('signature').value = emp.signature || '';
@@ -1221,6 +1263,7 @@ export async function exportFuelCsv() {
 
       const rowObj = {
         name: item.name,
+        empCode: resolveEmpCode(item.name, item),
         position: `${item.position} / ${item.duty || '-'}`,
         routeDesc: `ด้านจ่ายที่ ${item.route}` + (item.isSubstitute ? ' (วิ่งแทน)' : ''),
         dayCount: isStaff ? (item.daysNotWorked || 0) : (item.workDays || 0),
@@ -1229,7 +1272,7 @@ export async function exportFuelCsv() {
         maintCost,
         sumTotal,
         signature: item.signature || '',
-        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks, item.isSubstitute)
       };
 
       if (item.isSubstitute) {
@@ -1439,9 +1482,12 @@ export async function exportFuelCsv() {
           grandPeopleCount++;
 
           const dataRowIdx = combinedData.length;
+          const displayExcelName = row.empCode
+            ? `${row.name} (${row.position.includes('เหมา') ? 'สัญญา' : 'รหัส'}: ${row.empCode})`
+            : row.name;
           combinedData.push([
             idx + 1,
-            row.name,
+            displayExcelName,
             row.position,
             row.routeDesc,
             row.dayCount,
@@ -1584,9 +1630,12 @@ export async function exportFuelCsv() {
           subTotal += row.sumTotal;
 
           const rIdx = sheetData.length;
+          const displayExcelName = row.empCode
+            ? `${row.name} (${row.position.includes('เหมา') ? 'สัญญา' : 'รหัส'}: ${row.empCode})`
+            : row.name;
           sheetData.push([
             idx + 1,
-            row.name,
+            displayExcelName,
             row.position,
             row.routeDesc,
             row.dayCount,
@@ -1869,6 +1918,7 @@ export function printFuelReport() {
 
       const rowObj = {
         name: item.name,
+        empCode: resolveEmpCode(item.name, item),
         position: item.position,
         duty: item.duty || '-',
         routeDesc: `ด้านจ่ายที่ ${item.route}`,
@@ -1879,7 +1929,7 @@ export function printFuelReport() {
         maintCost: maintCost,
         sumTotal: sumTotal,
         signature: item.signature,
-        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks)
+        remarks: getResignRemarkForEmployee(item.name, year, month, item.remarks, item.isSubstitute)
       };
 
       if (item.isSubstitute) {
@@ -1911,10 +1961,14 @@ export function printFuelReport() {
       totalMaintCost += row.maintCost;
       grandTotal += row.sumTotal;
 
+      const empCodePrint = row.empCode
+        ? `<div style="font-size: 7pt; font-weight: normal; color: #444; margin-top: 1px;">${row.position === 'ลูกจ้างเหมา' ? 'สัญญา: ' : 'รหัส: '}${row.empCode}</div>`
+        : '';
+
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td><strong>${row.name}</strong></td>
+          <td><strong>${row.name}</strong>${empCodePrint}</td>
           <td>${row.position} / ${row.duty}</td>
           <td style="text-align: left !important; font-size: 7.5pt; line-height: 1.3;">${row.routeDesc}</td>
           <td>${title === 'พนักงาน และ ลูกจ้างประจำ' ? (row.daysNotWorked || 0) : row.workDays} วัน</td>
@@ -2613,16 +2667,23 @@ export async function clearFuelData() {
   });
 }
 
-function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
+function getResignRemarkForEmployee(name, year, month, existingRemark = '', isSubstitute = false) {
+  let finalRemark = String(existingRemark || '').trim();
   try {
+    if (!isSubstitute && typeof window.mergeAttendanceRemark === 'function') {
+      const attList = JSON.parse(localStorage.getItem(`tp_attendance_${year}_${month}`)) || [];
+      const attRec = attList.find(a => a.name === name);
+      if (attRec && attRec.dayStatuses) {
+        finalRemark = window.mergeAttendanceRemark(finalRemark, attRec.dayStatuses);
+      }
+    }
     const registry = JSON.parse(localStorage.getItem('tp_personnel')) || [];
     const person = registry.find(p => p.name === name);
     if (person && person.status === 'resigned' && person.resignYear && person.resignMonth) {
       if (year === person.resignYear && month === person.resignMonth) {
         const resignStr = `ลาออก${person.resignDate ? 'วันที่ ' + person.resignDate : ''}`;
-        const cleanExisting = (existingRemark || '').trim();
-        if (cleanExisting && !cleanExisting.includes('ลาออก')) {
-          return `${resignStr} | ${cleanExisting}`;
+        if (finalRemark && !finalRemark.includes('ลาออก')) {
+          return `${resignStr} | ${finalRemark}`;
         }
         return resignStr;
       }
@@ -2630,7 +2691,7 @@ function getResignRemarkForEmployee(name, year, month, existingRemark = '') {
   } catch (e) {
     console.error("Error reading resignation remark:", e);
   }
-  return existingRemark || '';
+  return finalRemark;
 }
 
 export function getCalculatorsTemplate() {
@@ -2753,6 +2814,11 @@ export function getCalculatorsTemplate() {
               <div class="form-group hidden" id="empNameManualGroup">
                 <label for="empName">ชื่อ - นามสกุล</label>
                 <input type="text" id="empName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" />
+              </div>
+
+              <div class="form-group" id="empCodeGroup">
+                <label id="empCodeLabel" for="empCodeInput">เลขประจำตัวพนักงาน</label>
+                <input type="text" id="empCodeInput" class="form-input" placeholder="เช่น 560123" />
               </div>
 
               <!-- Salary field for water calculation (hidden by default) -->
@@ -3347,9 +3413,15 @@ export function getCalculatorsTemplate() {
         <form id="editEmployeeForm">
           <input type="hidden" id="modalEditIndex" value="" />
           <div class="modal-body">
-            <div class="form-group">
-              <label for="modalEmpName">ชื่อ - นามสกุล</label>
-              <input type="text" id="modalEmpName" class="form-input" required />
+            <div class="form-row-2">
+              <div class="form-group">
+                <label for="modalEmpName">ชื่อ - นามสกุล</label>
+                <input type="text" id="modalEmpName" class="form-input" required />
+              </div>
+              <div class="form-group">
+                <label id="modalEmpCodeLabel" for="modalEmpCode">เลขประจำตัวพนักงาน</label>
+                <input type="text" id="modalEmpCode" class="form-input" placeholder="เช่น 560123" />
+              </div>
             </div>
 
             <div class="form-row-2">

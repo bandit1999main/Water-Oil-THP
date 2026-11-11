@@ -25,6 +25,51 @@ function getActiveMode() {
   return window.activeMode || 'personnel';
 }
 
+export function getEmpCodeLabel(position) {
+  return String(position || '').trim() === 'ลูกจ้างเหมา' ? 'เลขที่สัญญาจ้าง' : 'เลขประจำตัวพนักงาน';
+}
+
+export function getEmpCodePlaceholder(position) {
+  return String(position || '').trim() === 'ลูกจ้างเหมา' ? 'เช่น สัญญาเลขที่ 01/2569' : 'เช่น 560123';
+}
+window.getEmpCodeLabel = getEmpCodeLabel;
+window.getEmpCodePlaceholder = getEmpCodePlaceholder;
+
+export function formatLeaveRemarksFromStatuses(dayStatuses) {
+  if (!dayStatuses || typeof dayStatuses !== 'object') return '';
+  const groups = { 'ป': [], 'ก': [], 'พ': [], 'ข': [] };
+  Object.keys(dayStatuses).forEach(dayKey => {
+    const dayNum = parseInt(dayKey, 10);
+    const status = String(dayStatuses[dayKey] || '').trim();
+    if (!isNaN(dayNum) && groups[status]) {
+      groups[status].push(dayNum);
+    }
+  });
+  const parts = [];
+  ['ป', 'ก', 'พ', 'ข'].forEach(code => {
+    if (groups[code].length > 0) {
+      groups[code].sort((a, b) => a - b);
+      parts.push(`${code}(${groups[code].join(',')})`);
+    }
+  });
+  return parts.join(', ');
+}
+window.formatLeaveRemarksFromStatuses = formatLeaveRemarksFromStatuses;
+
+export function mergeAttendanceRemark(existingRemarks, dayStatuses) {
+  const autoLeaveStr = formatLeaveRemarksFromStatuses(dayStatuses);
+  let base = String(existingRemarks || '').trim();
+  // Remove previously synced ป(...), ก(...), พ(...), ข(...) tokens while preserving manual notes
+  base = base
+    .replace(/(?:^|[\s,|]+)(?:ป|ก|พ|ข)\([0-9,\-\s]+\)/g, '')
+    .replace(/^[\s,|]+|[\s,|]+$/g, '')
+    .trim();
+  if (!autoLeaveStr) return base;
+  if (!base) return autoLeaveStr;
+  return `${base} | ${autoLeaveStr}`;
+}
+window.mergeAttendanceRemark = mergeAttendanceRemark;
+
 export function populateRouteDropdowns() {
   const routeData = window.ROUTE_DATA || {};
   const routeKeys = Object.keys(routeData).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
@@ -183,6 +228,19 @@ export function initPersonnelManager() {
         personDutyCustomGroup.classList.add('hidden');
       }
     });
+  }
+
+  // Bind dynamic label for personEmpCode based on personPosition
+  const personPositionSelect = document.getElementById('personPosition');
+  const personEmpCodeLabel = document.getElementById('personEmpCodeLabel');
+  const personEmpCodeInput = document.getElementById('personEmpCode');
+  if (personPositionSelect && personEmpCodeLabel && personEmpCodeInput) {
+    const syncPersonEmpCodeLabel = () => {
+      personEmpCodeLabel.textContent = getEmpCodeLabel(personPositionSelect.value);
+      personEmpCodeInput.placeholder = getEmpCodePlaceholder(personPositionSelect.value);
+    };
+    personPositionSelect.addEventListener('change', syncPersonEmpCodeLabel);
+    syncPersonEmpCodeLabel();
   }
 
   // Personnel Import Modal Bindings
@@ -357,6 +415,7 @@ export function renderPersonnelTable() {
     const matches = !query || 
       person.name.toLowerCase().includes(query) ||
       person.position.toLowerCase().includes(query) ||
+      (person.empCode && person.empCode.toLowerCase().includes(query)) ||
       (person.department && person.department.toLowerCase().includes(query)) ||
       (person.duty && person.duty.toLowerCase().includes(query));
     if (matches) {
@@ -392,6 +451,7 @@ export function renderPersonnelTable() {
       <td>${displayNo}</td>
       <td style="font-weight: 700;">
         ${esc(person.name)}
+        ${person.empCode ? `<span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.72rem; margin-left: 0.35rem; font-weight: 600;">${person.position === 'ลูกจ้างเหมา' ? '📄 สัญญา: ' : '🆔 รหัส: '}${esc(person.empCode)}</span>` : ''}
         ${isResigned ? `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.4rem; font-weight: bold;">ลาออก</span>` : ''}
         ${person.restDays && person.restDays.length > 0 ? `<div class="fuel-only-field" style="font-size: 0.75rem; color: #f43f5e; font-weight: normal; margin-top: 0.2rem; display: flex; align-items: center; gap: 0.15rem;">🏖️ หยุด: ${person.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')}</div>` : ''}
         ${(person.taxId || person.address) ? `<div style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal; margin-top: 0.18rem; line-height: 1.3;">${person.taxId ? `🪪 ${esc(person.taxId)}` : ''}${person.taxId && person.address ? ' • ' : ''}${person.address ? `📍 ${esc(person.address)}` : ''}</div>` : ''}
@@ -514,8 +574,17 @@ function editPersonnel(index) {
   modal.querySelector('#modalPersonRoute').value = person.route || '';
   modal.querySelector('#modalPersonVehicle').value = person.vehicle || 'รถจักรยานยนต์';
   modal.querySelector('#modalPersonSignature').value = person.signature || '';
-  modal.querySelector('#modalPersonTaxId').value = person.taxId || '';
-  modal.querySelector('#modalPersonAddress').value = person.address || '';
+  if (modal.querySelector('#modalPersonTaxId')) modal.querySelector('#modalPersonTaxId').value = person.taxId || '';
+  if (modal.querySelector('#modalPersonAddress')) modal.querySelector('#modalPersonAddress').value = person.address || '';
+  const modalEmpCodeInput = modal.querySelector('#modalPersonEmpCode');
+  const modalEmpCodeLabel = modal.querySelector('#modalPersonEmpCodeLabel');
+  if (modalEmpCodeInput) {
+    modalEmpCodeInput.value = person.empCode || '';
+    modalEmpCodeInput.placeholder = getEmpCodePlaceholder(person.position);
+  }
+  if (modalEmpCodeLabel) {
+    modalEmpCodeLabel.textContent = getEmpCodeLabel(person.position);
+  }
 
   modal.classList.add('active');
   applyDutyBasedRegistryRestrictions();
@@ -718,8 +787,10 @@ async function handlePersonnelFormSubmit(e) {
   
   const taxIdInput = document.getElementById('personTaxId');
   const addressInput = document.getElementById('personAddress');
+  const empCodeInput = document.getElementById('personEmpCode');
   const taxId = taxIdInput ? taxIdInput.value.trim() : "";
   const address = addressInput ? addressInput.value.trim() : "";
+  const empCode = empCodeInput ? empCodeInput.value.trim() : "";
 
   const personnel = getPersonnel();
 
@@ -734,7 +805,8 @@ async function handlePersonnelFormSubmit(e) {
     signature,
     restDays,
     taxId,
-    address
+    address,
+    empCode
   };
 
   if (editIndexVal !== '') {
@@ -743,6 +815,7 @@ async function handlePersonnelFormSubmit(e) {
     if (oldPerson.id) item.id = oldPerson.id;
     if (!item.taxId && oldPerson.taxId) item.taxId = oldPerson.taxId;
     if (!item.address && oldPerson.address) item.address = oldPerson.address;
+    if (!item.empCode && oldPerson.empCode) item.empCode = oldPerson.empCode;
     if (oldPerson.status) item.status = oldPerson.status;
     if (oldPerson.resignDate) item.resignDate = oldPerson.resignDate;
     if (oldPerson.resignMonth) item.resignMonth = oldPerson.resignMonth;
@@ -845,6 +918,7 @@ function openDuplicateResolutionModal(newItem, duplicates) {
       if (oldPerson.id) newItem.id = oldPerson.id;
       if (!newItem.taxId && oldPerson.taxId) newItem.taxId = oldPerson.taxId;
       if (!newItem.address && oldPerson.address) newItem.address = oldPerson.address;
+      if (!newItem.empCode && oldPerson.empCode) newItem.empCode = oldPerson.empCode;
       if (oldPerson.status) newItem.status = oldPerson.status;
       if (oldPerson.resignDate) newItem.resignDate = oldPerson.resignDate;
       if (oldPerson.resignMonth) newItem.resignMonth = oldPerson.resignMonth;
@@ -1057,6 +1131,16 @@ function wireRegistryEditModal() {
     });
   }
 
+  const modalPosSelect = modal.querySelector('#modalPersonPosition');
+  const modalEmpCodeLabel = modal.querySelector('#modalPersonEmpCodeLabel');
+  const modalEmpCodeInput = modal.querySelector('#modalPersonEmpCode');
+  if (modalPosSelect && modalEmpCodeLabel && modalEmpCodeInput) {
+    modalPosSelect.addEventListener('change', () => {
+      modalEmpCodeLabel.textContent = getEmpCodeLabel(modalPosSelect.value);
+      modalEmpCodeInput.placeholder = getEmpCodePlaceholder(modalPosSelect.value);
+    });
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const idx = parseInt(modal.querySelector('#modalRegistryEditIndex').value);
@@ -1081,8 +1165,10 @@ function wireRegistryEditModal() {
     
     const taxIdInput = modal.querySelector('#modalPersonTaxId');
     const addressInput = modal.querySelector('#modalPersonAddress');
+    const empCodeField = modal.querySelector('#modalPersonEmpCode');
     const taxId = taxIdInput ? taxIdInput.value.trim() : "";
     const address = addressInput ? addressInput.value.trim() : "";
+    const empCode = empCodeField ? empCodeField.value.trim() : "";
 
     const personnel = getPersonnel();
     const oldPerson = personnel[idx];
@@ -1101,7 +1187,8 @@ function wireRegistryEditModal() {
       signature,
       restDays,
       taxId,
-      address
+      address,
+      empCode
     };
 
     if (isRestDaysChanged && oldPerson) {
@@ -1347,7 +1434,8 @@ async function downloadPersonnelTemplateXlsx() {
     'วันหยุดประจำสัปดาห์',
     'ลงนามเริ่มต้น (ชื่อเรียก)',
     'เลขประจำตัวผู้เสียภาษี (13 หลัก)',
-    'ที่อยู่ตามทะเบียน'
+    'ที่อยู่ตามทะเบียน',
+    'เลขพนักงาน / เลขที่สัญญา'
   ];
 
   const headerRow = headers.map(h => ({
@@ -1362,8 +1450,8 @@ async function downloadPersonnelTemplateXlsx() {
   }));
 
   const sampleRows = [
-    [1, 'นายสมศักดิ์ รักดี', 'ลูกจ้างประจำ', 'นำจ่าย', 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ', 15000, '5', 'รถจักรยานยนต์', 'เสาร์-อาทิตย์', 'สมศักดิ์', '1234567890123', '99/1 ถ.แจ้งวัฒนะ เขตหลักสี่ กทม.'],
-    [2, 'นางสาวสมศรี ทรงดี', 'ลูกจ้างเหมา', 'ไขตู้/ขนส่ง', 'เจ้าหน้าที่ไขตู้ไปรษณีย์', 12000, '12', 'รถยนต์', 'วันอาทิตย์', 'สมศรี', '', '']
+    [1, 'นายสมศักดิ์ รักดี', 'ลูกจ้างประจำ', 'นำจ่าย', 'เจ้าหน้าที่นำจ่ายไปรษณีย์/EMS/ด้านจ่ายพิเศษ', 15000, '5', 'รถจักรยานยนต์', 'เสาร์-อาทิตย์', 'สมศักดิ์', '1234567890123', '99/1 ถ.แจ้งวัฒนะ เขตหลักสี่ กทม.', '560123'],
+    [2, 'นางสาวสมศรี ทรงดี', 'ลูกจ้างเหมา', 'ไขตู้/ขนส่ง', 'เจ้าหน้าที่ไขตู้ไปรษณีย์', 12000, '12', 'รถยนต์', 'วันอาทิตย์', 'สมศรี', '', '', '01/2569']
   ].map(row => row.map((val, idx) => ({
     v: val,
     t: typeof val === 'number' ? 'n' : 's',
@@ -1388,7 +1476,8 @@ async function downloadPersonnelTemplateXlsx() {
     { wch: 20 },
     { wch: 25 },
     { wch: 24 },
-    { wch: 36 }
+    { wch: 36 },
+    { wch: 22 }
   ];
   ws['!rows'] = [{ hpt: 26 }, { hpt: 22 }, { hpt: 22 }];
 
@@ -1429,11 +1518,12 @@ function handlePersonnelPaste() {
       let signature = tokens[8] ? tokens[8].trim() : name.split(' ')[0];
       let taxId = tokens[9] ? String(tokens[9]).replace(/\D/g, '').trim() : '';
       let address = tokens[10] ? String(tokens[10]).trim() : '';
+      let empCode = tokens[11] ? String(tokens[11]).trim() : '';
       
       if (name === "ชื่อ-นามสกุล" || name === "ชื่อ - นามสกุล" || name.length < 2) return;
       
       const restDays = parseRestDaysText(restDaysText);
-      const record = { name, position, department, duty, salary, route, vehicle, restDays, signature, taxId, address };
+      const record = { name, position, department, duty, salary, route, vehicle, restDays, signature, taxId, address, empCode };
       tempParsedPersonnelRecords.push(record);
       
       const tr = document.createElement('tr');
@@ -1507,9 +1597,10 @@ function processUploadedPersonnelFile(file) {
         let signature = String(row[9] || '').trim() || name.split(' ')[0];
         let taxId = String(row[10] || '').replace(/\D/g, '').trim();
         let address = String(row[11] || '').trim();
+        let empCode = String(row[12] || '').trim();
         
         const restDays = parseRestDaysText(restDaysText);
-        const record = { name, position, department, duty, salary, route, vehicle, restDays, signature, taxId, address };
+        const record = { name, position, department, duty, salary, route, vehicle, restDays, signature, taxId, address, empCode };
         tempParsedPersonnelRecords.push(record);
         
         if (previewTableBody) {
@@ -1699,6 +1790,7 @@ async function handleConfirmPersonnelImport() {
         if (oldRec.id) dup.newRecord.id = oldRec.id;
         if (!dup.newRecord.taxId && oldRec.taxId) dup.newRecord.taxId = oldRec.taxId;
         if (!dup.newRecord.address && oldRec.address) dup.newRecord.address = oldRec.address;
+        if (!dup.newRecord.empCode && oldRec.empCode) dup.newRecord.empCode = oldRec.empCode;
         if (oldRec.branch && !dup.newRecord.branch) dup.newRecord.branch = oldRec.branch;
         if (oldRec.status) dup.newRecord.status = oldRec.status;
         if (oldRec.resignDate) dup.newRecord.resignDate = oldRec.resignDate;
@@ -1778,7 +1870,8 @@ export async function exportPersonnelCsv() {
     'วันหยุดประจำสัปดาห์',
     'ลงนามเริ่มต้น (ชื่อเรียก)',
     'เลขประจำตัวผู้เสียภาษี (13 หลัก)',
-    'ที่อยู่ตามทะเบียน'
+    'ที่อยู่ตามทะเบียน',
+    'เลขพนักงาน / เลขที่สัญญา'
   ];
 
   const colWidths = [
@@ -1793,7 +1886,8 @@ export async function exportPersonnelCsv() {
     { wch: 20 },
     { wch: 22 },
     { wch: 24 },
-    { wch: 36 }
+    { wch: 36 },
+    { wch: 22 }
   ];
 
   const formatRestDays = (item) => {
@@ -1831,7 +1925,8 @@ export async function exportPersonnelCsv() {
       { v: restDaysText, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
       { v: item.signature || item.name || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
       { v: item.taxId || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
-      { v: item.address || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } }
+      { v: item.address || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: item.empCode || '', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } }
     ];
   };
 
@@ -1851,6 +1946,7 @@ export async function exportPersonnelCsv() {
       { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
       { v: Math.round(totalSalary * 100) / 100, t: 'n', z: '#,##0.00', s: totalStyle },
+      { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
       { v: '', t: 's', s: centerTotalStyle },
@@ -2163,9 +2259,13 @@ export function printPersonnelReport() {
       ? item.restDays.map(d => ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'][d]).join(', ')
       : 'ไม่มี';
 
+    const empCodeSub = item.empCode
+      ? `<div style="font-size: 7.5pt; color: #444; font-weight: normal; margin-top: 1px;">${item.position === 'ลูกจ้างเหมา' ? 'เลขที่สัญญา: ' : 'รหัสพนักงาน: '}${item.empCode}</div>`
+      : '';
+
     const displayName = isResigned 
-      ? `${item.name} <span style="background: #feebeb; color: #ef4444; border: 1px solid #fecaca; padding: 1px 4px; border-radius: 3px; font-size: 7.5pt; font-weight: bold; margin-left: 4px;">ลาออก</span>`
-      : `<strong>${item.name}</strong>`;
+      ? `${item.name} <span style="background: #feebeb; color: #ef4444; border: 1px solid #fecaca; padding: 1px 4px; border-radius: 3px; font-size: 7.5pt; font-weight: bold; margin-left: 4px;">ลาออก</span>${empCodeSub}`
+      : `<strong>${item.name}</strong>${empCodeSub}`;
 
     const rowStyle = isResigned ? 'style="opacity: 0.65; background-color: #fafafa;"' : '';
 
@@ -2342,9 +2442,15 @@ export function getPersonnelTemplate() {
                 <form id="personnelForm">
                   <input type="hidden" id="personnelEditIndex" value="" />
                   
-                  <div class="form-group">
-                    <label for="personName">ชื่อ - นามสกุล</label>
-                    <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+                  <div class="form-row-2">
+                    <div class="form-group">
+                      <label for="personName">ชื่อ - นามสกุล</label>
+                      <input type="text" id="personName" class="form-input" placeholder="ตัวอย่าง: นายสมชาย รักดี" required />
+                    </div>
+                    <div class="form-group">
+                      <label id="personEmpCodeLabel" for="personEmpCode">เลขประจำตัวพนักงาน</label>
+                      <input type="text" id="personEmpCode" class="form-input" placeholder="เช่น 560123" />
+                    </div>
                   </div>
 
                   <div class="form-row-2">
@@ -2782,9 +2888,15 @@ export function getPersonnelTemplate() {
       <form id="editRegistryPersonnelForm">
         <input type="hidden" id="modalRegistryEditIndex" value="" />
         <div class="modal-body">
-          <div class="form-group">
-            <label for="modalPersonName">ชื่อ - นามสกุล</label>
-            <input type="text" id="modalPersonName" class="form-input" required />
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="modalPersonName">ชื่อ - นามสกุล</label>
+              <input type="text" id="modalPersonName" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label id="modalPersonEmpCodeLabel" for="modalPersonEmpCode">เลขประจำตัวพนักงาน</label>
+              <input type="text" id="modalPersonEmpCode" class="form-input" placeholder="เช่น 560123" />
+            </div>
           </div>
 
           <div class="form-row-2">
@@ -3337,29 +3449,55 @@ function renderAttendanceTableRows() {
       }
       
       await saveAttendanceRecord(year, month, name, attRec.checkedDays, attRec.dayStatuses);
-      syncWorkDaysToCalculators(name, attRec.checkedDays.length);
+      syncWorkDaysToCalculators(name, attRec.checkedDays.length, attRec.dayStatuses);
     });
   });
 }
 
-async function syncWorkDaysToCalculators(empName, totalDays) {
-  let fuelChanged = false;
-  const fuelList = window.employees || [];
-  const fuelIdx = fuelList.findIndex(e => e.name === empName);
-  if (fuelIdx !== -1) {
-    if (fuelList[fuelIdx].formMode !== 'supervisor') {
-      fuelList[fuelIdx].workDays = totalDays;
-      fuelChanged = true;
+export async function syncWorkDaysToCalculators(empName, totalDays, dayStatuses = null) {
+  let resolvedStatuses = dayStatuses;
+  if (!resolvedStatuses && Array.isArray(attendanceList)) {
+    const foundRec = attendanceList.find(item => item.name === empName);
+    if (foundRec && foundRec.dayStatuses) {
+      resolvedStatuses = foundRec.dayStatuses;
     }
   }
+
+  let fuelChanged = false;
+  const fuelList = window.employees || [];
+  fuelList.forEach(emp => {
+    if (emp.name === empName && !emp.isSubstitute) {
+      if (emp.formMode !== 'supervisor' && emp.workDays !== totalDays) {
+        emp.workDays = totalDays;
+        fuelChanged = true;
+      }
+      if (resolvedStatuses) {
+        const merged = mergeAttendanceRemark(emp.remarks, resolvedStatuses);
+        if ((emp.remarks || '') !== merged) {
+          emp.remarks = merged;
+          fuelChanged = true;
+        }
+      }
+    }
+  });
   
   let waterChanged = false;
   const waterList = window.waterEmployees || [];
-  const waterIdx = waterList.findIndex(e => e.name === empName);
-  if (waterIdx !== -1) {
-    waterList[waterIdx].workDays = totalDays;
-    waterChanged = true;
-  }
+  waterList.forEach(emp => {
+    if (emp.name === empName && !emp.isSubstitute) {
+      if (emp.workDays !== totalDays) {
+        emp.workDays = totalDays;
+        waterChanged = true;
+      }
+      if (resolvedStatuses) {
+        const merged = mergeAttendanceRemark(emp.remarks, resolvedStatuses);
+        if ((emp.remarks || '') !== merged) {
+          emp.remarks = merged;
+          waterChanged = true;
+        }
+      }
+    }
+  });
   
   if (fuelChanged) {
     await saveEmployees(fuelList);
@@ -3370,6 +3508,7 @@ async function syncWorkDaysToCalculators(empName, totalDays) {
     if (window.renderWaterTable) window.renderWaterTable();
   }
 }
+window.syncWorkDaysToCalculators = syncWorkDaysToCalculators;
 
 async function toggleAllAttendanceDays(checkAll) {
   const attMonthSelect = document.getElementById('attMonth');
@@ -3417,7 +3556,7 @@ async function toggleAllAttendanceDays(checkAll) {
       renderAttendanceTableRows();
       
       for (const item of updatedList) {
-        await syncWorkDaysToCalculators(item.name, item.checkedDays.length);
+        await syncWorkDaysToCalculators(item.name, item.checkedDays.length, item.dayStatuses || {});
       }
       
       window.showToast('ดำเนินการสำเร็จ!', 'success');
@@ -4603,7 +4742,7 @@ async function handleConfirmAttImport() {
     
     for (const rec of matchedRecords) {
       await saveAttendanceRecord(year, month, rec.name, rec.checkedDays, rec.dayStatuses || {});
-      await syncWorkDaysToCalculators(rec.name, rec.checkedDays.length);
+      await syncWorkDaysToCalculators(rec.name, rec.checkedDays.length, rec.dayStatuses || {});
     }
     
     await bindAttendanceDataListeners();
