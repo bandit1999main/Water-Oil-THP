@@ -23,11 +23,16 @@ function resolveEmployeeTaxInfo(empName, empItem = {}, registry = null) {
   } catch (e) {
     vaultEntry = {};
   }
+  const itemSalary = parseFloat(empItem?.salary) || 0;
+  const resolvedSalary = itemSalary > 0
+    ? itemSalary
+    : (parseFloat(person?.salary) || parseFloat(vaultEntry.salary) || 0);
   return {
     taxId: String(person?.taxId || vaultEntry.taxId || empItem?.taxId || '').trim(),
     branch: String(person?.branch || vaultEntry.branch || empItem?.branch || '00000').trim() || '00000',
     address: String(person?.address || vaultEntry.address || empItem?.address || '').trim(),
-    empCode: String(empItem?.empCode || person?.empCode || vaultEntry.empCode || '').trim()
+    empCode: String(empItem?.empCode || person?.empCode || vaultEntry.empCode || '').trim(),
+    salary: resolvedSalary
   };
 }
 
@@ -85,8 +90,11 @@ export function renderWaterTable() {
   let totalTaxVal = 0;
   let totalNetVal = 0;
   waterEmployees.forEach((item) => {
+    const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, registry);
+    const effSalary = resolvedInfo.salary;
+    if (!(parseFloat(item.salary) > 0) && effSalary > 0) item.salary = effSalary;
     const allowance = item.workDays * (window.waterAllowancePerDay || 30);
-    const tax = calculateWaterTax(item.salary, allowance);
+    const tax = calculateWaterTax(effSalary, allowance);
     const net = Math.round((allowance - tax) * 100) / 100;
     totalAllowance += allowance;
     totalTaxVal += tax;
@@ -241,11 +249,21 @@ export async function handleWaterFormSubmit(e) {
     signature
   };
 
-  if (empCode && Array.isArray(window.personnel)) {
+  if (Array.isArray(window.personnel)) {
     const pIdx = window.personnel.findIndex(p => p.name === name);
-    if (pIdx !== -1 && window.personnel[pIdx].empCode !== empCode) {
-      window.personnel[pIdx].empCode = empCode;
-      savePersonnelList(window.personnel);
+    if (pIdx !== -1) {
+      let pChanged = false;
+      if (empCode && window.personnel[pIdx].empCode !== empCode) {
+        window.personnel[pIdx].empCode = empCode;
+        pChanged = true;
+      }
+      if (salary > 0 && parseFloat(window.personnel[pIdx].salary) !== salary) {
+        window.personnel[pIdx].salary = salary;
+        pChanged = true;
+      }
+      if (pChanged) {
+        savePersonnelList(window.personnel);
+      }
     }
   }
 
@@ -429,11 +447,14 @@ export async function exportWaterCsv() {
   ];
 
   const computeRowMetrics = (item) => {
+    const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+    const effSalary = resolvedInfo.salary;
+    if (!(parseFloat(item.salary) > 0) && effSalary > 0) item.salary = effSalary;
     const allowance = Math.round((item.workDays * (window.waterAllowancePerDay || 30)) * 100) / 100;
-    const tax = calculateWaterTax(item.salary, allowance);
+    const tax = calculateWaterTax(effSalary, allowance);
     const net = Math.round((allowance - tax) * 100) / 100;
     const remarkText = getResignRemarkForEmployee(item.name, year, month, item.remarks) || '';
-    return { allowance, tax, net, remarkText };
+    return { allowance, tax, net, remarkText, effSalary, empCode: resolvedInfo.empCode };
   };
 
   const makeHeaderCell = (text, bgHex = '0284C7') => ({
@@ -879,6 +900,142 @@ export async function exportWaterCsv() {
   taxWs['!rows'] = taxRowHeights;
   XLSX.utils.book_append_sheet(wb, taxWs, '5.สรุปหักภาษี 50 ทวิ');
 
+  // ─────────────────────────────────────────────────────────
+  // SHEET 7: 6.บัญชีแนบเงินเดือน (บัญชีแสดงอัตราเงินเดือนแนบท้ายใบเบิกค่าน้ำดื่ม)
+  // ─────────────────────────────────────────────────────────
+  const salRows = [];
+  const salMerges = [];
+  const salRowHeights = [];
+
+  salRows.push([
+    {
+      v: `เอกสารแนบท้าย: บัญชีแสดงอัตราเงินเดือน/ค่าจ้าง และการคำนวณเกณฑ์ภาษีหัก ณ ที่จ่าย (ค่าน้ำดื่ม) ประจำเดือน ${monthText} พ.ศ. ${yearText}`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 13.5, bold: true, color: { rgb: '0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
+  ]);
+  salMerges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } });
+  salRowHeights.push({ hpt: 28 });
+
+  salRows.push([
+    {
+      v: `เกณฑ์การคำนวณภาษีหัก ณ ที่จ่าย: เงินเดือนเกิน 25,833.00 บาท/เดือน อยู่ในเกณฑ์ต้องหักภาษี ณ ที่จ่ายจากยอดเบิกค่าน้ำดื่ม | รวมทั้งสิ้น ${sortedList.length} ราย`,
+      t: 's',
+      s: {
+        font: { name: 'Sarabun', sz: 10.5, color: { rgb: '475569' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      }
+    },
+    ...Array.from({ length: 9 }, () => ({ v: '', t: 's' }))
+  ]);
+  salMerges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 9 } });
+  salRowHeights.push({ hpt: 20 });
+
+  salRows.push([]);
+  salRowHeights.push({ hpt: 10 });
+
+  const salHeaders = [
+    'ลำดับ',
+    'เลขพนักงาน / เลขที่สัญญา',
+    'ชื่อ-นามสกุล',
+    'ตำแหน่ง / ปฏิบัติหน้าที่',
+    'อัตราเงินเดือน/ค่าจ้าง (บาท)',
+    'เกณฑ์ภาษีหัก ณ ที่จ่าย',
+    'วันมาทำงาน',
+    'ค่าน้ำดื่ม (บาท)',
+    'ภาษีหัก ณ ที่จ่าย (บาท)',
+    'ยอดรับสุทธิ (บาท)'
+  ];
+  salRows.push(salHeaders.map(h => makeHeaderCell(h, '1E3A8A')));
+  salRowHeights.push({ hpt: 26 });
+
+  let totalSalSum = 0;
+  let totalSalDays = 0;
+  let totalSalAllowance = 0;
+  let totalSalTax = 0;
+  let totalSalNet = 0;
+
+  sortedList.forEach((item, idx) => {
+    const { allowance, tax, net, effSalary, empCode } = computeRowMetrics(item);
+    const isTaxable = effSalary > 25833 || tax > 0;
+    const taxStatusLabel = isTaxable ? 'หักภาษี ณ ที่จ่าย (> 25,833 บ.)' : 'ยกเว้น (ไม่ถึงเกณฑ์)';
+    const baseFont = { name: 'Sarabun', sz: 10.5, color: { rgb: '0F172A' } };
+    const boldFont = { name: 'Sarabun', sz: 10.5, bold: true, color: { rgb: '0F172A' } };
+    const statusFont = isTaxable
+      ? { name: 'Sarabun', sz: 10, bold: true, color: { rgb: 'B91C1C' } }
+      : { name: 'Sarabun', sz: 10, color: { rgb: '047857' } };
+    const rowFill = isTaxable
+      ? { fgColor: { rgb: 'FFFBEB' } }
+      : (idx % 2 === 1 ? { fgColor: { rgb: 'F8FAFC' } } : { fgColor: { rgb: 'FFFFFF' } });
+
+    totalSalSum += effSalary;
+    totalSalDays += Number(item.workDays || 0);
+    totalSalAllowance += allowance;
+    totalSalTax += tax;
+    totalSalNet += net;
+
+    salRows.push([
+      { v: idx + 1, t: 'n', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: empCode || '-', t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: item.name || '', t: 's', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: `${item.position || '-'} / ${item.duty || '-'}`, t: 's', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'left', vertical: 'center' }, border: thinBorder } },
+      { v: effSalary, t: 'n', z: '#,##0.00', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+      { v: taxStatusLabel, t: 's', s: { font: statusFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: Number(item.workDays || 0), t: 'n', z: '#,##0', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'center', vertical: 'center' }, border: thinBorder } },
+      { v: allowance, t: 'n', z: '#,##0.00', s: { font: baseFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+      { v: tax, t: 'n', z: '#,##0.00', s: { font: statusFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } },
+      { v: net, t: 'n', z: '#,##0.00', s: { font: boldFont, fill: rowFill, alignment: { horizontal: 'right', vertical: 'center' }, border: thinBorder } }
+    ]);
+    salRowHeights.push({ hpt: 22 });
+  });
+
+  const salTotalIdx = salRows.length;
+  const salTotalStyle = {
+    font: { name: 'Sarabun', sz: 11, bold: true, color: { rgb: '1E3A8A' } },
+    fill: { fgColor: { rgb: 'DBEAFE' } },
+    alignment: { horizontal: 'right', vertical: 'center' },
+    border: mediumTotalBorder
+  };
+  const salCenterTotalStyle = { ...salTotalStyle, alignment: { horizontal: 'center', vertical: 'center' } };
+
+  salRows.push([
+    { v: `รวมทั้งสิ้น (${sortedList.length} ราย)`, t: 's', s: salCenterTotalStyle },
+    { v: '', t: 's', s: salCenterTotalStyle },
+    { v: '', t: 's', s: salCenterTotalStyle },
+    { v: '', t: 's', s: salCenterTotalStyle },
+    { v: Math.round(totalSalSum * 100) / 100, t: 'n', z: '#,##0.00', s: salTotalStyle },
+    { v: '', t: 's', s: salCenterTotalStyle },
+    { v: Math.round(totalSalDays), t: 'n', z: '#,##0', s: salCenterTotalStyle },
+    { v: Math.round(totalSalAllowance * 100) / 100, t: 'n', z: '#,##0.00', s: salTotalStyle },
+    { v: Math.round(totalSalTax * 100) / 100, t: 'n', z: '#,##0.00', s: salTotalStyle },
+    { v: Math.round(totalSalNet * 100) / 100, t: 'n', z: '#,##0.00', s: salTotalStyle }
+  ]);
+  salMerges.push({ s: { r: salTotalIdx, c: 0 }, e: { r: salTotalIdx, c: 3 } });
+  salRowHeights.push({ hpt: 25 });
+
+  appendSignatoryFooter(salRows, salMerges);
+
+  const salWs = XLSX.utils.aoa_to_sheet(salRows);
+  salWs['!cols'] = [
+    { wch: 7 },
+    { wch: 20 },
+    { wch: 24 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 16 }
+  ];
+  salWs['!merges'] = salMerges;
+  salWs['!rows'] = salRowHeights;
+  XLSX.utils.book_append_sheet(wb, salWs, '6.บัญชีแนบเงินเดือน');
+
   XLSX.writeFile(wb, `เบิกค่าน้ำดื่ม_${monthText}_${yearText}.xlsx`);
   window.showToast('ส่งออกไฟล์ Excel แยกหมวดหมู่ค่าน้ำดื่มสำเร็จ!', 'success');
 }
@@ -948,16 +1105,21 @@ export function printWaterReport() {
     let allowance = 0;
     let tax = 0;
     let net = 0;
+    let salarySum = 0;
     list.forEach(item => {
+      const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+      const effSalary = resolvedInfo.salary;
+      if (!(parseFloat(item.salary) > 0) && effSalary > 0) item.salary = effSalary;
       const a = item.workDays * (window.waterAllowancePerDay || 30);
-      const t = calculateWaterTax(item.salary, a);
+      const t = calculateWaterTax(effSalary, a);
       const n = Math.round((a - t) * 100) / 100;
       days += Number(item.workDays || 0);
       allowance += a;
       tax += t;
       net += n;
+      salarySum += effSalary;
     });
-    return { count: list.length, days, allowance, tax, net };
+    return { count: list.length, days, allowance, tax, net, salarySum };
   };
 
   const groupSummaryList = [
@@ -974,14 +1136,15 @@ export function printWaterReport() {
     let subNet = 0;
 
     const rowsHtml = items.map((item, index) => {
+      const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+      const effSalary = resolvedInfo.salary;
       const allowance = item.workDays * (window.waterAllowancePerDay || 30);
-      const tax = calculateWaterTax(item.salary, allowance);
+      const tax = calculateWaterTax(effSalary, allowance);
       const net = Math.round((allowance - tax) * 100) / 100;
       subAllowance += allowance;
       subTax += tax;
       subNet += net;
 
-      const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
       const empCodePrint = resolvedInfo.empCode
         ? `<div style="font-size: 7pt; font-weight: normal; color: #444; margin-top: 1px;">${item.position === 'ลูกจ้างเหมา' ? 'สัญญา: ' : 'รหัส: '}${resolvedInfo.empCode}</div>`
         : '';
@@ -991,6 +1154,7 @@ export function printWaterReport() {
           <td>${index + 1}</td>
           <td><strong>${item.name}</strong>${empCodePrint}</td>
           <td>${item.position} / ${item.duty || '-'}</td>
+          <td style="text-align: right !important; padding-right: 4px !important;">${effSalary > 0 ? effSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
           <td>${item.workDays} วัน</td>
           <td>${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           <td>${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -1024,14 +1188,15 @@ export function printWaterReport() {
           <thead>
             <tr>
               <th style="width: 4%">ลำดับ</th>
-              <th style="width: 19%">ชื่อ - นามสกุลผู้รับเงิน</th>
-              <th style="width: 18%">ปฏิบัติหน้าที่</th>
-              <th style="width: 7%">วันปฏิบัติงาน</th>
-              <th style="width: 10%">รวมเป็นเงิน (บาท)</th>
+              <th style="width: 17%">ชื่อ - นามสกุลผู้รับเงิน</th>
+              <th style="width: 15%">ปฏิบัติหน้าที่</th>
+              <th style="width: 9%">อัตราเงินเดือน</th>
+              <th style="width: 6%">วันทำงาน</th>
+              <th style="width: 9%">รวมเป็นเงิน</th>
               <th style="width: 7%">ภาษี (ถ้ามี)</th>
-              <th style="width: 10%">คงเหลือสุทธิ (บาท)</th>
-              <th style="width: 15%">ลายมือชื่อผู้รับเงิน</th>
-              <th style="width: 10%">หมายเหตุ</th>
+              <th style="width: 9%">คงเหลือสุทธิ</th>
+              <th style="width: 13%">ลายมือชื่อผู้รับเงิน</th>
+              <th style="width: 11%">หมายเหตุ</th>
             </tr>
           </thead>
           <tbody>
@@ -1156,6 +1321,136 @@ export function printWaterReport() {
     `;
   };
 
+  const buildWaterSalaryAttachmentHtml = () => {
+    let totalSalary = 0;
+    let totalDays = 0;
+    let totalAllowance = 0;
+    let totalTax = 0;
+    let totalNet = 0;
+    let taxableCount = 0;
+    let exemptCount = 0;
+    let seq = 1;
+
+    const sectionRowsHtml = groupSummaryList.map((g) => {
+      if (!g.list || g.list.length === 0) return '';
+      const groupBanner = `
+        <tr style="background-color: #f1f5f9 !important;">
+          <td colspan="10" style="text-align: left !important; padding: 4px 8px !important; font-weight: bold; font-size: 8.5pt;">
+            📌 หมวดหมู่: ${g.title} (${g.list.length} ราย)
+          </td>
+        </tr>
+      `;
+      const itemRows = g.list.map((item) => {
+        const resolvedInfo = resolveEmployeeTaxInfo(item.name, item, personnelRegistry);
+        const effSalary = resolvedInfo.salary;
+        const allowance = item.workDays * (window.waterAllowancePerDay || 30);
+        const tax = calculateWaterTax(effSalary, allowance);
+        const net = Math.round((allowance - tax) * 100) / 100;
+        const isTaxable = effSalary > 25833 || tax > 0;
+        if (isTaxable) taxableCount++;
+        else exemptCount++;
+
+        totalSalary += effSalary;
+        totalDays += Number(item.workDays || 0);
+        totalAllowance += allowance;
+        totalTax += tax;
+        totalNet += net;
+
+        const codePrefix = item.position === 'ลูกจ้างเหมา' ? 'สัญญา: ' : 'รหัส: ';
+        const codeDisplay = resolvedInfo.empCode ? `${codePrefix}${resolvedInfo.empCode}` : '-';
+        const taxStatusText = isTaxable
+          ? '<strong style="color: #b91c1c;">เกิน 25,833 บ. (หักภาษี)</strong>'
+          : '<span style="color: #334155;">ไม่ถึงเกณฑ์ (ยกเว้น)</span>';
+
+        return `
+          <tr style="${isTaxable ? 'background-color: #fffbeb !important;' : ''}">
+            <td style="text-align: center !important;">${seq++}</td>
+            <td style="text-align: center !important; font-size: 7.5pt;">${codeDisplay}</td>
+            <td style="text-align: left !important; padding-left: 5px !important;"><strong>${item.name}</strong></td>
+            <td style="text-align: left !important; padding-left: 5px !important; font-size: 7.5pt;">${item.position} / ${item.duty || '-'}</td>
+            <td style="text-align: right !important; padding-right: 5px !important; font-weight: bold;">${effSalary > 0 ? effSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</td>
+            <td style="text-align: center !important; font-size: 7.5pt;">${taxStatusText}</td>
+            <td style="text-align: center !important;">${item.workDays} วัน</td>
+            <td style="text-align: right !important; padding-right: 5px !important;">${allowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="text-align: right !important; padding-right: 5px !important; ${tax > 0 ? 'font-weight: bold; color: #b91c1c;' : ''}">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="text-align: right !important; padding-right: 5px !important; font-weight: bold;">${net.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      }).join('');
+      return groupBanner + itemRows;
+    }).join('');
+
+    return `
+      <div class="print-page">
+        <div class="print-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px double #000 !important; padding-bottom: 0.2rem !important; margin-bottom: 0.35rem !important;">
+          <div style="width: 80px;"></div>
+          <div class="print-title-container" style="flex-grow: 1; text-align: center;">
+            <h2 style="font-size: 10.5pt !important; font-weight: bold; margin: 0 0 0.12rem 0;">เอกสารแนบท้ายหลักฐานการเบิกจ่ายเงินค่าน้ำดื่ม (${postOffice})</h2>
+            <h3 style="font-size: 9.2pt !important; font-weight: bold; margin: 0 0 0.12rem 0;">บัญชีแจ้งอัตราเงินเดือน / ค่าจ้าง และการคำนวณเกณฑ์ภาษีหัก ณ ที่จ่าย</h3>
+            <p style="font-size: 8pt; margin: 0;">ประจำเดือน ${monthText} พ.ศ. ${yearText} | เกณฑ์หักภาษี ณ ที่จ่าย: อัตราเงินเดือนเกิน 25,833.00 บาท/เดือน</p>
+          </div>
+          <div style="border: 1px dashed #888; width: 80px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 7pt; color: #555; border-radius: 4px; line-height: 1.1; text-align: center; background-color: #fafafa;">
+            เอกสารแนบ<br>ฐานเงินเดือน
+          </div>
+        </div>
+
+        <table class="print-table" style="margin-top: 0.25rem; margin-bottom: 0.6rem;">
+          <thead>
+            <tr>
+              <th style="width: 4%">ลำดับ</th>
+              <th style="width: 11%">เลขพนักงาน/สัญญา</th>
+              <th style="width: 17%">ชื่อ - นามสกุล</th>
+              <th style="width: 16%">ตำแหน่ง / หน้าที่</th>
+              <th style="width: 10%">อัตราเงินเดือน (บาท)</th>
+              <th style="width: 13%">เกณฑ์ภาษีหัก ณ ที่จ่าย</th>
+              <th style="width: 6%">วันทำงาน</th>
+              <th style="width: 8%">ค่าน้ำดื่ม (บาท)</th>
+              <th style="width: 7%">ภาษีที่หัก</th>
+              <th style="width: 8%">รับสุทธิ (บาท)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sectionRowsHtml}
+            <tr style="background-color: #e2e8f0 !important; font-weight: bold;">
+              <td colspan="4" style="text-align: center !important; padding: 5px !important;">รวมทั้งสิ้น (${waterEmployees.length} ราย)</td>
+              <td style="text-align: right !important; padding-right: 5px !important;">${totalSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: center !important; font-size: 7.5pt;">หักภาษี ${taxableCount} / ยกเว้น ${exemptCount}</td>
+              <td style="text-align: center !important;">${totalDays} วัน</td>
+              <td style="text-align: right !important; padding-right: 5px !important;">${totalAllowance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right !important; padding-right: 5px !important;">${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td style="text-align: right !important; padding-right: 5px !important; border-bottom: 3px double #000 !important;">${totalNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="print-summary-section" style="margin-bottom: 0.8rem;">
+          <div class="summary-block" style="font-size: 8pt;">
+            <p>จำนวนผู้มีสิทธิ์เบิกทั้งหมด: <strong>${waterEmployees.length}</strong> ราย (อยู่ในเกณฑ์หักภาษี ณ ที่จ่าย <strong>${taxableCount}</strong> ราย / ยกเว้นภาษี <strong>${exemptCount}</strong> ราย)</p>
+            <p>ขอรับรองว่าข้อมูลอัตราเงินเดือน/ค่าจ้างข้างต้นเป็นข้อมูลจริงตามทะเบียนประวัติบุคลากรเพื่อใช้ประกอบการคำนวณภาษีหัก ณ ที่จ่าย</p>
+          </div>
+        </div>
+
+        <div class="print-signatures">
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigMakerTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigMakerNameVal})</p>
+            <p>ตำแหน่ง ${sigMakerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigCheckerTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigCheckerNameVal})</p>
+            <p>ตำแหน่ง ${sigCheckerPosVal}</p>
+          </div>
+          <div class="sig-box">
+            <p>ลงชื่อ..........................................................${sigApproverTitleVal}</p>
+            <p style="margin-top: 0.5rem; font-weight: bold;">(${sigApproverNameVal})</p>
+            <p>ตำแหน่ง ${sigApproverPosVal}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
   let modal = document.getElementById('waterPrintSelectorModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -1194,6 +1489,13 @@ export function printWaterReport() {
               <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);">${fmtBaht(g.stats.net)} ฿</span>
             </label>
           `).join('')}
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1.5px solid #059669; background: rgba(16, 185, 129, 0.07); cursor: pointer;">
+            <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">
+              <input type="checkbox" class="water-print-opt" value="salary_attachment" checked style="width: 18px; height: 18px; cursor: pointer;" />
+              📎 บัญชีแจ้งอัตราเงินเดือนแนบท้ายใบเบิกค่าน้ำดื่ม (ตรวจสอบเกณฑ์ภาษี 25,833 บ.)
+            </span>
+            <span style="font-size: 0.76rem; font-weight: 700; color: #059669;">ใบแนบเงินเดือน</span>
+          </label>
           <label style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.9rem; border-radius: 10px; border: 1px dashed var(--border-glass); background: rgba(0,0,0,0.01); cursor: pointer;">
             <span style="display: flex; align-items: center; gap: 0.55rem; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem;">
               <input type="checkbox" class="water-print-opt" value="combined_all" style="width: 17px; height: 17px; cursor: pointer;" />
@@ -1235,6 +1537,9 @@ export function printWaterReport() {
         pagesHtml.push(buildWaterPageHtml(g.title.replace(/^\d+\.\s*/, ''), g.list));
       }
     });
+    if (selectedKeys.has('salary_attachment')) {
+      pagesHtml.push(buildWaterSalaryAttachmentHtml());
+    }
     if (selectedKeys.has('combined_all')) {
       pagesHtml.push(buildWaterPageHtml('รวมเจ้าหน้าที่ปฏิบัติงานทั้งหมด', waterEmployees));
     }

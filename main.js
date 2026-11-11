@@ -2308,7 +2308,7 @@ function openEditModal(isWaterMode, idx) {
       modalEmpCodeLabel.textContent = window.getEmpCodeLabel(item.position);
     }
     document.getElementById('modalEmpDuty').value = item.duty || '';
-    modalEmpSalary.value = item.salary;
+    modalEmpSalary.value = (parseFloat(item.salary) > 0) ? item.salary : ((regPerson && parseFloat(regPerson.salary) > 0) ? regPerson.salary : 0);
     modalWorkDays.value = item.workDays;
     modalRemarks.value = item.remarks || '';
     modalSignature.value = item.signature || '';
@@ -2443,6 +2443,13 @@ function wireEditModal() {
 
     if (isWater) {
       const salary = parseFloat(document.getElementById('modalEmpSalary').value) || 0;
+      if (salary > 0 && personnel) {
+        const pIdx = personnel.findIndex(p => p.name.trim() === name);
+        if (pIdx !== -1 && parseFloat(personnel[pIdx].salary) !== salary) {
+          personnel[pIdx].salary = salary;
+          await savePersonnelList(personnel);
+        }
+      }
       const existingId = waterEmployees[idx]?.id;
       const updatedItem = { ...waterEmployees[idx], name, empCode, position, duty, salary, workDays, remarks, signature };
       if (existingId) updatedItem.id = existingId;
